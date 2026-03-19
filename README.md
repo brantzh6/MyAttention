@@ -2,224 +2,179 @@
 
 > 利用 AI 整理世界知识，并为决策提供支持
 
-MyAttention 是一个 AI 驱动的智能决策支持系统，集成了信息流聚合、多模型智能对话、知识库管理和自我进化能力。
+MyAttention 是一个面向个人的 AI 智能信息助手。它自动聚合你关注的信息源，帮你整理成结构化知识，并通过多模型对话系统随时回答你的问题、辅助你做出更好的决策。
 
 ---
 
-## 核心功能
+## 它能做什么
 
-| 模块 | 状态 | 说明 |
-|------|------|------|
-| 信息流 (Feed) | ✅ 完成 | RSS 订阅、网页监控、权威分级、反爬处理 |
-| 智能对话 (Chat) | ✅ 完成 | 多模型支持、RAG 检索、多模型投票 |
-| 知识管理 (Knowledge) | ✅ 完成 | 多知识库、向量存储、知识图谱 |
-| 知识大脑 (Knowledge Brain) | 🔄 开发中 | 实体提取、关系推理 |
-| 进化大脑 (Evolution Brain) | 🔄 开发中 | 自动测试、性能监控、策略自优化 |
+**订阅和追踪信息**
+订阅 RSS、监控网页、接入 API 源，系统自动抓取并按重要性排序，省去手动浏览的时间。
 
----
+**与你的知识库对话**
+将文档、网页、搜索结果存入个人知识库，然后直接用自然语言提问，系统检索相关内容后由 AI 作答，并标注来源。
 
-## 技术栈
+**多模型智能对话**
+接入主流 LLM 提供商，支持普通对话、联网搜索、深度思考，以及多模型同时回答后投票取共识（适合重要决策）。
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | Next.js 14, React 18, TypeScript, Tailwind CSS |
-| 后端 | FastAPI, Python 3.11+, asyncio |
-| 存储 | PostgreSQL, Qdrant (向量), Redis, LocalObjectStore / MinIO / S3 |
-| LLM | Qwen, DeepSeek, GLM, Kimi, Claude, GPT |
-| 协议 | REST, A2A, MCP |
-| 自动化 | Playwright (UI 测试) |
+**记忆你的偏好**
+从对话中自动提取你的偏好、事实和决策记录，后续对话中自动带入上下文，越用越懂你。
 
----
-
-## 系统架构
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        前端层 (Frontend)                         │
-│                   Next.js 14 + React 18 + TypeScript            │
-│                         http://localhost:3000                   │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                        API 网关层 (Gateway)                      │
-│                      FastAPI + Uvicorn                          │
-│                         http://localhost:8000                   │
-└───────────────────────────────┬─────────────────────────────────┘
-                                │
-        ┌───────────────────────┼───────────────────────┐
-        ▼                       ▼                       ▼
-┌───────────────┐    ┌───────────────────┐    ┌───────────────────┐
-│   对话服务     │    │    知识库服务      │    │    进化服务        │
-│  Chat Router  │    │   Knowledge Mgr   │    │  Evolution Svc   │
-└───────┬───────┘    └─────────┬─────────┘    └─────────┬─────────┘
-        └──────────────────────┼────────────────────────┘
-                               │
-                               ▼
-        ┌──────────────────────────────────────────────────────┐
-        │                    存储层 (Storage)                    │
-        ├───────────────┬──────────────────┬───────────────────┤
-        │  PostgreSQL   │      Qdrant      │      Redis        │
-        │   关系数据     │     向量存储      │     缓存/队列      │
-        └───────────────┴──────────────────┴───────────────────┘
-```
+**推送重要信息**
+通过飞书或钉钉机器人，将重要信息、定时简报推送到你的工作群。
 
 ---
 
 ## 快速开始
 
-### 环境要求
+### 前置依赖
 
-| 软件 | 版本 |
-|------|------|
-| Python | 3.11+ |
-| Node.js | 18+ |
-| PostgreSQL | 15+ |
-| Qdrant | 1.4+ |
-| Redis | 7+ |
+- Python 3.11+
+- Node.js 18+
+- PostgreSQL 15+
+- Redis 7+
+- Qdrant 1.4+
 
-### 后端启动
+### 1. 启动基础服务
+
+确保 PostgreSQL、Redis、Qdrant 已在本地运行，或使用 Docker 一键启动：
+
+```bash
+docker-compose up -d postgres redis qdrant
+```
+
+### 2. 配置后端
 
 ```bash
 cd services/api
 
-# 创建虚拟环境
 python -m venv venv
-source venv/bin/activate      # Linux/Mac
-# 或 venv\Scripts\activate   # Windows
+source venv/bin/activate        # Linux/Mac
+# 或 venv\Scripts\activate     # Windows
 
-# 安装依赖
 pip install -r requirements.txt
 
-# 配置环境变量
 cp .env.example .env
-# 编辑 .env，填写 API Key 等配置
+# 编辑 .env，至少填写 QWEN_API_KEY（其他 LLM Key 按需填写）
 
-# 运行数据库迁移
 alembic upgrade head
 
-# 启动服务
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-### 前端启动
+### 3. 配置前端
 
 ```bash
 cd services/web
 
 npm install
+
 cp .env.local.example .env.local
-# 编辑 .env.local
+# 默认指向 http://localhost:8000，无需修改即可启动
 
 npm run dev
 ```
 
-### Docker 一键启动
+### 4. 访问
 
-```bash
-docker-compose up -d
-```
-
-启动后访问：
-- 前端：http://localhost:3000
-- API：http://localhost:8000
+- 应用界面：http://localhost:3000
 - API 文档：http://localhost:8000/docs
 
 ---
 
-## 项目结构
+## 环境变量说明
 
+### `services/api/.env`
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `DATABASE_URL` | ✅ | PostgreSQL 连接串 |
+| `REDIS_URL` | ✅ | Redis 连接串 |
+| `QDRANT_URL` | ✅ | Qdrant 地址 |
+| `QWEN_API_KEY` | ✅ | 阿里云百炼 API Key（主要 LLM） |
+| `ANTHROPIC_API_KEY` | 可选 | Claude 支持 |
+| `OPENAI_API_KEY` | 可选 | GPT 支持 |
+| `FEISHU_APP_ID` / `FEISHU_APP_SECRET` | 可选 | 飞书应用模式推送 |
+| `FEISHU_WEBHOOK_URL` | 可选 | 飞书 Webhook 推送（二选一） |
+| `DINGTALK_WEBHOOK_URL` | 可选 | 钉钉推送 |
+| `DEBUG` | 可选 | 开发模式，默认 `true` |
+
+### `services/web/.env.local`
+
+| 变量 | 说明 |
+|------|------|
+| `NEXT_PUBLIC_API_URL` | 后端 API 地址，默认 `http://localhost:8000` |
+
+---
+
+## 日常维护
+
+### 查看服务状态
+
+```bash
+python manage.py status
 ```
-MyAttention/
-├── services/
-│   ├── api/                  # FastAPI 后端
-│   │   ├── db/               # 数据库模型
-│   │   ├── feeds/            # 信息流模块
-│   │   ├── knowledge/        # 知识模块
-│   │   ├── llm/              # LLM 多模型适配
-│   │   ├── memory/           # 记忆引擎
-│   │   ├── notifications/    # 通知服务
-│   │   ├── pipeline/         # 调度任务
-│   │   ├── rag/              # RAG 引擎
-│   │   ├── routers/          # API 路由
-│   │   └── main.py           # 入口
-│   │
-│   └── web/                  # Next.js 前端
-│       ├── app/              # App Router 页面
-│       ├── components/       # UI 组件
-│       └── lib/              # 工具库
-│
-├── migrations/               # 数据库迁移 SQL
-├── docs/                     # 详细文档
-├── infrastructure/           # Dockerfile & docker-compose
-├── scripts/                  # 开发/部署脚本
-└── manage.py                 # 服务管理脚本
+
+### 启动 / 停止所有服务
+
+```bash
+python manage.py start
+python manage.py stop
+```
+
+### 数据库迁移
+
+新版本发布后若有数据库变更：
+
+```bash
+cd services/api
+alembic upgrade head
+```
+
+### 日志
+
+```bash
+# API 日志
+tail -f services/api/api.log
+
+# Docker 模式
+docker-compose logs -f api
+docker-compose logs -f web
+```
+
+### 健康检查
+
+```bash
+curl http://localhost:8000/health
+# 返回 {"status": "healthy"}
 ```
 
 ---
 
-## 支持的 LLM 模型
+## Docker 部署
 
-| 模型 | 提供商 | 特点 |
-|------|--------|------|
-| Qwen Max | 阿里云 | 中文能力强，支持联网搜索 |
-| Qwen Plus | 阿里云 | 均衡性能，支持深度思考 |
-| DeepSeek V3 | DeepSeek | 性价比高，推理能力强 |
-| GLM-5 | 智谱AI | 国产优秀，支持深度思考 |
-| MiniMax M2 | MiniMax | 长文本处理 |
-| Kimi K2 | 月之暗面 | 128K 长上下文 |
+```bash
+# 构建并启动所有服务
+docker-compose up -d
 
----
+# 更新代码后重新构建
+docker-compose build api web
+docker-compose up -d api web
 
-## 主要 API
-
-```
-# 对话
-POST /api/chat
-
-# 知识库
-GET  /api/rag/knowledge-bases
-POST /api/rag/knowledge-bases
-POST /api/rag/knowledge-bases/{id}/documents/file
-POST /api/rag/knowledge-bases/{id}/documents/web
-
-# 对话历史
-GET  /api/conversations
-GET  /api/conversations/{id}/messages
-
-# 记忆
-GET  /api/memories
-POST /api/memories
-
-# 健康检查
-GET  /health
+# 停止
+docker-compose down
 ```
 
-完整 API 文档见 [docs/API.md](docs/API.md) 或启动服务后访问 `/docs`。
-
 ---
 
-## 通知集成
-
-支持推送到企业协作工具：
-- **飞书 Webhook**
-- **钉钉 Webhook**
-
-在 `/settings/notifications` 页面配置 Webhook 地址。
-
----
-
-## 文档
+## 更多文档
 
 | 文档 | 说明 |
 |------|------|
-| [docs/SPEC.md](docs/SPEC.md) | 系统规格定义 |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 架构设计 |
-| [docs/FEATURES.md](docs/FEATURES.md) | 功能详解 |
-| [docs/API.md](docs/API.md) | API 参考 |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 部署指南 |
-| [docs/STORAGE_ARCHITECTURE.md](docs/STORAGE_ARCHITECTURE.md) | 存储层架构 |
-| [docs/SECURITY.md](docs/SECURITY.md) | 安全配置 |
+| [docs/FEATURES.md](docs/FEATURES.md) | 各功能详细说明 |
+| [docs/API.md](docs/API.md) | API 接口参考 |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 生产环境部署（Nginx、SSL、备份等） |
+| [docs/SECURITY.md](docs/SECURITY.md) | 安全配置建议 |
 
 ---
 

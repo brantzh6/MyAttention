@@ -1,54 +1,58 @@
 # MyAttention
 
-**构建世界知识，洞察规律，支持决策。**
+**Build world knowledge. Discover patterns. Support decisions.**
+
+[中文文档](docs/README_zh.md)
 
 ---
 
-## 这是什么
+## What is this?
 
-大多数信息工具帮你管理信息。MyAttention 的目标是更深一层：**从海量互联网信息中，持续提炼结构化的世界知识，尤其是跨学科的深层规律，最终为重要决策提供可信的认知支撑。**
+Most information tools help you manage information. MyAttention goes deeper: **continuously distilling structured world knowledge from the vast internet — especially cross-disciplinary insights — to provide reliable cognitive support for important decisions.**
 
-现有的大模型知识是静态的、截止的、无个性的。MyAttention 要做的，是围绕你的关注领域，建立一个持续生长的私有知识体系——它不只是检索，而是理解；不只是回答，而是洞察。
-
----
-
-## 三个大脑
-
-### 信息大脑
-
-持续感知世界的变化。
-
-从 RSS、网页、API 等多源渠道自动抓取信息，按来源权威性分级，按时间、主题、重要性聚合。信息不只是堆积，而是持续向知识层输送原料。
-
-### 知识大脑
-
-将信息提炼为结构化知识。
-
-对抓取内容进行实体提取、关系抽取、跨学科关联与知识推理，建立覆盖多领域的知识图谱。目标是理解概念之间的内在联系，不是存储文本片段，而是构建**世界运行的认知模型**。
-
-### 进化大脑
-
-系统自我观察、自我修正。
-
-持续监控运行日志与测试结果，自动识别问题、归并重复任务、生成优化建议，让系统在使用中不断变得更可靠、更准确。
+Existing LLMs have static, cutoff, and impersonal knowledge. MyAttention builds a continuously growing private knowledge system around your domain of interest. It doesn't just retrieve — it understands. It doesn't just answer — it reasons.
 
 ---
 
-## 主要功能
+## Three Brains
 
-- **信息流聚合** — 订阅 RSS / 监控网页 / 接入 API，自动抓取，按重要性排序展示
-- **知识库管理** — 上传文档或索引网页，构建私有向量知识库，支持多库分类管理
-- **多模型对话** — 接入主流 LLM，支持联网搜索、深度思考、RAG 知识检索、多模型投票共识
-- **用户记忆** — 从对话自动提取偏好、事实和决策记录，越用越懂你
-- **知识图谱** — 实体、关系、跨学科推理（开发中）
-- **自我进化** — 日志监控、自动测试、问题追踪与系统自优化（开发中）
-- **消息推送** — 飞书 / 钉钉通知，将重要信息推送到工作群
+### Information Brain
+
+Continuously perceive the world.
+
+Automatically aggregates information from RSS feeds, web monitoring, and APIs. Sources are graded by authority, and content is ranked by time, topic, and importance. Information is not just accumulated — it flows as raw material into the knowledge layer.
+
+### Knowledge Brain
+
+Distill information into structured knowledge.
+
+Performs entity extraction, relation mining, cross-disciplinary association, and knowledge reasoning on ingested content to build a multi-domain knowledge graph. The goal is not to store text fragments, but to construct **a cognitive model of how the world works**.
+
+### Evolution Brain
+
+Self-observe. Self-correct.
+
+Continuously monitors logs and test results, automatically identifies issues, merges duplicate tasks, and generates optimization suggestions — making the system more reliable and accurate over time.
 
 ---
 
-## 快速开始
+## Features
 
-### 前置依赖
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Feed Aggregation | ✅ | Subscribe to RSS / monitor pages / connect APIs, auto-fetch with importance ranking |
+| Knowledge Base | ✅ | Upload docs or index web pages, build private vector knowledge bases |
+| Multi-model Chat | ✅ | LLM chat with web search, deep thinking, RAG retrieval, and multi-model voting |
+| Memory | ✅ | Auto-extracts preferences, facts, and decisions from conversations |
+| Knowledge Graph | 🔄 | Entity extraction, relation mining, cross-disciplinary reasoning |
+| Evolution Engine | 🔄 | Log monitoring, auto-testing, issue tracking, self-optimization |
+| Notifications | ✅ | Push important updates to Feishu / DingTalk groups |
+
+---
+
+## Quick Start
+
+### Prerequisites
 
 - Python 3.11+
 - Node.js 18+
@@ -56,32 +60,32 @@
 - Redis 7+
 - Qdrant 1.4+
 
-用 Docker 一键启动基础服务：
+Start infrastructure services with Docker:
 
 ```bash
 docker-compose up -d postgres redis qdrant
 ```
 
-### 后端
+### Backend
 
 ```bash
 cd services/api
 
 python -m venv venv
 source venv/bin/activate        # Linux/Mac
-# 或 venv\Scripts\activate     # Windows
+# or: venv\Scripts\activate    # Windows
 
 pip install -r requirements.txt
 
 cp .env.example .env
-# 编辑 .env，至少填写 QWEN_API_KEY
+# Edit .env — at minimum, set QWEN_API_KEY (or any supported LLM key)
 
 alembic upgrade head
 
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-### 前端
+### Frontend
 
 ```bash
 cd services/web
@@ -92,84 +96,85 @@ cp .env.local.example .env.local
 npm run dev
 ```
 
-### 访问
+### Access
 
-| 地址 | 说明 |
-|------|------|
-| http://localhost:3000 | Web 界面 |
-| http://localhost:8000/docs | API 文档 |
+| URL | Description |
+|-----|-------------|
+| http://localhost:3000 | Web UI |
+| http://localhost:8000/docs | API documentation |
 
 ---
 
-## 环境变量
+## Configuration
 
 ### `services/api/.env`
 
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| `DATABASE_URL` | ✅ | PostgreSQL 连接串 |
-| `REDIS_URL` | ✅ | Redis 连接串 |
-| `QDRANT_URL` | ✅ | Qdrant 地址 |
-| `QWEN_API_KEY` | ✅ | 阿里云百炼 API Key（LLM 主入口） |
-| `ANTHROPIC_API_KEY` | 可选 | Claude 支持 |
-| `OPENAI_API_KEY` | 可选 | GPT 支持 |
-| `FEISHU_APP_ID` / `FEISHU_APP_SECRET` | 可选 | 飞书应用推送 |
-| `FEISHU_WEBHOOK_URL` | 可选 | 飞书 Webhook 推送（二选一） |
-| `DINGTALK_WEBHOOK_URL` | 可选 | 钉钉推送 |
-| `DEBUG` | 可选 | 开发模式，默认 `true` |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | ✅ | PostgreSQL connection string |
+| `REDIS_URL` | ✅ | Redis connection string |
+| `QDRANT_URL` | ✅ | Qdrant endpoint |
+| `QWEN_API_KEY` | ✅ | Primary LLM API key (Alibaba Cloud Bailian) |
+| `ANTHROPIC_API_KEY` | optional | Claude support |
+| `OPENAI_API_KEY` | optional | GPT support |
+| `FEISHU_APP_ID` / `FEISHU_APP_SECRET` | optional | Feishu app push |
+| `FEISHU_WEBHOOK_URL` | optional | Feishu Webhook (alternative to app mode) |
+| `DINGTALK_WEBHOOK_URL` | optional | DingTalk push |
+| `DEBUG` | optional | Development mode, default `true` |
 
 ### `services/web/.env.local`
 
-| 变量 | 说明 |
-|------|------|
-| `NEXT_PUBLIC_API_URL` | 后端地址，默认 `http://localhost:8000` |
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | Backend URL, default `http://localhost:8000` |
 
 ---
 
-## 日常维护
+## Maintenance
 
 ```bash
-# 查看服务状态
+# Check service status
 python manage.py status
 
-# 启动 / 停止全部服务
+# Start / stop all services
 python manage.py start
 python manage.py stop
 
-# 数据库迁移（版本更新后执行）
+# Run database migrations (after version updates)
 cd services/api && alembic upgrade head
 
-# 查看日志
+# View logs
 tail -f services/api/api.log
 
-# 健康检查
+# Health check
 curl http://localhost:8000/health
 ```
 
 ---
 
-## Docker 部署
+## Docker Deployment
 
 ```bash
+# Start all services
 docker-compose up -d
 
-# 更新后重新构建
+# Rebuild after code updates
 docker-compose build api web
 docker-compose up -d api web
 ```
 
 ---
 
-## 文档
+## Documentation
 
-| 文档 | 说明 |
-|------|------|
-| [docs/SPEC.md](docs/SPEC.md) | 系统愿景与核心定义 |
-| [docs/PROJECT_MASTER_PLAN.md](docs/PROJECT_MASTER_PLAN.md) | 项目总纲与研发约束 |
-| [docs/FEATURES.md](docs/FEATURES.md) | 各功能模块详解 |
-| [docs/API.md](docs/API.md) | API 接口参考 |
-| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | 生产部署指南 |
-| [docs/SECURITY.md](docs/SECURITY.md) | 安全配置 |
+| Document | Description |
+|----------|-------------|
+| [docs/SPEC.md](docs/SPEC.md) | System vision and core definitions |
+| [docs/PROJECT_MASTER_PLAN.md](docs/PROJECT_MASTER_PLAN.md) | Project master plan and engineering constraints |
+| [docs/FEATURES.md](docs/FEATURES.md) | Detailed feature documentation |
+| [docs/API.md](docs/API.md) | API reference |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Production deployment guide |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security configuration |
 
 ---
 

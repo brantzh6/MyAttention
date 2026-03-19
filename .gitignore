@@ -31,6 +31,10 @@ services/api/data/
 *.swp
 *.swo
 
+# AI assistant config (may contain sensitive data)
+.claude/
+.qoder/
+
 # OS
 .DS_Store
 Thumbs.db

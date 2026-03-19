@@ -1,0 +1,20 @@
+<service>
+  <id>MyAttentionWatchdog</id>
+  <name>MyAttentionWatchdog</name>
+  <description>MyAttention watchdog service</description>
+  <executable>D:\code\MyAttention\.venv\Scripts\python.exe</executable>
+  <arguments>D:\code\MyAttention\runtime_watchdog.py --mode local-process</arguments>
+  <workingdirectory>D:\code\MyAttention</workingdirectory>
+  <stoptimeout>15sec</stoptimeout>
+  <startmode>Manual</startmode>
+  <logpath>D:\code\MyAttention\.runtime\logs</logpath>
+  <log mode="roll-by-size-time">
+    <sizeThreshold>10240</sizeThreshold>
+    <pattern>yyyyMMdd</pattern>
+    <autoRollAtTime>00:00:00</autoRollAtTime>
+    <zipOlderThanNumDays>7</zipOlderThanNumDays>
+  </log>
+  <env name="MYATTENTION_RUNTIME_MODE" value="local-process" />
+  <env name="PYTHONUTF8" value="1" />
+  <env name="PYTHONUNBUFFERED" value="1" />
+</service>

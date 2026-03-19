@@ -1,0 +1,93 @@
+# MyAttention 变更日志
+
+> 用于记录项目级重要变更、阶段性能力提升和兼容性调整。详细设计变更请结合 `docs/` 下的专项文档阅读。
+
+---
+
+## [Unreleased]
+
+### Added
+
+- 新增项目总计划，统一主线目标、核心模块、研发流程和测试要求
+- 新增信息流数据架构设计，明确 `raw_ingest / feed_items / feed_enrichments / feed_aggregates`
+- 新增存储层架构设计，明确 `PostgreSQL + Redis + Qdrant + Object Storage`
+- 新增研发方法与质量保障体系，明确方案先行、设计先行、测试门槛和进化闭环
+- 新增变更与版本管理规则，明确项目版本、架构版本、进化策略版本和记录要求
+- 新增 `ObjectStore` 抽象与 `LocalObjectStore` 本地实现
+- 新增 `raw_ingest` ORM 模型、SQL 迁移和原始层写入服务
+- 新增 `/api/feeds/import` 的原始层持久化接入，保留现有缓存注入行为
+- 新增跨平台运行配置：`config/runtime/local-process.toml`、`container.toml`、`distributed.toml`
+- 新增本机 override 示例：`config/runtime/local-process.local.example.toml`
+- 新增跨平台开发包装脚本，覆盖 Windows PowerShell、Linux shell 和 macOS `.command`
+- 新增前端环境模板：`services/web/.env.local.example`
+- 新增启动器日志目录与查看能力：`.runtime/logs/` 和 `manage.py logs <component>`
+
+### Changed
+
+- 主架构文档已明确对象存储属于正式存储层，不再仅隐含在专项设计中
+- 部署文档已补充开发期 `LocalObjectStore` 和生产期 `MinIO / S3 / OSS` 的扩展路径
+- 项目文档体系已明确：中大型改动必须先确认方案和设计，再开始编码
+- 信息流 Phase 1 已从纯规划进入首批代码落地阶段
+- `manage.py` 已重构为跨平台、配置化的运行控制面，支持 `setup/start/stop/status/health`
+- 旧 `start.bat` 已从硬编码 Docker 启动脚本收敛为薄包装入口
+- `manage.py` 已进一步改为直接执行命令并修正运行状态判定，`status` 现在以健康检查补足 dev 进程派生场景
+- 当前开发机 `local-process` 已接入真实 PostgreSQL/Redis 本机进程启动命令
+- Web 本机启动已切换为更稳定的后台服务模式，并支持 standalone 产物启动
+- 前端知识库页面类型定义已修复，`npm run build` 可通过
+- `manage.py health` 已纳入 `auto_evolution` 聚合状态
+- API / Web 启动方式已调整为后台运行并自动落盘 stdout/stderr，减少黑色窗口依赖
+- 新增独立 `runtime_watchdog.py`，本机运行现在可由守护进程巡检 `postgres/redis/api/web/auto_evolution`
+- `manage.py` 已支持 `start/stop watchdog`、`start/stop infra`、`start/stop postgres`、`start/stop redis`
+- Windows 停止受控进程已改为优先使用 `taskkill /T /F`，减少后台残留
+- `local-process` 默认 API 命令已切为非 `--reload` 的后台托管模式，避免后台运行产生多余控制台与派生进程
+- PostgreSQL 本机 override 已改为优先直接启动 `postgres.exe`，减少通过 `pg_ctl` 间接拉起时的额外控制台包装
+- 本机启动策略已调整为“应用层托管、基础设施显式启动”：
+  - `start dev` 默认不再自动拉起 `postgres/redis`
+  - `watchdog` 默认不再自动重启 `postgres/redis`
+  - API 已恢复为由 `manage.py status` 准确显示 `pid/meta/log_path`
+- `manage.py` 已支持基于配置的 Windows Service 基础设施托管，当前本机 PostgreSQL / Redis 已切到 service 模式
+- `manage.py logs postgres|redis` 现在可读取配置中的真实服务日志路径
+- 新增服务化部署专项文档 `docs/SERVICE_DEPLOYMENT_ARCHITECTURE.md`
+- 新增 Windows / Linux / macOS 服务模板目录 `scripts/services/`
+- `manage.py status` 已显式展示基础设施运行模式与 service 信息
+- `manage.py` 已支持 `api/web/watchdog` 的可选 service 模式识别与控制
+- 新增 Windows 应用层 NSSM 模板脚本，用于后续将 API / Web / Watchdog 注册为服务
+- 已确认当前黑色窗口问题与 API 的 `process` 模式相关，而不是 PostgreSQL / Redis service
+- `manage.py status` / `health` 现已支持识别“配置为进程模式但机器上仍残留旧 service”的状态
+- 当前稳定 Windows 本机方案已收敛为：
+  - `postgres / redis / web / watchdog` 使用 service
+  - `api` 保持 `manage.py` 后台进程
+  - 失败的 `MyAttentionApi` service 不再作为当前基线
+- `LocalObjectStore` 现已保存 `.meta.json` 侧车元数据，`head()` 可返回 `content_type / content_encoding`
+- `raw_ingest` 对象 key 已改为 Windows 安全、稳定可重放的格式，不再把 URL 直接落为文件名
+- `storage` 与 `feeds` 包入口已改为惰性导出，降低测试与工具链对重依赖模块的耦合
+- 新增 Phase 1 最小自动化测试，覆盖对象存储元数据和原始对象 key 生成
+- 新增 `services/api/feeds/persistence.py`，提供导入来源解析与 `feed_items` 持久化能力
+- `/api/feeds/import` 已从“原始层 + 缓存”升级为“原始层 + `feed_items` + 缓存”双写
+- 导入响应新增 `persisted` 计数，用于区分缓存注入和事实层落库
+- 已对齐 `FeedItem.metadata` 列映射，以及 `sources` 表相关 PostgreSQL enum 名称，修复真实库环境下的落库失败
+- 已通过真实烟测验证：导入新条目时会自动创建/复用 `sources`，并写入 `feed_items`
+- `/api/feeds` 已支持 `cache / db / hybrid` 读取模式，默认走 `hybrid`
+- `/api/feeds` 的 `source_id` 过滤已兼容抓取器 source key 与数据库 source 记录
+- 导入链路已改为逐条 nested transaction，避免单条失败把整个 session 打成 pending rollback
+- 新增 `feeds_read_backend` 配置项，用于控制默认信息流读取后端
+
+### Notes
+
+- 当前仍处于架构与实施设计收敛阶段，后续阶段性交付建议继续以 `Unreleased` 累积，待形成明确里程碑后再切分版本号
+- 本机进程模式当前已具备统一控制入口，但基础设施自动拉起仍依赖本机 override 配置补齐启动命令
+- 当前机器已经完成 PostgreSQL、Redis、API、Web 的本机进程拉起，`manage.py health --json` 返回整体 `healthy`
+- 当前仅剩一个可见 `cmd.exe` 为外部 Ollama 相关进程，不属于 MyAttention 启动链
+- 当前机型的 PostgreSQL / Redis 已以 Windows Service 方式运行，进一步降低黑色控制台窗口出现概率
+- Added feed collection health monitoring, including `GET /api/evolution/collection-health`, `GET /api/feeds/health`, and system status integration.
+- Added durable import status tracking on `raw_ingest`, including `persisted / duplicate / error` states and trace metadata back to `feed_items`.
+- Backfilled legacy `raw_saved` rows that could be matched to existing `feed_items`, reducing false degradation in collection health reporting.
+- Added collection-health-to-task-center wiring, so `auto_evolution` can create deduplicated `system_health` tasks when feed collection degrades.
+- Added tests for collection health issue generation and confirmed that healthy collection snapshots do not create unnecessary tasks.
+- Added source-level collection diagnostics (`pending_sources_1h`, `error_sources_24h`) to collection health snapshots and task payloads.
+- Fixed a local Windows frontend runtime regression where the residual `MyAttentionWeb` service kept serving `.next/standalone/server.js` instead of the current source frontend.
+- Updated `manage.py` to stop residual process-mode web services before launch, validate stale Windows PIDs via `tasklist`, and resolve npm scripts as `npm.cmd run <script>` in detached mode.
+- Reset local web startup back to process-mode source launch, restoring the expected current frontend on port `3000`.
+- Closed the MVP self-evolution loop for feed collection health: `system_health` tasks can now auto-trigger the pipeline, verify recovery through collection health, and persist remediation evidence in task history.
+- Added `/api/evolution/mvp-status` as a trial-run status surface for self-test, collection health, pipeline state, recent actions, and active blockers.
+- Updated collection health issue generation so feed collection degradations are auto-processible by the self-evolution task pipeline.

@@ -1,0 +1,17 @@
+[Unit]
+Description=MyAttention Runtime Watchdog
+After=network.target myattention-api.service
+Wants=myattention-api.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/myattention
+Environment=PYTHONUTF8=1
+ExecStart=/opt/myattention/.venv/bin/python /opt/myattention/runtime_watchdog.py --mode distributed
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/myattention/watchdog.log
+StandardError=append:/var/log/myattention/watchdog.log
+
+[Install]
+WantedBy=multi-user.target

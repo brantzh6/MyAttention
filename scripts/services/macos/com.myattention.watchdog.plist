@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.myattention.watchdog</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/myattention/.venv/bin/python</string>
+    <string>/opt/myattention/runtime_watchdog.py</string>
+    <string>--mode</string>
+    <string>distributed</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/opt/myattention</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/opt/myattention/.runtime/logs/watchdog.log</string>
+  <key>StandardErrorPath</key>
+  <string>/opt/myattention/.runtime/logs/watchdog.log</string>
+</dict>
+</plist>

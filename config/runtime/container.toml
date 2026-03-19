@@ -1,0 +1,68 @@
+[runtime]
+mode = "container"
+api_host = "0.0.0.0"
+api_port = 8000
+api_health_path = "/health"
+web_host = "127.0.0.1"
+web_port = 3000
+web_health_url = "http://127.0.0.1:3000"
+start_timeout = 30
+start_infra_with_dev = true
+
+[watchdog]
+auto_start = false
+interval_seconds = 20
+restart_cooldown_seconds = 45
+auto_evolution_grace_cycles = 2
+manage_infra = true
+manage_api = true
+manage_web = true
+manage_auto_evolution = true
+script = "runtime_watchdog.py"
+python = ""
+command = ""
+
+[tools]
+bootstrap_python = "python"
+package_manager = "npm"
+npm = "npm"
+pnpm = "pnpm"
+yarn = "yarn"
+
+[setup]
+venv_path = ".venv"
+create_venv = false
+api_requirements = "requirements.txt"
+api_env_source = "services/api/.env.example"
+api_env_target = "services/api/.env"
+web_env_source = "services/web/.env.local.example"
+web_env_target = "services/web/.env.local"
+migrate_command = ""
+
+[api]
+workdir = "services/api"
+python = ""
+entry = ""
+command = ""
+install_command = ""
+
+[web]
+workdir = "services/web"
+command = ""
+install_command = ""
+
+[postgres]
+host = "localhost"
+port = 5432
+start_command = "docker compose up -d postgres"
+
+[redis]
+host = "localhost"
+port = 6379
+start_command = "docker compose up -d redis"
+
+[qdrant]
+mode = "service"
+host = "localhost"
+port = 6333
+start_command = "docker compose up -d qdrant"

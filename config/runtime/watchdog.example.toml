@@ -1,0 +1,5 @@
+[watchdog]
+auto_start = true
+interval_seconds = 20
+restart_cooldown_seconds = 45
+auto_evolution_grace_cycles = 2

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.myattention.api</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/myattention/.venv/bin/python</string>
+    <string>-m</string>
+    <string>uvicorn</string>
+    <string>main:app</string>
+    <string>--host</string>
+    <string>0.0.0.0</string>
+    <string>--port</string>
+    <string>8000</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/opt/myattention/services/api</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/opt/myattention/.runtime/logs/api.log</string>
+  <key>StandardErrorPath</key>
+  <string>/opt/myattention/.runtime/logs/api.log</string>
+</dict>
+</plist>

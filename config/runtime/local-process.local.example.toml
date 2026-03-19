@@ -1,0 +1,48 @@
+# Copy this file to local-process.local.toml and adjust for each machine.
+
+[tools]
+# bootstrap_python = "C:/Python311/python.exe"
+# package_manager = "npm"
+# npm = "C:/Program Files/nodejs/npm.cmd"
+
+[setup]
+# migrate_command = "{python} -m alembic upgrade head"
+
+[postgres]
+# use_service = true
+# service_name = "MyAttentionPostgres"
+# log_path = "D:/pgsql/logfile"
+# start_command = "pg_ctl -D D:/pgsql/data -l D:/pgsql/logfile start"
+# stop_command = "pg_ctl -D D:/pgsql/data -m fast stop"
+
+[redis]
+# use_service = true
+# service_name = "MyAttentionRedis"
+# log_path = "D:/redis/redis.log"
+# start_command = "redis-server.exe --port 6379"
+# stop_command = "taskkill /IM redis-server.exe /F"
+
+[qdrant]
+# mode = "embedded"
+
+[api]
+# use_service = true
+# service_name = "MyAttentionApi"
+# log_path = "D:/code/MyAttention/.runtime/logs/api-service.log"
+# command = "{python} run_service.py --host {api_host} --port {api_port}"
+
+[web]
+# use_service = true
+# service_name = "MyAttentionWeb"
+# log_path = "D:/code/MyAttention/.runtime/logs/web-service.log"
+# command = "node .next/standalone/server.js"
+
+[watchdog]
+# auto_start = true
+# interval_seconds = 20
+# manage_infra = false
+# manage_api = true
+# manage_web = true
+# use_service = true
+# service_name = "MyAttentionWatchdog"
+# log_path = "D:/code/MyAttention/.runtime/logs/watchdog-service.log"

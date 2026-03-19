@@ -1,0 +1,31 @@
+[setup]
+migrate_command = "{python} -m alembic upgrade head"
+
+[postgres]
+use_service = true
+service_name = "MyAttentionPostgres"
+log_path = "D:/tools/postgres-data/server.log"
+start_command = "D:/tools/postgresql17/pgsql/bin/pg_ctl.exe -D D:/tools/postgres-data -l D:/tools/postgres-data/server.log start"
+stop_command = "D:/tools/postgresql17/pgsql/bin/pg_ctl.exe -D D:/tools/postgres-data -m fast stop"
+
+[redis]
+use_service = true
+service_name = "MyAttentionRedis"
+log_path = "D:/tools/redis/redis.log"
+start_command = "D:/tools/redis/Redis-x64-5.0.14.1/redis-server.exe D:/tools/redis/redis.local.conf"
+stop_command = "taskkill /IM redis-server.exe /F"
+
+[api]
+command = "{python} run_service.py --host {api_host} --port {api_port}"
+
+[web]
+use_service = false
+service_name = "MyAttentionWeb"
+log_path = "D:/code/MyAttention/.runtime/logs/web.log"
+command = ""
+
+[watchdog]
+auto_start = true
+use_service = true
+service_name = "MyAttentionWatchdog"
+log_path = "D:/code/MyAttention/.runtime/logs/MyAttentionWatchdog.out.log"

@@ -1,0 +1,21 @@
+<service>
+  <id>MyAttentionApi</id>
+  <name>MyAttentionApi</name>
+  <description>MyAttention API service</description>
+  <executable>D:\code\MyAttention\.venv\Scripts\python.exe</executable>
+  <arguments>run_service.py --host 0.0.0.0 --port 8000</arguments>
+  <workingdirectory>D:\code\MyAttention\services\api</workingdirectory>
+  <stoptimeout>15sec</stoptimeout>
+  <startmode>Manual</startmode>
+  <logpath>D:\code\MyAttention\.runtime\logs</logpath>
+  <log mode="roll-by-size-time">
+    <sizeThreshold>10240</sizeThreshold>
+    <pattern>yyyyMMdd</pattern>
+    <autoRollAtTime>00:00:00</autoRollAtTime>
+    <zipOlderThanNumDays>7</zipOlderThanNumDays>
+  </log>
+  <env name="PYTHONUTF8" value="1" />
+  <env name="API_PORT" value="8000" />
+  <env name="DEPLOYMENT_MODE" value="local-process" />
+  <env name="INFRASTRUCTURE_MODE" value="local-process" />
+</service>

@@ -3,7 +3,7 @@ import asyncio
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from urllib.parse import urlparse
 
@@ -172,6 +172,8 @@ class SourcePlanResponse(BaseModel):
     review_cadence_days: int
     current_version: int = 1
     latest_version: int = 1
+    last_reviewed_at: Optional[datetime] = None
+    next_review_due_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     items: List[SourcePlanItemResponse] = []
@@ -382,6 +384,7 @@ def _serialize_source_plan_item(item: SourcePlanItemModel) -> SourcePlanItemResp
 
 def _serialize_source_plan(plan: SourcePlanModel) -> SourcePlanResponse:
     items = sorted(list(plan.items or []), key=lambda item: (item.authority_score or 0.0), reverse=True)
+    extra = dict(plan.extra or {})
     return SourcePlanResponse(
         id=str(plan.id),
         topic=plan.topic,
@@ -393,6 +396,8 @@ def _serialize_source_plan(plan: SourcePlanModel) -> SourcePlanResponse:
         review_cadence_days=plan.review_cadence_days,
         current_version=plan.current_version or 1,
         latest_version=plan.latest_version or 1,
+        last_reviewed_at=_parse_datetime_value(extra.get("last_reviewed_at")),
+        next_review_due_at=_parse_datetime_value(extra.get("next_review_due_at")),
         created_at=plan.created_at,
         updated_at=plan.updated_at,
         items=[_serialize_source_plan_item(item) for item in items],
@@ -473,6 +478,35 @@ def _snapshot_source_plan_from_payload(
         "objective": objective or "",
         "review_cadence_days": int(review_cadence_days or 14),
         "items": normalized_items,
+    }
+
+
+def _parse_datetime_value(value: Any) -> Optional[datetime]:
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return None
+
+
+def _build_review_schedule_metadata(
+    plan: SourcePlanModel,
+    *,
+    reviewed_at: datetime,
+    trigger_type: str,
+    result_count: int,
+) -> Dict[str, Any]:
+    next_due = reviewed_at + timedelta(days=int(plan.review_cadence_days or 14))
+    return {
+        "last_reviewed_at": reviewed_at.isoformat(),
+        "next_review_due_at": next_due.isoformat(),
+        "last_review_trigger": trigger_type,
+        "last_refresh_result_count": result_count,
     }
 
 
@@ -1284,9 +1318,19 @@ async def create_source_plan(
         review_cadence_days=plan.review_cadence_days,
         items=created_items_payload,
     )
+    created_at = datetime.now(timezone.utc)
     plan.current_version = 1
     plan.latest_version = 1
     plan.review_status = "accepted"
+    plan.extra = {
+        **dict(plan.extra or {}),
+        **_build_review_schedule_metadata(
+            plan,
+            reviewed_at=created_at,
+            trigger_type="initial_create",
+            result_count=len(created_items_payload),
+        ),
+    }
     db.add(
         _build_source_plan_version_record(
             plan,
@@ -1316,6 +1360,7 @@ async def create_source_plan(
 async def refresh_source_plan(
     plan_id: str,
     limit: int = Query(12, ge=3, le=30),
+    trigger_type: str = Query("manual_refresh"),
     db: AsyncSession = Depends(get_db),
 ):
     """Re-run discovery for an existing source plan and update candidate states."""
@@ -1331,6 +1376,10 @@ async def refresh_source_plan(
     focus = SourceDiscoveryFocus(plan.focus)
     previous_snapshot = _snapshot_source_plan(plan)
     previous_current_version = int(plan.current_version or 1)
+    normalized_trigger = trigger_type.strip().lower() if trigger_type else "manual_refresh"
+    if normalized_trigger not in {"manual_refresh", "scheduled_refresh"}:
+        normalized_trigger = "manual_refresh"
+    reviewed_at = datetime.now(timezone.utc)
 
     await _refresh_source_plan_items(plan, focus, plan.review_cadence_days, limit)
     candidate_snapshot = _snapshot_source_plan(plan)
@@ -1349,6 +1398,12 @@ async def refresh_source_plan(
 
     plan.extra = {
         **dict(plan.extra or {}),
+        **_build_review_schedule_metadata(
+            plan,
+            reviewed_at=reviewed_at,
+            trigger_type=normalized_trigger,
+            result_count=len(candidate_snapshot.get("items", [])),
+        ),
         "latest_diff": diff,
         "latest_evaluation": evaluation,
     }
@@ -1358,9 +1413,13 @@ async def refresh_source_plan(
             plan,
             version_number=next_version,
             parent_version=previous_current_version,
-            trigger_type="manual_refresh",
+            trigger_type=normalized_trigger,
             decision_status=evaluation["decision_status"],
-            change_reason="Manual source-plan refresh from topic-driven discovery.",
+            change_reason=(
+                "Scheduled source-plan refresh from topic-driven discovery."
+                if normalized_trigger == "scheduled_refresh"
+                else "Manual source-plan refresh from topic-driven discovery."
+            ),
             change_summary=diff,
             plan_snapshot=candidate_snapshot,
             evaluation=evaluation,

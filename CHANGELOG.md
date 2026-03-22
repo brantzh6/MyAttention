@@ -148,4 +148,9 @@
   - refresh diff now tracks average authority score, evidence delta, trusted-source delta, and authority-tier regressions
   - refresh evaluation now emits structured `gate_signals`
   - the sources UI now shows recent version deltas and makes current-vs-latest version drift visible
+- Connected source-plan review cadence to auto-evolution:
+  - recurring scheduled refresh now runs from the auto-evolution loop
+  - source plans now expose `last_reviewed_at / next_review_due_at / last_review_trigger`
+  - source-plan review snapshots now persist into the `source_intelligence` runtime context
+  - evolution status now reports `source_plan_review` and degrades when this recurring review loop fails
 - Added `docs/VERSION_MANAGEMENT.md` to separate Git/file versioning from runtime intelligence-object versioning.

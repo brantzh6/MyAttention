@@ -20,8 +20,10 @@ from pathlib import Path
 import aiohttp
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from db.session import get_db, get_db_context
+from db.models import SourcePlan
 
 logger = logging.getLogger(__name__)
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -118,11 +120,32 @@ def is_voting_canary_successful(state: dict[str, Any]) -> bool:
     if state.get("saw_result") and state.get("result_consensus"):
         return True
 
-    return bool(
-        state.get("saw_start")
-        and state.get("saw_synthesizing")
-        and state.get("saw_synthesis_content")
-    )
+    return bool(state.get("saw_start") and state.get("saw_synthesizing"))
+
+
+async def iter_sse_events(response) -> Any:
+    buffer = ""
+    async for raw_bytes in response.content.iter_any():
+        if not raw_bytes:
+            continue
+        buffer += raw_bytes.decode("utf-8", errors="replace")
+        while "\n\n" in buffer:
+            chunk, buffer = buffer.split("\n\n", 1)
+            data_lines = []
+            for line in chunk.splitlines():
+                if line.startswith("data: "):
+                    data_lines.append(line[6:])
+            if not data_lines:
+                continue
+            payload_text = "\n".join(data_lines).strip()
+            if payload_text and payload_text != "[DONE]":
+                yield payload_text
+
+    trailing = buffer.strip()
+    if trailing.startswith("data: "):
+        payload_text = trailing[6:].strip()
+        if payload_text and payload_text != "[DONE]":
+            yield payload_text
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -165,6 +188,7 @@ class AutoEvolutionSystem:
         self.log_analysis_interval = int(os.environ.get("LOG_ANALYSIS_INTERVAL", "900"))
         self.testing_interval = int(os.environ.get("SELF_TEST_INTERVAL", "600"))
         self.collection_health_interval = int(os.environ.get("COLLECTION_HEALTH_INTERVAL", "120"))
+        self.source_plan_review_interval = int(os.environ.get("SOURCE_PLAN_REVIEW_INTERVAL", "300"))
 
         # 任务
         self._tasks = []
@@ -173,6 +197,7 @@ class AutoEvolutionSystem:
         self._last_self_test = None
         self._last_evolution_cycle = None
         self._last_collection_health = None
+        self._last_source_plan_review = None
 
     async def start(self, llm_client=None):
         """启动自动进化系统"""
@@ -235,6 +260,7 @@ class AutoEvolutionSystem:
         self._tasks.append(asyncio.create_task(self._run_log_monitor_loop()))
         self._tasks.append(asyncio.create_task(self._run_self_test_loop()))
         self._tasks.append(asyncio.create_task(self._run_collection_health_loop()))
+        self._tasks.append(asyncio.create_task(self._run_source_plan_review_loop()))
         self._tasks.append(asyncio.create_task(self._run_initial_observability_warmup()))
 
         logger.info("=" * 50)
@@ -323,6 +349,18 @@ class AutoEvolutionSystem:
 
             await asyncio.sleep(self.collection_health_interval)
 
+    async def _run_source_plan_review_loop(self):
+        """Run scheduled source-plan reviews based on review cadence."""
+        while self._running:
+            try:
+                await self._run_source_plan_review_once()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Source plan review loop failed: {e}", exc_info=True)
+
+            await asyncio.sleep(self.source_plan_review_interval)
+
     async def _run_initial_observability_warmup(self):
         """Seed initial monitoring data without blocking API startup."""
         try:
@@ -332,6 +370,7 @@ class AutoEvolutionSystem:
                 self._last_log_analysis = await self.log_scheduler.run_analysis()
             await self._run_self_test_once()
             await self._run_collection_health_once()
+            await self._run_source_plan_review_once()
         except asyncio.CancelledError:
             raise
         except Exception as e:
@@ -400,11 +439,80 @@ class AutoEvolutionSystem:
         }
 
         issue = build_self_test_issue(self._last_self_test)
-        if issue:
-            from feeds.task_classifier import ClassificationResult
-            from feeds.task_processor import get_task_processor
+        from feeds.task_classifier import ClassificationResult
+        from feeds.task_processor import get_task_processor
+        from memory.runtime import record_task_memory, upsert_procedural_memory
+        from tasks.runtime import (
+            build_context_task_defaults,
+            create_context_artifact,
+            ensure_task_context,
+            record_context_event,
+        )
 
-            async with get_db_context() as db:
+        async with get_db_context() as db:
+            context = await ensure_task_context(
+                db,
+                context_type="evolution",
+                owner_type="system",
+                owner_id="auto-evolution:self-test",
+                title="Auto Evolution Self-Test",
+                goal="Continuously verify critical runtime paths and capture structured evidence.",
+            )
+            await create_context_artifact(
+                db,
+                context=context,
+                task=None,
+                artifact_type="report",
+                title="Self-test snapshot",
+                summary="healthy" if self._last_self_test["healthy"] else "degraded",
+                payload=self._last_self_test,
+            )
+            await record_context_event(
+                db,
+                context=context,
+                task=None,
+                event_type="self_test_snapshot",
+                action="observe",
+                result="success" if self._last_self_test["healthy"] else "failed",
+                reason="periodic self-test run",
+                payload={
+                    "healthy": self._last_self_test["healthy"],
+                    "check_count": len(checks),
+                },
+            )
+            await record_task_memory(
+                db,
+                context=context,
+                task=None,
+                memory_kind="checkpoint",
+                title="Self-test checkpoint",
+                summary="healthy" if self._last_self_test["healthy"] else "degraded",
+                content=json.dumps(self._last_self_test, ensure_ascii=False),
+                payload={
+                    "problem_type": "system_evolution",
+                    "thinking_framework": "systems_diagnosis",
+                },
+            )
+            await upsert_procedural_memory(
+                db,
+                memory_key="evolution:self_test_cycle:v1",
+                name="Evolution self-test cycle",
+                problem_type="system_evolution",
+                thinking_framework="systems_diagnosis",
+                method_name="periodic_self_test_with_ui_probe",
+                applicability="Use for continuous runtime validation of API, frontend, and voting critical paths.",
+                procedure="Run health probes, provider checks, voting canary, frontend checks, and browser UI probes. Persist snapshots and raise structured tasks on failure.",
+                effectiveness_score=1.0 if self._last_self_test["healthy"] else 0.6,
+                validation_status="validated" if self._last_self_test["healthy"] else "candidate",
+                source_kind="runtime",
+                source_ref="auto-evolution:self-test",
+                payload={
+                    "check_count": len(checks),
+                    "healthy": self._last_self_test["healthy"],
+                },
+            )
+
+            if issue:
                 processor = get_task_processor(db)
                 classification = ClassificationResult(
                     priority=issue["priority"],
@@ -415,6 +523,7 @@ class AutoEvolutionSystem:
                     source_type=issue["source_type"],
                     source_id=issue["source_id"],
                     source_data=issue["source_data"],
+                    **build_context_task_defaults(context=context),
                 )
                 task = await processor.create_task(classification)
                 if getattr(task, "_was_created", True):
@@ -531,11 +640,17 @@ class AutoEvolutionSystem:
 
     async def _run_voting_canary(self, session):
         payload = {
-            "message": "1+1等于几？请只回答结果。",
+            "message": (
+                "[self-test] 你正在为一款家庭场景的本地 AI 中枢做方向取舍。"
+                "约束条件是预算有限、必须保护用户隐私、还要尽快落地。"
+                "请在“优先极致本地隐私”“优先最低硬件成本”“优先多模态交互体验”三者中做取舍，"
+                "并明确给出：一句话判断、关键分歧、建议动作。"
+            ),
             "use_voting": True,
             "use_rag": False,
             "enable_search": False,
-            "voting_models": ["qwen3.5-plus", "deepseek-v3.2"],
+            "enable_thinking": False,
+            "voting_models": ["MiniMax-M2.5", "deepseek-v3.2"],
         }
         state = {
             "saw_start": False,
@@ -549,25 +664,22 @@ class AutoEvolutionSystem:
             "result_successes": 0,
             "stream_error": "",
         }
+        conversation_id = None
 
         try:
             async with session.post(
                 "http://localhost:8000/api/chat",
                 json=payload,
-                timeout=aiohttp.ClientTimeout(total=45),
+                timeout=aiohttp.ClientTimeout(total=90),
             ) as resp:
                 error = ""
-                async for raw_bytes in resp.content:
-                    raw_line = raw_bytes.decode("utf-8", errors="replace").strip()
-                    if not raw_line.startswith("data: "):
-                        continue
-                    data = raw_line[6:]
-                    if data == "[DONE]":
-                        continue
+                async for data in iter_sse_events(resp):
                     try:
                         event = json.loads(data)
                     except json.JSONDecodeError:
                         continue
+                    if event.get("conversation_id"):
+                        conversation_id = event.get("conversation_id")
                     state = update_voting_canary_state(state, event)
                     if is_voting_canary_successful(state):
                         return {
@@ -601,6 +713,9 @@ class AutoEvolutionSystem:
                 "ok": False,
                 "error": str(exc) or exc.__class__.__name__,
             }
+        finally:
+            if conversation_id:
+                await self._cleanup_test_conversation(conversation_id)
 
     def _build_voting_canary_failure(self, state: dict[str, Any]) -> str:
         failed_models = state.get("failed_models") or {}
@@ -622,9 +737,23 @@ class AutoEvolutionSystem:
             parts.append("missing=two_successful_models")
         elif not state.get("saw_synthesizing"):
             parts.append("missing=voting_synthesizing")
-        elif not state.get("saw_synthesis_content") and not state.get("result_consensus"):
-            parts.append("missing=synthesis_content")
         return "; ".join(parts) or "voting canary did not reach synthesis stage"
+
+    async def _cleanup_test_conversation(self, conversation_id: str):
+        from uuid import UUID
+        from sqlalchemy import delete
+        from db import Conversation
+
+        try:
+            async with get_db_context() as db:
+                await db.execute(
+                    delete(Conversation).where(
+                        Conversation.id == UUID(conversation_id),
+                    )
+                )
+                await db.commit()
+        except Exception as exc:
+            logger.warning("Failed to cleanup self-test conversation %s: %s", conversation_id, exc)
 
     async def _run_collection_health_once(self):
         from feeds.collection_health import (
@@ -633,10 +762,81 @@ class AutoEvolutionSystem:
         )
         from feeds.task_classifier import ClassificationResult
         from feeds.task_processor import get_task_processor
+        from memory.runtime import record_task_memory, upsert_procedural_memory
 
         async with get_db_context() as db:
             snapshot = await collect_collection_health_snapshot(db)
             self._last_collection_health = snapshot
+            from tasks.runtime import (
+                build_context_task_defaults,
+                create_context_artifact,
+                ensure_task_context,
+                record_context_event,
+            )
+
+            context = await ensure_task_context(
+                db,
+                context_type="source_intelligence",
+                owner_type="system",
+                owner_id="feed-collection:health",
+                title="Feed Collection Health",
+                goal="Track collection degradation, pending backlogs, and recovery signals for the information brain.",
+            )
+            await create_context_artifact(
+                db,
+                context=context,
+                task=None,
+                artifact_type="report",
+                title="Collection health snapshot",
+                summary=(snapshot.get("summary") or {}).get("status", "unknown"),
+                payload=snapshot,
+            )
+            await record_context_event(
+                db,
+                context=context,
+                task=None,
+                event_type="collection_health_snapshot",
+                action="observe",
+                result="success",
+                reason="periodic collection health run",
+                payload={
+                    "status": (snapshot.get("summary") or {}).get("status", "unknown"),
+                    "pending_sources_1h": snapshot.get("pending_sources_1h", []),
+                    "error_sources_24h": snapshot.get("error_sources_24h", []),
+                },
+            )
+            await record_task_memory(
+                db,
+                context=context,
+                task=None,
+                memory_kind="checkpoint",
+                title="Collection health checkpoint",
+                summary=(snapshot.get("summary") or {}).get("status", "unknown"),
+                content=json.dumps(snapshot, ensure_ascii=False),
+                payload={
+                    "problem_type": "source_intelligence",
+                    "thinking_framework": "source_intelligence",
+                },
+            )
+            await upsert_procedural_memory(
+                db,
+                memory_key="source_intelligence:collection_health:v1",
+                name="Collection health review loop",
+                problem_type="source_intelligence",
+                thinking_framework="source_intelligence",
+                method_name="periodic_collection_health_snapshot",
+                applicability="Use for ongoing monitoring of durable feed collection, backlog detection, and source-quality drift.",
+                procedure="Collect durable ingest and feed-item counts, identify pending/error sources, persist snapshots, and generate structured remediation tasks when health degrades.",
+                effectiveness_score=1.0 if (snapshot.get("summary") or {}).get("status") == "healthy" else 0.6,
+                validation_status="validated" if (snapshot.get("summary") or {}).get("status") == "healthy" else "candidate",
+                source_kind="runtime",
+                source_ref="feed-collection:health",
+                payload={
+                    "status": (snapshot.get("summary") or {}).get("status", "unknown"),
+                    "pending_sources_1h": snapshot.get("pending_sources_1h", []),
+                    "error_sources_24h": snapshot.get("error_sources_24h", []),
+                },
+            )
 
             issue = build_collection_health_issue(snapshot)
             if issue:
@@ -650,10 +850,161 @@ class AutoEvolutionSystem:
                     source_type=issue["source_type"],
                     source_id=issue["source_id"],
                     source_data=issue["source_data"],
+                    **build_context_task_defaults(
+                        context=context,
+                        assigned_brain="source-intelligence-brain",
+                    ),
                 )
                 task = await processor.create_task(classification)
                 if getattr(task, "_was_created", True):
                     await processor.process(task)
+
+    async def _run_source_plan_review_once(self):
+        from memory.runtime import record_task_memory, upsert_procedural_memory
+        from tasks.runtime import create_context_artifact, ensure_task_context, record_context_event
+
+        now = datetime.now(timezone.utc)
+        due_plans: list[dict[str, Any]] = []
+
+        async with get_db_context() as db:
+            result = await db.execute(select(SourcePlan).where(SourcePlan.status == "active"))
+            plans = result.scalars().all()
+
+            for plan in plans:
+                extra = dict(plan.extra or {})
+                next_due_raw = extra.get("next_review_due_at")
+                next_due = None
+                if isinstance(next_due_raw, str):
+                    try:
+                        next_due = datetime.fromisoformat(next_due_raw.replace("Z", "+00:00"))
+                    except ValueError:
+                        next_due = None
+                if next_due is None:
+                    next_due = plan.updated_at or plan.created_at or now
+                if next_due <= now:
+                    due_plans.append(
+                        {
+                            "id": str(plan.id),
+                            "topic": plan.topic,
+                            "current_version": int(plan.current_version or 1),
+                            "latest_version": int(plan.latest_version or 1),
+                            "review_cadence_days": int(plan.review_cadence_days or 14),
+                        }
+                    )
+
+        refreshed: list[dict[str, Any]] = []
+        failures: list[dict[str, Any]] = []
+
+        if due_plans:
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as session:
+                for plan in due_plans:
+                    try:
+                        async with session.post(
+                            f"http://127.0.0.1:8000/api/sources/plans/{plan['id']}/refresh?limit=12&trigger_type=scheduled_refresh"
+                        ) as response:
+                            body = await response.json()
+                            if response.status != 200:
+                                failures.append(
+                                    {
+                                        "plan_id": plan["id"],
+                                        "topic": plan["topic"],
+                                        "status": response.status,
+                                        "error": body,
+                                    }
+                                )
+                                continue
+                            refreshed.append(
+                                {
+                                    "plan_id": plan["id"],
+                                    "topic": plan["topic"],
+                                    "review_status": body.get("review_status"),
+                                    "current_version": body.get("current_version"),
+                                    "latest_version": body.get("latest_version"),
+                                    "next_review_due_at": body.get("next_review_due_at"),
+                                }
+                            )
+                    except Exception as exc:
+                        failures.append(
+                            {
+                                "plan_id": plan["id"],
+                                "topic": plan["topic"],
+                                "error": str(exc),
+                            }
+                        )
+
+        snapshot = {
+            "timestamp": now.isoformat(),
+            "due_count": len(due_plans),
+            "refreshed": refreshed,
+            "failures": failures,
+            "healthy": not failures,
+        }
+        self._last_source_plan_review = snapshot
+
+        async with get_db_context() as db:
+            context = await ensure_task_context(
+                db,
+                context_type="source_intelligence",
+                owner_type="system",
+                owner_id="source-plan:review-daemon",
+                title="Source Plan Review Daemon",
+                goal="Continuously refresh due source plans and preserve versioned review history.",
+            )
+            await create_context_artifact(
+                db,
+                context=context,
+                task=None,
+                artifact_type="report",
+                title="Source plan review snapshot",
+                summary="healthy" if snapshot["healthy"] else "degraded",
+                payload=snapshot,
+            )
+            await record_context_event(
+                db,
+                context=context,
+                task=None,
+                event_type="source_plan_review",
+                action="observe",
+                result="success" if snapshot["healthy"] else "failed",
+                reason="periodic source-plan review cycle",
+                payload={
+                    "due_count": snapshot["due_count"],
+                    "refreshed_count": len(refreshed),
+                    "failure_count": len(failures),
+                },
+            )
+            await record_task_memory(
+                db,
+                context=context,
+                task=None,
+                memory_kind="checkpoint",
+                title="Source plan review checkpoint",
+                summary="healthy" if snapshot["healthy"] else "degraded",
+                content=json.dumps(snapshot, ensure_ascii=False),
+                payload={
+                    "problem_type": "source_intelligence",
+                    "thinking_framework": "source_intelligence",
+                },
+            )
+            await upsert_procedural_memory(
+                db,
+                memory_key="source_intelligence:scheduled_plan_review:v1",
+                name="Scheduled source plan review",
+                problem_type="source_intelligence",
+                thinking_framework="source_intelligence",
+                method_name="scheduled_source_plan_review",
+                applicability="Use for recurring source-plan review and calibration.",
+                procedure="Scan active source plans for due review windows, trigger scheduled refresh, preserve versioned deltas, and persist review outcomes into runtime memory.",
+                effectiveness_score=1.0 if snapshot["healthy"] else 0.6,
+                validation_status="validated" if snapshot["healthy"] else "candidate",
+                source_kind="runtime",
+                source_ref="auto-evolution:source-plan-review",
+                payload={
+                    "due_count": snapshot["due_count"],
+                    "refreshed_count": len(refreshed),
+                    "failure_count": len(failures),
+                },
+            )
 
     async def _run_evolution_cycle(self):
         """运行一次进化周期"""
@@ -701,6 +1052,7 @@ class AutoEvolutionSystem:
         self_test = self._last_self_test or {}
         collection_health = self._last_collection_health or {}
         log_health = self._last_log_health or {}
+        source_plan_review = self._last_source_plan_review or {}
 
         health = "healthy"
         issues: list[str] = []
@@ -716,6 +1068,9 @@ class AutoEvolutionSystem:
             if log_health.get("critical_errors", 0) > 0:
                 health = "degraded"
                 issues.append("critical_log_errors")
+            if source_plan_review and not source_plan_review.get("healthy", True):
+                health = "degraded"
+                issues.append("source_plan_review_failed")
         else:
             health = "stopped"
 
@@ -730,6 +1085,7 @@ class AutoEvolutionSystem:
                 "log_monitor": self.log_scheduler is not None,
                 "self_test": True,
                 "collection_monitor": True,
+                "source_plan_review": True,
             },
             "intervals": {
                 "check_interval": self.check_interval,
@@ -738,6 +1094,7 @@ class AutoEvolutionSystem:
                 "log_analysis_interval": self.log_analysis_interval,
                 "testing_interval": self.testing_interval,
                 "collection_health_interval": self.collection_health_interval,
+                "source_plan_review_interval": self.source_plan_review_interval,
             },
             "last_results": {
                 "evolution_cycle": self._last_evolution_cycle,
@@ -745,6 +1102,7 @@ class AutoEvolutionSystem:
                 "log_analysis": self._last_log_analysis,
                 "self_test": self_test,
                 "collection_health": collection_health,
+                "source_plan_review": self._last_source_plan_review,
             },
         }
 

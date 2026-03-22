@@ -213,6 +213,11 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - refresh evaluation now emits `gate_signals`
   - source-plan versions now capture a richer change summary instead of only score-drop/stale counts
   - the sources UI now surfaces recent version deltas and highlights when a newer candidate version is pending review
+- Source-plan review cadence is now connected to the automatic evolution loop:
+  - `review_cadence_days` now drives recurring scheduled refresh through auto-evolution
+  - `last_reviewed_at / next_review_due_at / last_review_trigger` are now stored and returned on source plans
+  - auto-evolution now persists source-plan review snapshots into `source_intelligence` task context runtime data
+  - evolution status now includes `source_plan_review` results and degrades if recurring source-plan review fails
 - Added a project-level version management specification:
   - `docs/VERSION_MANAGEMENT.md`
   - clarifies Git/file versioning vs. runtime intelligence object versioning

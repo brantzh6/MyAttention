@@ -100,6 +100,8 @@ interface SourcePlan {
   review_cadence_days: number
   current_version: number
   latest_version: number
+  last_reviewed_at: string | null
+  next_review_due_at: string | null
   created_at: string | null
   updated_at: string | null
   items: SourcePlanItem[]
@@ -562,6 +564,9 @@ export function SourcesManager() {
                     )}
                     <p className="mt-2 text-xs text-muted-foreground">
                       review cadence: {plan.review_cadence_days} days · items: {plan.items.length} · review status: {plan.review_status} · current v{plan.current_version} / latest v{plan.latest_version}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      last reviewed: {plan.last_reviewed_at ? new Date(plan.last_reviewed_at).toLocaleString() : 'never'} · next due: {plan.next_review_due_at ? new Date(plan.next_review_due_at).toLocaleString() : 'not scheduled'}
                     </p>
                     {plan.latest_version > plan.current_version && (
                       <p className="mt-1 text-xs text-amber-700">

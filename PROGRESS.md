@@ -274,3 +274,19 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - Current known gap:
   - policy-driven selection is now live, but candidate quality is still too community-heavy for method topics such as multi-agent research
   - the next iteration should expand candidate object types beyond pure domains and improve method-topic query planning before UI redesign
+- Source discovery is no longer limited to domain-only identity:
+  - GitHub/GitLab/Hugging Face results can now normalize into `repository` objects
+  - Reddit results can now normalize into `community` objects
+  - X/Twitter profile URLs can now normalize into `person` objects
+- Method-intelligence attention policy has been upgraded to `v2`:
+  - policy execution now carries strategy-specific query templates
+  - default policy seeding now supports in-place upgrades, not only first-time inserts
+  - discovery now reflects the upgraded `policy_version`
+- Verified on live discovery:
+  - `POST /api/sources/discover` for `multi agent research + method` now returns `policy_version=2`
+  - returned queries now come from policy templates instead of the old fixed method-query list
+  - returned candidates now include object-level identities such as `repository`
+  - portfolio summary for this sample now reached `accepted` with four distinct buckets instead of collapsing into a single low-diversity portfolio
+- Current known gap:
+  - the system now produces object-level candidates, but many community-domain results are still noisy
+  - the next implementation step should introduce a true discovery-adapter layer so generic web search becomes one channel rather than the only candidate generator

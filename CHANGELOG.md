@@ -176,3 +176,16 @@
   - source plans expose active policy metadata to the UI
   - source-plan items retain attention evidence such as bucket, gate status, and selection rationale
 - Updated the sources UI so each plan now shows the active attention policy and current policy gate decision instead of hiding that logic in backend state.
+- Promoted source discovery from pure domain identity toward object identity:
+  - GitHub/GitLab/Hugging Face URLs can now normalize into `repository` objects
+  - Reddit URLs can now normalize into `community` objects
+  - X/Twitter profile URLs can now normalize into `person` objects
+- Upgraded the method-intelligence attention policy to `v2`:
+  - execution policy now carries query templates
+  - default policy seeding now upgrades persisted policies instead of only creating missing rows
+  - live discovery now reflects upgraded policy versions in API output
+- `POST /api/sources/discover` for method topics now returns:
+  - `policy_version=2`
+  - policy-driven query plans
+  - object-level candidates such as `repository`
+  - improved portfolio summaries with clearer diversity signals

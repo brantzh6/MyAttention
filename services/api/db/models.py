@@ -683,6 +683,72 @@ class TaskAction(str, enum.Enum):
     EXECUTE = "execute"           # 执行
 
 
+class TaskType(str, enum.Enum):
+    """Task classes for the V1 workflow model."""
+    DAEMON = "daemon"
+    WORKFLOW = "workflow"
+    UNIT = "unit"
+    REFINEMENT = "refinement"
+
+
+class ContextStatus(str, enum.Enum):
+    """Lifecycle states for long-lived contexts."""
+    ACTIVE = "active"
+    PAUSED = "paused"
+    CLOSED = "closed"
+    ARCHIVED = "archived"
+
+
+class ContextType(str, enum.Enum):
+    """Top-level context categories."""
+    EVOLUTION = "evolution"
+    CHAT = "chat"
+    RESEARCH = "research"
+    SOURCE_INTELLIGENCE = "source_intelligence"
+    KNOWLEDGE = "knowledge"
+    SYSTEM = "system"
+
+
+class ArtifactType(str, enum.Enum):
+    """Structured task outputs."""
+    REPORT = "report"
+    SCREENSHOT = "screenshot"
+    STRUCTURED_DIAGNOSIS = "structured_diagnosis"
+    REPAIR_PLAN = "repair_plan"
+    RESEARCH_BRIEF = "research_brief"
+    EVIDENCE_LOG = "evidence_log"
+    KNOWLEDGE_EXTRACTION = "knowledge_extraction"
+    TIMELINE = "timeline"
+    COMPARISON = "comparison"
+    DECISION_SUMMARY = "decision_summary"
+
+
+class RelationType(str, enum.Enum):
+    """Relations between contexts, tasks, and artifacts."""
+    PARENT_OF = "parent_of"
+    CHILD_OF = "child_of"
+    DEPENDS_ON = "depends_on"
+    BLOCKED_BY = "blocked_by"
+    REFINES = "refines"
+    HANDOFF_TO = "handoff_to"
+    PRODUCED = "produced"
+    REVIEWS = "reviews"
+    RETRIES = "retries"
+    SUPERSEDES = "supersedes"
+
+
+class BrainRole(str, enum.Enum):
+    """Brain roles in the control plane."""
+    CHIEF = "chief"
+    DIALOG = "dialog"
+    SOURCE_INTELLIGENCE = "source_intelligence"
+    RESEARCH = "research"
+    KNOWLEDGE = "knowledge"
+    EVOLUTION = "evolution"
+    CODING = "coding"
+    SYSTEM = "system"
+
+
 class Task(Base):
     """任务表 - 存储系统检测到的问题和待处理任务"""
     __tablename__ = "tasks"
@@ -701,6 +767,17 @@ class Task(Base):
     # 优先级和分类
     priority = Column(Integer, default=2)  # 0=紧急, 1=重要, 2=普通, 3=建议
     category = Column(String(50))  # functional, performance, security, config
+    context_id = Column(UUID(as_uuid=True), ForeignKey("task_contexts.id", ondelete="SET NULL"))
+    task_type = Column(String(50), default=TaskType.WORKFLOW.value)
+    goal = Column(Text)
+    parent_task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"))
+    initiator_type = Column(String(50))
+    initiator_id = Column(String(255))
+    assigned_brain = Column(String(100))
+    assigned_agent = Column(String(100))
+    budget_policy = Column(JSON, default=dict)
+    timeout_policy = Column(JSON, default=dict)
+    retry_policy = Column(JSON, default=dict)
 
     # 状态
     status = Column(String(20), default="pending")
@@ -718,12 +795,17 @@ class Task(Base):
     completed_at = Column(DateTime(timezone=True))
     failed_at = Column(DateTime(timezone=True))
     expired_at = Column(DateTime(timezone=True))
+    checkpoint_ref = Column(String(255))
+    result_summary = Column(Text)
 
     # 创建者
     created_by = Column(String(100), default="system")
 
     # Relationships
+    context = relationship("TaskContext", back_populates="tasks")
+    parent_task = relationship("Task", remote_side=[id], backref="child_tasks")
     history = relationship("TaskHistory", back_populates="task", cascade="all, delete-orphan")
+    artifacts = relationship("TaskArtifact", back_populates="task", cascade="all, delete-orphan")
 
 
 class TaskHistory(Base):
@@ -731,14 +813,24 @@ class TaskHistory(Base):
     __tablename__ = "task_history"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
-    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="CASCADE"))
+    task_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        nullable=True,
+    )
 
     # 处理信息
     action = Column(String(50), nullable=False)  # auto_retry, manual_confirm, auto_fix, confirm, reject
     result = Column(String(50), nullable=False)  # success, failed, skipped, timeout
 
     # 详细信息
+    context_id = Column(UUID(as_uuid=True), ForeignKey("task_contexts.id", ondelete="SET NULL"))
+    event_type = Column(String(50))
+    from_status = Column(String(20))
+    to_status = Column(String(20))
+    reason = Column(Text)
     details = Column(JSON, default=dict)
+    payload = Column(JSON, default=dict)
 
     # 执行者
     performed_by = Column(String(100), default="system")
@@ -747,4 +839,275 @@ class TaskHistory(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
+    context = relationship("TaskContext", back_populates="events")
     task = relationship("Task", back_populates="history")
+
+
+class TaskContext(Base):
+    """Long-lived contexts that group related tasks."""
+    __tablename__ = "task_contexts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    context_type = Column(String(50), nullable=False, default=ContextType.SYSTEM.value)
+    title = Column(String(255), nullable=False)
+    goal = Column(Text)
+    owner_type = Column(String(50))
+    owner_id = Column(String(255))
+    status = Column(String(20), nullable=False, default=ContextStatus.ACTIVE.value)
+    priority = Column(Integer, default=2)
+    extra = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    closed_at = Column(DateTime(timezone=True))
+
+    tasks = relationship("Task", back_populates="context")
+    events = relationship("TaskHistory", back_populates="context")
+    artifacts = relationship("TaskArtifact", back_populates="context")
+
+
+class TaskArtifact(Base):
+    """Structured artifacts produced by tasks."""
+    __tablename__ = "task_artifacts"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    context_id = Column(UUID(as_uuid=True), ForeignKey("task_contexts.id", ondelete="CASCADE"))
+    task_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("tasks.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    artifact_type = Column(String(50), nullable=False)
+    version = Column(Integer, default=1)
+    parent_version = Column(Integer)
+    title = Column(String(255), nullable=False)
+    summary = Column(Text)
+    storage_ref = Column(Text)
+    content_ref = Column(Text)
+    created_by = Column(String(100), default="system")
+    extra = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    context = relationship("TaskContext", back_populates="artifacts")
+    task = relationship("Task", back_populates="artifacts")
+
+
+class TaskRelation(Base):
+    """Relations between contexts, tasks, and artifacts."""
+    __tablename__ = "task_relations"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    source_type = Column(String(50), nullable=False)
+    source_id = Column(String(255), nullable=False)
+    relation_type = Column(String(50), nullable=False)
+    target_type = Column(String(50), nullable=False)
+    target_id = Column(String(255), nullable=False)
+    extra = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class BrainProfile(Base):
+    """Brain control plane profile."""
+    __tablename__ = "brain_profiles"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    brain_id = Column(String(100), nullable=False, unique=True)
+    role = Column(String(50), nullable=False)
+    description = Column(Text)
+    capabilities = Column(ARRAY(Text), default=list)
+    default_models = Column(JSON, default=list)
+    fallback_models = Column(JSON, default=list)
+    tool_policy = Column(JSON, default=dict)
+    cost_policy = Column(JSON, default=dict)
+    latency_policy = Column(JSON, default=dict)
+    risk_policy = Column(JSON, default=dict)
+    status = Column(String(20), default="active")
+    version = Column(Integer, default=1)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    routes_as_primary = relationship(
+        "BrainRoute",
+        foreign_keys="BrainRoute.primary_brain_id",
+        back_populates="primary_brain",
+    )
+    routes_as_review = relationship(
+        "BrainRoute",
+        foreign_keys="BrainRoute.review_brain_id",
+        back_populates="review_brain",
+    )
+    routes_as_fallback = relationship(
+        "BrainRoute",
+        foreign_keys="BrainRoute.fallback_brain_id",
+        back_populates="fallback_brain",
+    )
+
+
+class BrainRoute(Base):
+    """Routing rules from problem types to brains."""
+    __tablename__ = "brain_routes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    route_id = Column(String(100), nullable=False, unique=True)
+    problem_type = Column(String(100), nullable=False)
+    thinking_framework = Column(String(100))
+    primary_brain_id = Column(UUID(as_uuid=True), ForeignKey("brain_profiles.id", ondelete="CASCADE"))
+    supporting_brains = Column(ARRAY(Text), default=list)
+    review_brain_id = Column(UUID(as_uuid=True), ForeignKey("brain_profiles.id", ondelete="SET NULL"))
+    fallback_brain_id = Column(UUID(as_uuid=True), ForeignKey("brain_profiles.id", ondelete="SET NULL"))
+    version = Column(Integer, default=1)
+    enabled = Column(Boolean, default=True)
+    extra = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    primary_brain = relationship("BrainProfile", foreign_keys=[primary_brain_id], back_populates="routes_as_primary")
+    review_brain = relationship("BrainProfile", foreign_keys=[review_brain_id], back_populates="routes_as_review")
+    fallback_brain = relationship("BrainProfile", foreign_keys=[fallback_brain_id], back_populates="routes_as_fallback")
+
+
+class BrainPolicy(Base):
+    """Execution and risk policy for a brain or route."""
+    __tablename__ = "brain_policies"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    policy_id = Column(String(100), nullable=False, unique=True)
+    brain_id = Column(String(100))
+    route_id = Column(String(100))
+    cost_policy = Column(JSON, default=dict)
+    latency_policy = Column(JSON, default=dict)
+    execution_policy = Column(JSON, default=dict)
+    network_policy = Column(JSON, default=dict)
+    timeout_policy = Column(JSON, default=dict)
+    degrade_policy = Column(JSON, default=dict)
+    enabled = Column(Boolean, default=True)
+    version = Column(Integer, default=1)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class BrainFallback(Base):
+    """Fallback rules when a primary brain is unavailable."""
+    __tablename__ = "brain_fallbacks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    fallback_id = Column(String(100), nullable=False, unique=True)
+    brain_id = Column(String(100), nullable=False)
+    failure_mode = Column(String(100), nullable=False)
+    fallback_brain = Column(String(100))
+    fallback_mode = Column(String(100), default="degrade")
+    fallback_policy = Column(JSON, default=dict)
+    enabled = Column(Boolean, default=True)
+    version = Column(Integer, default=1)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class SourcePlan(Base):
+    """Topic-driven source intelligence plan."""
+    __tablename__ = "source_plans"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    topic = Column(String(255), nullable=False)
+    focus = Column(String(50), nullable=False, default="authoritative")
+    objective = Column(Text)
+    owner_type = Column(String(50), default="system")
+    owner_id = Column(String(255))
+    planning_brain = Column(String(100), default="source-intelligence-brain")
+    status = Column(String(20), default="active")
+    review_status = Column(String(20), default="pending")
+    review_cadence_days = Column(Integer, default=14)
+    current_version = Column(Integer, default=1)
+    latest_version = Column(Integer, default=1)
+    extra = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    items = relationship("SourcePlanItem", back_populates="plan", cascade="all, delete-orphan")
+    versions = relationship("SourcePlanVersion", back_populates="plan", cascade="all, delete-orphan")
+
+
+class SourcePlanItem(Base):
+    """Concrete source objects and monitoring decisions inside a source plan."""
+    __tablename__ = "source_plan_items"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    plan_id = Column(UUID(as_uuid=True), ForeignKey("source_plans.id", ondelete="CASCADE"))
+    item_type = Column(String(50), default="domain")
+    object_key = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False)
+    url = Column(Text)
+    authority_tier = Column(String(10))
+    authority_score = Column(Float, default=0.0)
+    monitoring_mode = Column(String(50), default="review")
+    execution_strategy = Column(String(50), default="search_review")
+    review_cadence_days = Column(Integer, default=14)
+    rationale = Column(Text)
+    evidence = Column(JSON, default=dict)
+    status = Column(String(20), default="active")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    plan = relationship("SourcePlan", back_populates="items")
+
+
+class SourcePlanVersion(Base):
+    """Versioned review snapshots for source plans."""
+    __tablename__ = "source_plan_versions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    plan_id = Column(UUID(as_uuid=True), ForeignKey("source_plans.id", ondelete="CASCADE"))
+    version_number = Column(Integer, nullable=False)
+    parent_version = Column(Integer)
+    trigger_type = Column(String(50), default="manual_refresh")
+    decision_status = Column(String(20), default="accepted")
+    change_reason = Column(Text)
+    change_summary = Column(JSON, default=dict)
+    plan_snapshot = Column(JSON, default=dict)
+    evaluation = Column(JSON, default=dict)
+    created_by = Column(String(100), default="system")
+    accepted_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    plan = relationship("SourcePlan", back_populates="versions")
+
+
+class TaskMemory(Base):
+    """Scoped memory for task and context recovery."""
+    __tablename__ = "task_memories"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    context_id = Column(UUID(as_uuid=True), ForeignKey("task_contexts.id", ondelete="CASCADE"))
+    task_id = Column(UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL"))
+    memory_kind = Column(String(50), nullable=False, default="checkpoint")
+    title = Column(String(255), nullable=False)
+    summary = Column(Text)
+    content = Column(Text)
+    created_by = Column(String(100), default="system")
+    extra = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class ProceduralMemory(Base):
+    """Validated methods, playbooks, and operating procedures."""
+    __tablename__ = "procedural_memories"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    memory_key = Column(String(100), nullable=False, unique=True)
+    name = Column(String(255), nullable=False)
+    problem_type = Column(String(100))
+    thinking_framework = Column(String(100))
+    method_name = Column(String(100))
+    applicability = Column(Text)
+    procedure = Column(Text)
+    effectiveness_score = Column(Float, default=0.0)
+    validation_status = Column(String(20), default="draft")
+    source_kind = Column(String(50), default="system")
+    source_ref = Column(String(255))
+    version = Column(Integer, default=1)
+    parent_version = Column(Integer)
+    last_validated_at = Column(DateTime(timezone=True))
+    extra = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

@@ -100,3 +100,48 @@
 - Added browser-based UI smoke checks for `/chat` and `/evolution`, and wired them into `auto_evolution` self-test instead of relying only on API/status probes.
 - Added `POST /api/evolution/self-test/run` and an evolution dashboard action so self-test can be triggered on demand.
 - Fixed `chat-voting-canary` false negatives by validating the real voting chain up to synthesis start, rather than waiting for the entire long-form final answer to finish streaming.
+- Added `docs/TASK_AND_WORKFLOW_MODEL.md`, defining first-class `Context / Task / Artifact / Event / Relation` objects, four task classes, explicit state transitions, and daemon-task modeling.
+- Added `docs/BRAIN_CONTROL_ARCHITECTURE.md`, defining `Brainstem / Cerebellum / Cortex`, chief-plus-specialist roles, controlled collaboration topology, and fallback/degrade paths.
+- Added `docs/VERSIONED_INTELLIGENCE_ARCHITECTURE.md`, formalizing versioned cognition, method, task, knowledge, and memory objects beyond plain code versioning.
+- Added `docs/TEMPORAL_AND_VERSIONED_DATA_RESEARCH.md`, clarifying temporal data categories, shared time-field semantics, and why TSDB should not be introduced prematurely.
+- Added migration `migrations/007_task_brain_foundation.sql`, extending the legacy task system with `task_contexts`, task workflow columns, artifacts, relations, and brain control plane tables.
+- Added ORM foundation for the first control-plane implementation in `services/api/db/models.py`, including `TaskContext`, `TaskArtifact`, `TaskRelation`, `BrainProfile`, `BrainRoute`, `BrainPolicy`, and `BrainFallback`.
+- Added `services/api/brains/control_plane.py` with default brain profile and route seeds for `brainstem`, `chief`, `dialog`, `source_intelligence`, `research`, `knowledge`, `evolution`, and `coding`.
+- Added `GET /api/brains/control-plane`, which bootstraps default brain configuration on first access and returns the live control-plane view from PostgreSQL.
+- Added unit coverage for the new schema and default control-plane seeds:
+  - `services/api/tests/test_task_brain_foundation_models.py`
+  - `services/api/tests/test_brain_control_plane_defaults.py`
+- Added evolution runtime visibility endpoints:
+  - `GET /api/evolution/contexts`
+  - `GET /api/evolution/contexts/{context_id}`
+- Reworked the evolution dashboard so it now shows live contexts, snapshots, events, artifacts, and context-level task lists instead of only summary status cards.
+- Added migration `migrations/009_source_intelligence_plans.sql` for the first source-intelligence control objects:
+  - `source_plans`
+  - `source_plan_items`
+- Added persisted source-intelligence planning APIs:
+  - `POST /api/sources/plans`
+  - `GET /api/sources/plans`
+- Added helper coverage for evolution context summaries and source-plan strategy rules:
+  - `services/api/tests/test_evolution_context_views.py`
+  - `services/api/tests/test_source_plan_helpers.py`
+- Added chat-side brain routing integration:
+  - `services/api/brains/control_plane.py` now builds live execution plans for interactive dialog.
+  - `services/api/routers/chat.py` now emits `brain_plan` over SSE and stores it in assistant-message metadata.
+  - `services/api/routers/conversations.py` now returns message metadata so brain routing survives conversation reloads.
+- Updated the chat UI to surface the live brain route on assistant messages, making the current route/primary brain/supporting brains visible in the conversation instead of hidden in backend logs.
+- Added `services/api/tests/test_brain_execution_plan.py` to protect execution-plan selection behavior.
+- Added a first source-intelligence UI surface in `services/web/components/settings/sources-manager.tsx`:
+  - create source plans from topic/focus/objective
+  - render persisted source plan candidates
+  - promote plan items into real managed sources through the subscribe endpoint
+- Extended source-plan lifecycle management:
+  - `services/api/routers/feeds.py` now supports source-plan refresh and plan-item subscription endpoints
+  - source-plan items now transition through visible statuses such as `active`, `stale`, and `subscribed`
+  - the sources UI now supports manual plan review refresh and plan-item promotion in place
+- Added source-plan version management:
+  - `migrations/011_source_plan_versions.sql`
+  - `source_plans.current_version / latest_version`
+  - `source_plan_versions`
+  - `GET /api/sources/plans/{plan_id}/versions`
+  - refresh/subscribe now emit versioned diff + evaluation records instead of silently overwriting plan state
+- Added `docs/VERSION_MANAGEMENT.md` to separate Git/file versioning from runtime intelligence-object versioning.

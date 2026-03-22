@@ -13,6 +13,9 @@ from sqlalchemy.orm import joinedload
 from config import get_settings
 from db.models import FeedItem as FeedItemModel
 from db.models import Source as SourceModel
+from db.models import SourcePlan as SourcePlanModel
+from db.models import SourcePlanItem as SourcePlanItemModel
+from db.models import SourcePlanVersion as SourcePlanVersionModel
 from feeds.fetcher import PROXY_DOMAINS, get_feed_fetcher, FeedSource as _FeedSource, FeedEntry, reload_feed_fetcher, map_category, reload_feed_fetcher
 from feeds.authority import get_authority_classifier
 from feeds.persistence import (
@@ -134,6 +137,60 @@ class SourceDiscoveryResponse(BaseModel):
     candidates: List[SourceDiscoveryCandidate]
 
 
+class SourcePlanCreateRequest(BaseModel):
+    topic: str = Field(..., min_length=2, description="需要持续跟踪的主题")
+    focus: SourceDiscoveryFocus = Field(SourceDiscoveryFocus.AUTHORITATIVE, description="建源重点")
+    objective: str = Field("", description="为什么要关注这个主题")
+    limit: int = Field(12, ge=3, le=30)
+    review_cadence_days: int = Field(14, ge=1, le=180)
+
+
+class SourcePlanItemResponse(BaseModel):
+    id: str
+    item_type: str
+    object_key: str
+    name: str
+    url: str
+    authority_tier: str
+    authority_score: float
+    monitoring_mode: str
+    execution_strategy: str
+    review_cadence_days: int
+    rationale: str
+    status: str
+    evidence: Dict[str, Any]
+
+
+class SourcePlanResponse(BaseModel):
+    id: str
+    topic: str
+    focus: str
+    objective: str
+    planning_brain: str
+    status: str
+    review_status: str
+    review_cadence_days: int
+    current_version: int = 1
+    latest_version: int = 1
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    items: List[SourcePlanItemResponse] = []
+
+
+class SourcePlanVersionResponse(BaseModel):
+    id: str
+    version_number: int
+    parent_version: Optional[int] = None
+    trigger_type: str
+    decision_status: str
+    change_reason: str = ""
+    change_summary: Dict[str, Any] = {}
+    evaluation: Dict[str, Any] = {}
+    created_by: str
+    accepted_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+
+
 # ── Import models ────────────────────────────────────
 
 class ImportItem(BaseModel):
@@ -183,6 +240,31 @@ def _source_to_api_model(source: _FeedSource) -> Source:
         proxy_mode,
         proxy_settings,
         PROXY_DOMAINS,
+    )
+    success_count = max(0, int(getattr(source, "success_count", 0) or 0))
+    failure_count = max(0, int(getattr(source, "failure_count", 0) or 0))
+    total_attempts = success_count + failure_count
+    success_rate = 100.0 if total_attempts == 0 else round((success_count / total_attempts) * 100.0, 2)
+    status_value = getattr(source, "status", SourceStatus.OK.value)
+    try:
+        status = SourceStatus(status_value)
+    except ValueError:
+        status = SourceStatus.OK
+
+    return Source(
+        id=str(source.id),
+        name=source.name,
+        type=SourceType(getattr(source, "type", SourceType.RSS.value)),
+        url=source.url,
+        category=source.category or "",
+        tags=list(getattr(source, "tags", []) or []),
+        enabled=bool(getattr(source, "enabled", True)),
+        status=status,
+        last_fetched=getattr(source, "last_fetched", None),
+        success_rate=success_rate,
+        proxy_mode=ProxyMode(proxy_mode),
+        proxy_effective=proxy_effective,
+        proxy_reason=proxy_reason,
     )
 
 
@@ -248,6 +330,407 @@ def _focus_category(focus: SourceDiscoveryFocus) -> str:
 def _source_id_from_domain(domain: str) -> str:
     cleaned = "".join(ch if ch.isalnum() else "_" for ch in domain.lower())
     return cleaned.strip("_") or "discovered_source"
+
+
+def _execution_strategy_for_candidate(
+    candidate: SourceDiscoveryCandidate,
+    focus: SourceDiscoveryFocus,
+) -> str:
+    domain = candidate.domain.lower()
+    if any(token in domain for token in ("github.com", "reddit.com", "x.com", "twitter.com")):
+        return "agent_assisted"
+    if any(token in domain for token in ("arxiv.org", "openreview.net", "nature.com", "science.org")):
+        return "review_capture"
+    if focus == SourceDiscoveryFocus.LATEST:
+        return "feed_or_fetch"
+    if focus in {SourceDiscoveryFocus.FRONTIER, SourceDiscoveryFocus.METHOD}:
+        return "search_review"
+    return "review_capture"
+
+
+def _review_cadence_for_candidate(
+    candidate: SourceDiscoveryCandidate,
+    focus: SourceDiscoveryFocus,
+    default_days: int,
+) -> int:
+    if candidate.recommendation == "subscribe" and focus == SourceDiscoveryFocus.LATEST:
+        return min(default_days, 3)
+    if focus in {SourceDiscoveryFocus.FRONTIER, SourceDiscoveryFocus.METHOD}:
+        return min(max(default_days, 7), 14)
+    if candidate.authority_tier == "S":
+        return max(default_days, 30)
+    return default_days
+
+
+def _serialize_source_plan_item(item: SourcePlanItemModel) -> SourcePlanItemResponse:
+    return SourcePlanItemResponse(
+        id=str(item.id),
+        item_type=item.item_type,
+        object_key=item.object_key,
+        name=item.name,
+        url=item.url or "",
+        authority_tier=item.authority_tier or "C",
+        authority_score=item.authority_score or 0.0,
+        monitoring_mode=item.monitoring_mode,
+        execution_strategy=item.execution_strategy,
+        review_cadence_days=item.review_cadence_days,
+        rationale=item.rationale or "",
+        status=item.status,
+        evidence=item.evidence or {},
+    )
+
+
+def _serialize_source_plan(plan: SourcePlanModel) -> SourcePlanResponse:
+    items = sorted(list(plan.items or []), key=lambda item: (item.authority_score or 0.0), reverse=True)
+    return SourcePlanResponse(
+        id=str(plan.id),
+        topic=plan.topic,
+        focus=plan.focus,
+        objective=plan.objective or "",
+        planning_brain=plan.planning_brain,
+        status=plan.status,
+        review_status=plan.review_status,
+        review_cadence_days=plan.review_cadence_days,
+        current_version=plan.current_version or 1,
+        latest_version=plan.latest_version or 1,
+        created_at=plan.created_at,
+        updated_at=plan.updated_at,
+        items=[_serialize_source_plan_item(item) for item in items],
+    )
+
+
+def _serialize_source_plan_version(version: SourcePlanVersionModel) -> SourcePlanVersionResponse:
+    return SourcePlanVersionResponse(
+        id=str(version.id),
+        version_number=version.version_number,
+        parent_version=version.parent_version,
+        trigger_type=version.trigger_type,
+        decision_status=version.decision_status,
+        change_reason=version.change_reason or "",
+        change_summary=dict(version.change_summary or {}),
+        evaluation=dict(version.evaluation or {}),
+        created_by=version.created_by,
+        accepted_at=version.accepted_at,
+        created_at=version.created_at,
+    )
+
+
+def _snapshot_source_plan(plan: SourcePlanModel) -> Dict[str, Any]:
+    items = []
+    for item in sorted(list(plan.items or []), key=lambda value: value.object_key):
+        items.append(
+            {
+                "object_key": item.object_key,
+                "name": item.name,
+                "url": item.url or "",
+                "authority_tier": item.authority_tier or "C",
+                "authority_score": float(item.authority_score or 0.0),
+                "monitoring_mode": item.monitoring_mode,
+                "execution_strategy": item.execution_strategy,
+                "review_cadence_days": int(item.review_cadence_days or plan.review_cadence_days or 14),
+                "rationale": item.rationale or "",
+                "status": item.status,
+                "evidence": dict(item.evidence or {}),
+            }
+        )
+    return {
+        "topic": plan.topic,
+        "focus": plan.focus,
+        "objective": plan.objective or "",
+        "review_cadence_days": int(plan.review_cadence_days or 14),
+        "items": items,
+    }
+
+
+def _snapshot_source_plan_from_payload(
+    *,
+    topic: str,
+    focus: str,
+    objective: str,
+    review_cadence_days: int,
+    items: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    normalized_items = []
+    for item in sorted(items, key=lambda value: value["object_key"]):
+        normalized_items.append(
+            {
+                "object_key": item["object_key"],
+                "name": item["name"],
+                "url": item.get("url", ""),
+                "authority_tier": item.get("authority_tier", "C"),
+                "authority_score": float(item.get("authority_score", 0.0)),
+                "monitoring_mode": item.get("monitoring_mode", "review"),
+                "execution_strategy": item.get("execution_strategy", "search_review"),
+                "review_cadence_days": int(item.get("review_cadence_days", review_cadence_days)),
+                "rationale": item.get("rationale", ""),
+                "status": item.get("status", "active"),
+                "evidence": dict(item.get("evidence", {})),
+            }
+        )
+    return {
+        "topic": topic,
+        "focus": focus,
+        "objective": objective or "",
+        "review_cadence_days": int(review_cadence_days or 14),
+        "items": normalized_items,
+    }
+
+
+def _apply_source_plan_snapshot(plan: SourcePlanModel, snapshot: Dict[str, Any]) -> None:
+    plan.topic = snapshot.get("topic", plan.topic)
+    plan.focus = snapshot.get("focus", plan.focus)
+    plan.objective = snapshot.get("objective", plan.objective)
+    plan.review_cadence_days = int(snapshot.get("review_cadence_days", plan.review_cadence_days or 14))
+
+    existing_by_key = {item.object_key: item for item in list(plan.items or [])}
+    snapshot_keys = set()
+
+    for payload in snapshot.get("items", []):
+        object_key = payload["object_key"]
+        snapshot_keys.add(object_key)
+        existing = existing_by_key.get(object_key)
+        if existing is None:
+            plan.items.append(
+                SourcePlanItemModel(
+                    item_type="domain",
+                    object_key=object_key,
+                    name=payload["name"],
+                    url=payload.get("url", ""),
+                    authority_tier=payload.get("authority_tier", "C"),
+                    authority_score=float(payload.get("authority_score", 0.0)),
+                    monitoring_mode=payload.get("monitoring_mode", "review"),
+                    execution_strategy=payload.get("execution_strategy", "search_review"),
+                    review_cadence_days=int(payload.get("review_cadence_days", plan.review_cadence_days)),
+                    rationale=payload.get("rationale", ""),
+                    evidence=dict(payload.get("evidence", {})),
+                    status=payload.get("status", "active"),
+                )
+            )
+            continue
+
+        existing.name = payload["name"]
+        existing.url = payload.get("url", "")
+        existing.authority_tier = payload.get("authority_tier", "C")
+        existing.authority_score = float(payload.get("authority_score", 0.0))
+        existing.monitoring_mode = payload.get("monitoring_mode", "review")
+        existing.execution_strategy = payload.get("execution_strategy", "search_review")
+        existing.review_cadence_days = int(payload.get("review_cadence_days", plan.review_cadence_days))
+        existing.rationale = payload.get("rationale", "")
+        existing.evidence = dict(payload.get("evidence", {}))
+        existing.status = payload.get("status", "active")
+
+    for object_key, existing in existing_by_key.items():
+        if object_key not in snapshot_keys:
+            plan.items.remove(existing)
+
+
+def _diff_source_plan_snapshots(previous: Dict[str, Any], current: Dict[str, Any]) -> Dict[str, Any]:
+    previous_items = {item["object_key"]: item for item in previous.get("items", [])}
+    current_items = {item["object_key"]: item for item in current.get("items", [])}
+
+    added = sorted(key for key in current_items if key not in previous_items)
+    removed = sorted(key for key in previous_items if key not in current_items)
+    stale = sorted(
+        key for key, item in current_items.items()
+        if item.get("status") == "stale" and previous_items.get(key, {}).get("status") != "stale"
+    )
+    subscribed = sorted(
+        key for key, item in current_items.items()
+        if item.get("status") == "subscribed" and previous_items.get(key, {}).get("status") != "subscribed"
+    )
+
+    score_deltas: list[Dict[str, Any]] = []
+    largest_drop = 0.0
+    for key in sorted(set(previous_items) & set(current_items)):
+        before_score = float(previous_items[key].get("authority_score", 0.0))
+        after_score = float(current_items[key].get("authority_score", 0.0))
+        delta = round(after_score - before_score, 4)
+        if delta != 0:
+            score_deltas.append({"object_key": key, "before": before_score, "after": after_score, "delta": delta})
+        if delta < largest_drop:
+            largest_drop = delta
+
+    return {
+        "added": added,
+        "removed": removed,
+        "stale": stale,
+        "subscribed": subscribed,
+        "score_deltas": score_deltas,
+        "summary": {
+            "previous_item_count": len(previous_items),
+            "current_item_count": len(current_items),
+            "added_count": len(added),
+            "removed_count": len(removed),
+            "stale_count": len(stale),
+            "subscribed_count": len(subscribed),
+            "largest_score_drop": largest_drop,
+        },
+    }
+
+
+def _evaluate_source_plan_refresh(diff: Dict[str, Any]) -> Dict[str, Any]:
+    summary = dict(diff.get("summary", {}))
+    largest_drop = float(summary.get("largest_score_drop", 0.0))
+    stale_count = int(summary.get("stale_count", 0))
+    removed_count = int(summary.get("removed_count", 0))
+
+    decision_status = "accepted"
+    reasons: list[str] = []
+    confidence = 0.8
+
+    if largest_drop <= -0.15:
+        decision_status = "needs_review"
+        reasons.append("authority_score dropped sharply for one or more tracked candidates")
+        confidence -= 0.25
+    if stale_count >= 3:
+        decision_status = "needs_review"
+        reasons.append("multiple tracked candidates became stale in a single refresh")
+        confidence -= 0.15
+    if removed_count > 0:
+        decision_status = "needs_review"
+        reasons.append("candidate set lost previously tracked objects")
+        confidence -= 0.1
+
+    if not reasons:
+        reasons.append("refresh produced no high-risk degradations")
+
+    return {
+        "decision_status": decision_status,
+        "confidence": max(0.1, round(confidence, 2)),
+        "reasons": reasons,
+    }
+
+
+def _build_source_plan_version_record(
+    plan: SourcePlanModel,
+    *,
+    version_number: int,
+    parent_version: Optional[int],
+    trigger_type: str,
+    decision_status: str,
+    change_reason: str,
+    change_summary: Dict[str, Any],
+    plan_snapshot: Dict[str, Any],
+    evaluation: Dict[str, Any],
+) -> SourcePlanVersionModel:
+    accepted_at = datetime.now(timezone.utc) if decision_status == "accepted" else None
+    return SourcePlanVersionModel(
+        plan_id=plan.id,
+        version_number=version_number,
+        parent_version=parent_version,
+        trigger_type=trigger_type,
+        decision_status=decision_status,
+        change_reason=change_reason,
+        change_summary=change_summary,
+        plan_snapshot=plan_snapshot,
+        evaluation=evaluation,
+        created_by=plan.planning_brain,
+        accepted_at=accepted_at,
+    )
+
+
+def _find_existing_source_for_domain(domain: str):
+    fetcher = get_feed_fetcher()
+    return next(
+        (
+            src for src in fetcher.get_sources()
+            if src.id == _source_id_from_domain(domain) or _normalize_domain(src.url) == domain
+        ),
+        None,
+    )
+
+
+def _subscribe_candidate_to_source(
+    candidate: SourceDiscoveryCandidate,
+    focus: SourceDiscoveryFocus,
+) -> Source:
+    fetcher = get_feed_fetcher()
+    source_id = _source_id_from_domain(candidate.domain)
+    existing = _find_existing_source_for_domain(candidate.domain)
+    if existing is not None:
+        return _source_to_api_model(existing)
+
+    tags = [focus.value, "discovered", candidate.authority_tier]
+    new_source = _FeedSource(
+        id=source_id,
+        name=candidate.name,
+        url=candidate.url,
+        category=_focus_category(focus),
+        tags=tags,
+        enabled=True,
+        proxy_mode=ProxyMode.AUTO.value,
+        use_proxy=False,
+    )
+    fetcher.add_source(new_source)
+    return _source_to_api_model(new_source)
+
+
+async def _refresh_source_plan_items(
+    plan: SourcePlanModel,
+    focus: SourceDiscoveryFocus,
+    review_cadence_days: int,
+    limit: int,
+) -> SourcePlanModel:
+    discovery = await _run_source_discovery(
+        SourceDiscoveryRequest(topic=plan.topic, focus=focus, limit=limit)
+    )
+
+    existing_by_key = {item.object_key: item for item in list(plan.items or [])}
+    discovered_keys: set[str] = set()
+
+    for candidate in discovery.candidates:
+        discovered_keys.add(candidate.domain)
+        review_days = _review_cadence_for_candidate(candidate, focus, review_cadence_days)
+        strategy = _execution_strategy_for_candidate(candidate, focus)
+        rationale = (
+            f"{candidate.recommendation_reason}；执行策略={strategy}；"
+            f"证据命中 {candidate.evidence_count} 次。"
+        )
+        existing = existing_by_key.get(candidate.domain)
+        subscribed = _find_existing_source_for_domain(candidate.domain) is not None
+
+        payload = {
+            "name": candidate.name,
+            "url": candidate.url,
+            "authority_tier": candidate.authority_tier,
+            "authority_score": candidate.authority_score,
+            "monitoring_mode": candidate.recommendation,
+            "execution_strategy": strategy,
+            "review_cadence_days": review_days,
+            "rationale": rationale,
+            "evidence": {
+                "matched_queries": candidate.matched_queries,
+                "sample_titles": candidate.sample_titles,
+                "sample_snippets": candidate.sample_snippets,
+                "evidence_count": candidate.evidence_count,
+            },
+            "status": "subscribed" if subscribed else "active",
+        }
+
+        if existing is None:
+            plan.items.append(
+                SourcePlanItemModel(
+                    item_type="domain",
+                    object_key=candidate.domain,
+                    **payload,
+                )
+            )
+        else:
+            for key, value in payload.items():
+                setattr(existing, key, value)
+
+    for object_key, item in existing_by_key.items():
+        if object_key not in discovered_keys and item.status != "subscribed":
+            item.status = "stale"
+
+    plan.review_status = "reviewed"
+    plan.extra = {
+        **dict(plan.extra or {}),
+        "queries": discovery.queries,
+        "last_refresh_result_count": len(discovery.candidates),
+        "last_refreshed_at": datetime.now(timezone.utc).isoformat(),
+    }
+    return plan
 
 
 def _domain_quality_adjustment(domain: str, focus: SourceDiscoveryFocus) -> float:
@@ -612,6 +1095,208 @@ async def discover_sources(body: SourceDiscoveryRequest):
     return await _run_source_discovery(body)
 
 
+@router.get("/sources/plans", response_model=List[SourcePlanResponse])
+async def list_source_plans(db: AsyncSession = Depends(get_db)):
+    """List persisted source-intelligence plans."""
+    stmt = (
+        select(SourcePlanModel)
+        .options(joinedload(SourcePlanModel.items))
+        .order_by(SourcePlanModel.updated_at.desc().nullslast(), SourcePlanModel.created_at.desc())
+    )
+    plans = (await db.execute(stmt)).scalars().unique().all()
+    return [_serialize_source_plan(plan) for plan in plans]
+
+
+@router.get("/sources/plans/{plan_id}/versions", response_model=List[SourcePlanVersionResponse])
+async def list_source_plan_versions(plan_id: str, db: AsyncSession = Depends(get_db)):
+    stmt = (
+        select(SourcePlanVersionModel)
+        .join(SourcePlanModel, SourcePlanModel.id == SourcePlanVersionModel.plan_id)
+        .where(cast(SourcePlanModel.id, SqlString) == plan_id)
+        .order_by(SourcePlanVersionModel.version_number.desc(), SourcePlanVersionModel.created_at.desc())
+    )
+    versions = (await db.execute(stmt)).scalars().all()
+    return [_serialize_source_plan_version(version) for version in versions]
+
+
+@router.post("/sources/plans", response_model=SourcePlanResponse)
+async def create_source_plan(
+    body: SourcePlanCreateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Create a persisted source-intelligence plan from topic-driven discovery.
+
+    This is the first brain-facing control object for the information brain:
+    it stores what to watch, why to watch it, and how it should be reviewed.
+    """
+    discovery = await _run_source_discovery(
+        SourceDiscoveryRequest(topic=body.topic, focus=body.focus, limit=body.limit)
+    )
+
+    plan = SourcePlanModel(
+        topic=body.topic,
+        focus=body.focus.value,
+        objective=body.objective or f"Build and maintain a source plan for {body.topic}.",
+        owner_type="system",
+        owner_id=f"source-plan:{body.topic.strip().lower()}",
+        planning_brain="source-intelligence-brain",
+        status="active",
+        review_status="draft",
+        review_cadence_days=body.review_cadence_days,
+        extra={"queries": discovery.queries},
+    )
+    db.add(plan)
+    await db.flush()
+
+    created_items_payload: list[Dict[str, Any]] = []
+    for candidate in discovery.candidates:
+        review_days = _review_cadence_for_candidate(candidate, body.focus, body.review_cadence_days)
+        strategy = _execution_strategy_for_candidate(candidate, body.focus)
+        evidence = {
+            "matched_queries": candidate.matched_queries,
+            "sample_titles": candidate.sample_titles,
+            "sample_snippets": candidate.sample_snippets,
+            "evidence_count": candidate.evidence_count,
+        }
+        rationale = (
+            f"{candidate.recommendation_reason}；执行策略={strategy}；"
+            f"证据命中 {candidate.evidence_count} 次。"
+        )
+        created_items_payload.append(
+            {
+                "object_key": candidate.domain,
+                "name": candidate.name,
+                "url": candidate.url,
+                "authority_tier": candidate.authority_tier,
+                "authority_score": candidate.authority_score,
+                "monitoring_mode": candidate.recommendation,
+                "execution_strategy": strategy,
+                "review_cadence_days": review_days,
+                "rationale": rationale,
+                "status": "active",
+                "evidence": evidence,
+            }
+        )
+        db.add(
+            SourcePlanItemModel(
+                plan_id=plan.id,
+                item_type="domain",
+                object_key=candidate.domain,
+                name=candidate.name,
+                url=candidate.url,
+                authority_tier=candidate.authority_tier,
+                authority_score=candidate.authority_score,
+                monitoring_mode=candidate.recommendation,
+                execution_strategy=strategy,
+                review_cadence_days=review_days,
+                rationale=rationale,
+                evidence=evidence,
+                status="active",
+            )
+        )
+
+    initial_snapshot = _snapshot_source_plan_from_payload(
+        topic=plan.topic,
+        focus=plan.focus,
+        objective=plan.objective or "",
+        review_cadence_days=plan.review_cadence_days,
+        items=created_items_payload,
+    )
+    plan.current_version = 1
+    plan.latest_version = 1
+    plan.review_status = "accepted"
+    db.add(
+        _build_source_plan_version_record(
+            plan,
+            version_number=1,
+            parent_version=None,
+            trigger_type="initial_create",
+            decision_status="accepted",
+            change_reason="Initial source plan created from topic-driven discovery.",
+            change_summary={"summary": {"previous_item_count": 0, "current_item_count": len(initial_snapshot.get("items", []))}},
+            plan_snapshot=initial_snapshot,
+            evaluation={"decision_status": "accepted", "confidence": 1.0, "reasons": ["initial source plan baseline"]},
+        )
+    )
+
+    await db.commit()
+
+    result = await db.execute(
+        select(SourcePlanModel)
+        .where(SourcePlanModel.id == plan.id)
+        .options(joinedload(SourcePlanModel.items))
+    )
+    persisted = result.scalars().unique().one()
+    return _serialize_source_plan(persisted)
+
+
+@router.post("/sources/plans/{plan_id}/refresh", response_model=SourcePlanResponse)
+async def refresh_source_plan(
+    plan_id: str,
+    limit: int = Query(12, ge=3, le=30),
+    db: AsyncSession = Depends(get_db),
+):
+    """Re-run discovery for an existing source plan and update candidate states."""
+    stmt = (
+        select(SourcePlanModel)
+        .where(cast(SourcePlanModel.id, SqlString) == plan_id)
+        .options(joinedload(SourcePlanModel.items))
+    )
+    plan = (await db.execute(stmt)).scalars().unique().one_or_none()
+    if plan is None:
+        raise HTTPException(status_code=404, detail="Source plan not found")
+
+    focus = SourceDiscoveryFocus(plan.focus)
+    previous_snapshot = _snapshot_source_plan(plan)
+    previous_current_version = int(plan.current_version or 1)
+
+    await _refresh_source_plan_items(plan, focus, plan.review_cadence_days, limit)
+    candidate_snapshot = _snapshot_source_plan(plan)
+    diff = _diff_source_plan_snapshots(previous_snapshot, candidate_snapshot)
+    evaluation = _evaluate_source_plan_refresh(diff)
+    next_version = int(plan.latest_version or plan.current_version or 1) + 1
+
+    if evaluation["decision_status"] == "accepted":
+        plan.current_version = next_version
+        plan.latest_version = next_version
+        plan.review_status = "accepted"
+    else:
+        _apply_source_plan_snapshot(plan, previous_snapshot)
+        plan.latest_version = next_version
+        plan.review_status = "needs_review"
+
+    plan.extra = {
+        **dict(plan.extra or {}),
+        "latest_diff": diff,
+        "latest_evaluation": evaluation,
+    }
+
+    db.add(
+        _build_source_plan_version_record(
+            plan,
+            version_number=next_version,
+            parent_version=previous_current_version,
+            trigger_type="manual_refresh",
+            decision_status=evaluation["decision_status"],
+            change_reason="Manual source-plan refresh from topic-driven discovery.",
+            change_summary=diff,
+            plan_snapshot=candidate_snapshot,
+            evaluation=evaluation,
+        )
+    )
+    await db.commit()
+
+    refreshed = (
+        await db.execute(
+            select(SourcePlanModel)
+            .where(SourcePlanModel.id == plan.id)
+            .options(joinedload(SourcePlanModel.items))
+        )
+    ).scalars().unique().one()
+    return _serialize_source_plan(refreshed)
+
+
 @router.post("/sources/discover/{domain}/subscribe", response_model=Source)
 async def subscribe_discovered_source(
     domain: str,
@@ -629,25 +1314,76 @@ async def subscribe_discovered_source(
     if candidate is None:
         raise HTTPException(status_code=404, detail="Discovered candidate not found")
 
-    fetcher = get_feed_fetcher()
-    source_id = _source_id_from_domain(candidate.domain)
-    existing = next((src for src in fetcher.get_sources() if src.id == source_id or _normalize_domain(src.url) == candidate.domain), None)
-    if existing is not None:
-        return _source_to_api_model(existing)
+    return _subscribe_candidate_to_source(candidate, body.focus)
 
-    tags = [body.focus.value, "discovered", candidate.authority_tier]
-    new_source = _FeedSource(
-        id=source_id,
-        name=candidate.name,
-        url=candidate.url,
-        category=_focus_category(body.focus),
-        tags=tags,
-        enabled=True,
-        proxy_mode=ProxyMode.AUTO.value,
-        use_proxy=False,
+
+@router.post("/sources/plans/{plan_id}/items/{item_id}/subscribe", response_model=Source)
+async def subscribe_source_plan_item(
+    plan_id: str,
+    item_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Promote a source-plan item into a managed source and mark the plan item as subscribed."""
+    stmt = (
+        select(SourcePlanItemModel)
+        .join(SourcePlanModel, SourcePlanModel.id == SourcePlanItemModel.plan_id)
+        .where(
+            cast(SourcePlanModel.id, SqlString) == plan_id,
+            cast(SourcePlanItemModel.id, SqlString) == item_id,
+        )
+        .options(joinedload(SourcePlanItemModel.plan).joinedload(SourcePlanModel.items))
     )
-    fetcher.add_source(new_source)
-    return _source_to_api_model(new_source)
+    item = (await db.execute(stmt)).scalars().unique().one_or_none()
+    if item is None:
+        raise HTTPException(status_code=404, detail="Source plan item not found")
+
+    candidate = SourceDiscoveryCandidate(
+        domain=item.object_key,
+        name=item.name,
+        url=item.url or "",
+        authority_tier=item.authority_tier or "C",
+        authority_score=item.authority_score or 0.0,
+        recommendation=item.monitoring_mode,
+        recommendation_reason=item.rationale or "",
+        evidence_count=int((item.evidence or {}).get("evidence_count", 0)),
+        matched_queries=list((item.evidence or {}).get("matched_queries", [])),
+        sample_titles=list((item.evidence or {}).get("sample_titles", [])),
+        sample_snippets=list((item.evidence or {}).get("sample_snippets", [])),
+    )
+    previous_snapshot = _snapshot_source_plan(item.plan)
+    source = _subscribe_candidate_to_source(candidate, SourceDiscoveryFocus(item.plan.focus))
+    item.status = "subscribed"
+    item.execution_strategy = item.execution_strategy or "feed_or_fetch"
+    current_snapshot = _snapshot_source_plan(item.plan)
+    diff = _diff_source_plan_snapshots(previous_snapshot, current_snapshot)
+    next_version = int(item.plan.latest_version or item.plan.current_version or 1) + 1
+    item.plan.current_version = next_version
+    item.plan.latest_version = next_version
+    item.plan.review_status = "accepted"
+    item.plan.extra = {
+        **dict(item.plan.extra or {}),
+        "latest_diff": diff,
+        "latest_evaluation": {
+            "decision_status": "accepted",
+            "confidence": 1.0,
+            "reasons": ["plan item promoted into managed source"],
+        },
+    }
+    db.add(
+        _build_source_plan_version_record(
+            item.plan,
+            version_number=next_version,
+            parent_version=max(next_version - 1, 1),
+            trigger_type="manual_subscribe",
+            decision_status="accepted",
+            change_reason=f"Promoted source-plan item {item.object_key} into managed source.",
+            change_summary=diff,
+            plan_snapshot=current_snapshot,
+            evaluation={"decision_status": "accepted", "confidence": 1.0, "reasons": ["plan item promoted into managed source"]},
+        )
+    )
+    await db.commit()
+    return source
 
 
 @router.delete("/sources/{source_id}")

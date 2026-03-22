@@ -3,6 +3,7 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import {
   AlertCircle,
+  Brain,
   CheckCircle,
   Globe,
   Loader2,
@@ -20,6 +21,7 @@ import { cn } from '@/lib/utils'
 type SourceType = 'rss' | 'web' | 'api'
 type SourceStatus = 'ok' | 'warning' | 'error'
 type ProxyMode = 'auto' | 'always' | 'never'
+type DiscoveryFocus = 'latest' | 'authoritative' | 'frontier' | 'method'
 
 interface Source {
   id: string
@@ -71,12 +73,65 @@ interface NewSourceForm {
   proxy_mode: ProxyMode
 }
 
+interface SourcePlanItem {
+  id: string
+  item_type: string
+  object_key: string
+  name: string
+  url: string
+  authority_tier: string
+  authority_score: number
+  monitoring_mode: string
+  execution_strategy: string
+  review_cadence_days: number
+  rationale: string
+  status: string
+  evidence: Record<string, any>
+}
+
+interface SourcePlan {
+  id: string
+  topic: string
+  focus: DiscoveryFocus
+  objective: string
+  planning_brain: string
+  status: string
+  review_status: string
+  review_cadence_days: number
+  current_version: number
+  latest_version: number
+  created_at: string | null
+  updated_at: string | null
+  items: SourcePlanItem[]
+}
+
+interface SourcePlanVersion {
+  id: string
+  version_number: number
+  parent_version: number | null
+  trigger_type: string
+  decision_status: string
+  change_reason: string
+  change_summary: Record<string, any>
+  evaluation: Record<string, any>
+  created_by: string
+  accepted_at: string | null
+  created_at: string | null
+}
+
 const emptyForm: NewSourceForm = {
   name: '',
   type: 'rss',
   url: '',
   category: '',
   proxy_mode: 'auto',
+}
+
+const emptyPlanForm = {
+  topic: '',
+  focus: 'authoritative' as DiscoveryFocus,
+  objective: '',
+  review_cadence_days: 14,
 }
 
 const typeIcons = {
@@ -112,6 +167,7 @@ const proxyModeLabels: Record<ProxyMode, string> = {
 
 export function SourcesManager() {
   const [sources, setSources] = useState<Source[]>([])
+  const [sourcePlans, setSourcePlans] = useState<SourcePlan[]>([])
   const [proxySettings, setProxySettings] = useState<ProxySettings>({
     enabled: false,
     http_proxy: '',
@@ -124,8 +180,14 @@ export function SourcesManager() {
   const [testingProxy, setTestingProxy] = useState(false)
   const [refreshingId, setRefreshingId] = useState<string | null>(null)
   const [savingSourceId, setSavingSourceId] = useState<string | null>(null)
+  const [subscribingPlanItemId, setSubscribingPlanItemId] = useState<string | null>(null)
+  const [refreshingPlanId, setRefreshingPlanId] = useState<string | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newSource, setNewSource] = useState<NewSourceForm>(emptyForm)
+  const [planForm, setPlanForm] = useState(emptyPlanForm)
+  const [creatingPlan, setCreatingPlan] = useState(false)
+  const [planVersions, setPlanVersions] = useState<Record<string, SourcePlanVersion[]>>({})
+  const [loadingVersionsPlanId, setLoadingVersionsPlanId] = useState<string | null>(null)
 
   useEffect(() => {
     void loadData()
@@ -148,6 +210,8 @@ export function SourcesManager() {
         const proxyData = await proxyRes.json()
         setProxySettings(proxyData)
       }
+
+      await loadSourcePlans()
     } catch (error) {
       console.error('Failed to load sources settings:', error)
     } finally {
@@ -216,6 +280,18 @@ export function SourcesManager() {
       }
     } catch (error) {
       console.error('Failed to reload sources:', error)
+    }
+  }
+
+  const loadSourcePlans = async () => {
+    try {
+      const res = await fetch('/api/sources/plans')
+      if (res.ok) {
+        const data = await res.json()
+        setSourcePlans(data)
+      }
+    } catch (error) {
+      console.error('Failed to load source plans:', error)
     }
   }
 
@@ -299,11 +375,306 @@ export function SourcesManager() {
     }
   }
 
+  const createSourcePlan = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!planForm.topic.trim() || creatingPlan) return
+
+    setCreatingPlan(true)
+    try {
+      const res = await fetch('/api/sources/plans', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(planForm),
+      })
+      if (res.ok) {
+        const created = await res.json()
+        setSourcePlans((prev) => [created, ...prev.filter((item) => item.id !== created.id)])
+        setPlanForm(emptyPlanForm)
+      }
+    } catch (error) {
+      console.error('Failed to create source plan:', error)
+    } finally {
+      setCreatingPlan(false)
+    }
+  }
+
+  const subscribePlanItem = async (plan: SourcePlan, item: SourcePlanItem) => {
+    setSubscribingPlanItemId(item.id)
+    try {
+      const res = await fetch(`/api/sources/plans/${plan.id}/items/${item.id}/subscribe`, {
+        method: 'POST',
+      })
+      if (res.ok) {
+        const created = await res.json()
+        setSources((prev) => {
+          const next = [created, ...prev.filter((source) => source.id !== created.id)]
+          return next
+        })
+        await loadSourcePlans()
+      }
+    } catch (error) {
+      console.error('Failed to subscribe plan item:', error)
+    } finally {
+      setSubscribingPlanItemId(null)
+    }
+  }
+
+  const refreshSourcePlan = async (planId: string) => {
+    setRefreshingPlanId(planId)
+    try {
+      const res = await fetch(`/api/sources/plans/${planId}/refresh`, {
+        method: 'POST',
+      })
+      if (res.ok) {
+        const refreshed = await res.json()
+        setSourcePlans((prev) => [refreshed, ...prev.filter((plan) => plan.id !== refreshed.id)])
+      }
+    } catch (error) {
+      console.error('Failed to refresh source plan:', error)
+    } finally {
+      setRefreshingPlanId(null)
+    }
+  }
+
+  const loadPlanVersions = async (planId: string) => {
+    setLoadingVersionsPlanId(planId)
+    try {
+      const res = await fetch(`/api/sources/plans/${planId}/versions`)
+      if (res.ok) {
+        const data = await res.json()
+        setPlanVersions((prev) => ({ ...prev, [planId]: data }))
+      }
+    } catch (error) {
+      console.error('Failed to load source plan versions:', error)
+    } finally {
+      setLoadingVersionsPlanId(null)
+    }
+  }
+
   const proxyStatus = proxySettings.status
   const proxyState = proxyStatus?.state ?? 'disabled'
 
   return (
     <div className="space-y-6">
+      <section className="rounded-xl border bg-card p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Source Intelligence</h2>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              围绕主题生成建源计划，区分长期关注对象、低频复查对象和复杂获取策略，再将候选项订阅为真实信息源。
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void loadSourcePlans()}
+            className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors"
+          >
+            <RefreshCw className="h-4 w-4" />
+            刷新计划
+          </button>
+        </div>
+
+        <form onSubmit={createSourcePlan} className="mt-5 grid gap-4 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">主题</label>
+            <input
+              type="text"
+              value={planForm.topic}
+              onChange={(event) => setPlanForm((prev) => ({ ...prev, topic: event.target.value }))}
+              className="w-full rounded-lg border bg-background px-3 py-2"
+              placeholder="例如：AI coding agents、量化投资数据源、认知架构研究"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">关注重点</label>
+            <select
+              value={planForm.focus}
+              onChange={(event) => setPlanForm((prev) => ({ ...prev, focus: event.target.value as DiscoveryFocus }))}
+              className="w-full rounded-lg border bg-background px-3 py-2"
+            >
+              <option value="authoritative">权威理解</option>
+              <option value="latest">最新动态</option>
+              <option value="frontier">前沿研究</option>
+              <option value="method">方法与工具</option>
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium">复查周期（天）</label>
+            <input
+              type="number"
+              min={1}
+              max={180}
+              value={planForm.review_cadence_days}
+              onChange={(event) =>
+                setPlanForm((prev) => ({
+                  ...prev,
+                  review_cadence_days: Number(event.target.value || 14),
+                }))
+              }
+              className="w-full rounded-lg border bg-background px-3 py-2"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium">目标</label>
+            <textarea
+              value={planForm.objective}
+              onChange={(event) => setPlanForm((prev) => ({ ...prev, objective: event.target.value }))}
+              className="min-h-[84px] w-full rounded-lg border bg-background px-3 py-2"
+              placeholder="例如：建立一个持续跟踪 coding agent、agent team、workflow/skill 演化的来源集合"
+            />
+          </div>
+          <div className="md:col-span-2 flex justify-end">
+            <button
+              type="submit"
+              disabled={creatingPlan || !planForm.topic.trim()}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {creatingPlan ? <Loader2 className="h-4 w-4 animate-spin" /> : <Brain className="h-4 w-4" />}
+              生成建源计划
+            </button>
+          </div>
+        </form>
+
+        <div className="mt-6 space-y-4">
+          {sourcePlans.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+              还没有 source plan。先围绕一个主题生成建源计划，再选择候选项进入真实信息源。
+            </div>
+          ) : (
+            sourcePlans.map((plan) => (
+              <div key={plan.id} className="rounded-xl border p-4">
+                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-semibold">{plan.topic}</h3>
+                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-700">
+                        {plan.focus}
+                      </span>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        {plan.planning_brain}
+                      </span>
+                    </div>
+                    {plan.objective && (
+                      <p className="mt-1 text-sm text-muted-foreground">{plan.objective}</p>
+                    )}
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      review cadence: {plan.review_cadence_days} days · items: {plan.items.length} · review status: {plan.review_status} · current v{plan.current_version} / latest v{plan.latest_version}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void loadPlanVersions(plan.id)}
+                      disabled={loadingVersionsPlanId === plan.id}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      {loadingVersionsPlanId === plan.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      查看版本
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void refreshSourcePlan(plan.id)}
+                      disabled={refreshingPlanId === plan.id}
+                      className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
+                    >
+                      {refreshingPlanId === plan.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                      重新评审
+                    </button>
+                  </div>
+                </div>
+
+                {planVersions[plan.id] && planVersions[plan.id].length > 0 && (
+                  <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div className="text-sm font-medium">版本记录</div>
+                      <div className="text-xs text-muted-foreground">
+                        latest {planVersions[plan.id][0]?.trigger_type} · {planVersions[plan.id][0]?.decision_status}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {planVersions[plan.id].slice(0, 3).map((version) => (
+                        <div key={version.id} className="rounded-md border bg-background p-2">
+                          <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                              v{version.version_number}
+                            </span>
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                              {version.trigger_type}
+                            </span>
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">
+                              {version.decision_status}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {version.parent_version ? `from v${version.parent_version}` : 'baseline'}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-sm">{version.change_reason}</div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            {version.evaluation?.reasons?.join?.(' · ') || 'No evaluation notes'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 grid gap-3">
+                  {plan.items.map((item) => (
+                    <div key={item.id} className="rounded-lg border bg-background p-3">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium">{item.name}</span>
+                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+                              {item.authority_tier}
+                            </span>
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                              {item.execution_strategy}
+                            </span>
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                              {item.status}
+                            </span>
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground break-all">{item.url}</div>
+                          <div className="mt-2 text-sm text-muted-foreground">{item.rationale}</div>
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            authority score: {item.authority_score.toFixed(2)} · review every {item.review_cadence_days} days
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => void subscribePlanItem(plan, item)}
+                          disabled={subscribingPlanItemId === item.id || item.status === 'subscribed'}
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
+                        >
+                          {subscribingPlanItemId === item.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Plus className="h-4 w-4" />
+                          )}
+                          订阅为信息源
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
       <section className="rounded-xl border bg-card p-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>

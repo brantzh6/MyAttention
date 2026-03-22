@@ -108,13 +108,113 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - 已新增研究索引与分轨研究文档：
   - `docs/RESEARCH_INDEX.md`
   - `docs/TASK_AND_WORKFLOW_MODEL_RESEARCH.md`
+  - `docs/SOURCE_INTELLIGENCE_RESEARCH.md`
+  - `docs/MEMORY_ARCHITECTURE_RESEARCH.md`
   - `docs/KNOWLEDGE_LIFECYCLE_RESEARCH.md`
   - `docs/METHOD_EFFECTIVENESS_AND_SKILL_RESEARCH.md`
   - `docs/METHOD_INTELLIGENCE_RESEARCH.md`
+  - `docs/DEEP_RESEARCH_METHOD_RESEARCH.md`
   - 已将“任务/工作流”和“知识生命周期”从单一讨论中拆开，方便后续独立设计
+- 已进一步明确：来源发现与来源执行必须分开；并非所有信息都应进入持续抓取
+- 已明确：深度研究方法值得作为主线方法底座吸收，但投票只能作为研究中的比较/复核工具，而不能替代 source plan、evidence log 和 fact base
+
+## Latest Implementation Update
+
+- Implemented the first task-and-brain control-plane foundation in the running system:
+  - task workflow fields on `tasks`
+  - `task_contexts`, `task_artifacts`, `task_relations`
+  - `brain_profiles`, `brain_routes`, `brain_policies`, `brain_fallbacks`
+- Added live control-plane bootstrap and inspection:
+  - `GET /api/brains/control-plane`
+- Connected `auto_evolution` to the new runtime model:
+  - self-test writes context snapshots and events
+  - collection health writes context snapshots and events
+- Added runtime visibility endpoints for the evolution brain:
+  - `GET /api/evolution/contexts`
+  - `GET /api/evolution/contexts/{context_id}`
+- Reworked the evolution page into a real runtime dashboard that now shows:
+  - active contexts
+  - latest snapshots
+  - recent events
+  - recent artifacts
+  - context task lists
+- Implemented the first source-intelligence control object layer:
+  - `source_plans`
+  - `source_plan_items`
+  - `POST /api/sources/plans`
+  - `GET /api/sources/plans`
+- Verification completed:
+  - migration `007`, `008`, `009`
+  - backend unit tests
+  - frontend `next build`
+  - API smoke tests
+  - `manage.py health --json`
 
 ## 下一步
 
-1. 给进化大脑继续补“问题归因、恢复建议、去噪”，避免只会报错不会判断。
-2. 回到存储主线，继续完成 Phase 2 收口和 Phase 3 设计实施。
-3. 持续收口本机运行稳定性，避免 API/Web 因 watchdog 与运行模式漂移再次失稳。
+1. 已完成 `Phase 3` 的第一份上位设计：`docs/PROBLEM_FRAMING_AND_METHOD_SELECTION.md`，明确问题类型、思维模型、方法和执行路由的 `V1` 框架。
+2. 已完成 `Phase 4` 的第一份专项设计：`docs/SOURCE_INTELLIGENCE_ARCHITECTURE.md`，明确来源发现/来源执行分层、来源对象模型、冷热策略、Search/LLM/Feed/Agent 关系和 source intelligence 作为信息流上游控制层的定位。
+3. 已完成 `Phase 4` 的第二份专项设计：`docs/MEMORY_ARCHITECTURE.md`，明确五层记忆分层、统一元字段、回忆策略、物理存储方案和 `task/procedural memory` 的短期优先级。
+4. 已完成 `Phase 6` 的第一份前置设计：`docs/TASK_AND_WORKFLOW_MODEL.md`，明确 `Context / Task / Artifact / Event / Relation` 五类核心对象、四类任务、状态机、持续任务建模与事件/产物分离。
+5. 已完成 `Phase 6` 的第二份核心设计：`docs/BRAIN_CONTROL_ARCHITECTURE.md`，明确 `Brainstem / Cerebellum / Cortex` 三层、`chief + specialist brains` 角色、受控协作拓扑、配置层和降级保底路径。
+6. 已完成 `Phase 7` 的首版上位设计与研究：
+   - `docs/VERSIONED_INTELLIGENCE_ARCHITECTURE.md`
+   - `docs/TEMPORAL_AND_VERSIONED_DATA_RESEARCH.md`
+   明确哪些对象必须版本化、版本通用字段、版本变化闭环、时间性数据分类，以及当前阶段不应仓促引入独立 TSDB 的判断。
+7. 已完成进入编码前的主线收口判断：`docs/IMPLEMENTATION_READINESS_CHECKPOINT.md`。
+   当前结论是：已具备进入下一轮主线编码的条件，最适合先落地“任务基础设施 + 大脑配置层”，其后是 source intelligence 基础对象层和 task/procedural memory。
+8. 继续给进化大脑补“问题归因、恢复建议、去噪”，但作为服务主线的支线而不是新的主线。
+9. 持续收口本机运行稳定性，避免 API/Web 因 watchdog 与运行模式漂移再次失稳。
+## Latest Implementation Update
+
+- First implementation batch has started for `task foundation + brain configuration`.
+- Applied `migrations/007_task_brain_foundation.sql` to local PostgreSQL and verified the new tables exist in `myattention_utf8`.
+- Extended the legacy task system instead of replacing it, so existing `testing/evolution/task_processor` flows remain compatible while new workflow concepts are added underneath.
+- Added schema/model support for:
+  - `task_contexts`
+  - `task_artifacts`
+  - `task_relations`
+  - `brain_profiles`
+  - `brain_routes`
+  - `brain_policies`
+  - `brain_fallbacks`
+- Added the first minimal control-plane service in `services/api/brains/control_plane.py`.
+- Added `GET /api/brains/control-plane`, which now returns `200` and bootstraps default brain profiles and routes on first access.
+- Verified locally:
+  - model compilation passes
+  - 10 unit tests pass
+  - migration `007` applied successfully
+  - `/api/brains/control-plane` returns `200`
+  - `python manage.py health --json` returns overall `healthy`
+
+## Immediate Next Step
+
+- Continue the first implementation batch by wiring the evolution subsystem onto the new task/context/artifact model, so automatic health checks and self-test loops become real daemon tasks instead of ad hoc background routines.
+- Chat has now started using the brain control plane for live routing decisions via `build_execution_plan(...)` instead of relying only on the legacy task router/model picker.
+- `POST /api/chat` now emits `brain_plan` in the SSE stream and persists it into assistant-message metadata, so the routing decision survives reloads and is no longer only an in-flight runtime detail.
+- The chat UI now renders a lightweight brain-route card showing route id, primary brain, supporting brains, and thinking framework for assistant turns.
+- Added unit coverage for execution-plan selection in `services/api/tests/test_brain_execution_plan.py`.
+- Source intelligence is now surfaced in the frontend at `/settings/sources`:
+  - source plans can be created from topic/focus/objective inputs
+  - persisted plans are listed with candidate items, authority score, strategy, and review cadence
+  - candidate items can be promoted into real managed sources through the existing subscribe endpoint
+- Source-plan lifecycle has been extended beyond one-shot creation:
+  - `POST /api/sources/plans/{plan_id}/refresh` now re-runs discovery and updates item status/rationale/evidence
+  - `POST /api/sources/plans/{plan_id}/items/{item_id}/subscribe` now promotes a plan item into a managed source and marks the item as `subscribed`
+  - the sources settings UI now supports in-place plan review refresh and item-level subscription with visible item status
+- Source-plan versioning is now live:
+  - migration `011_source_plan_versions.sql`
+  - `source_plans.current_version / latest_version`
+  - `source_plan_versions`
+  - `GET /api/sources/plans/{plan_id}/versions`
+  - refresh and subscribe actions now create version records with diff/evaluation metadata
+- Added a project-level version management specification:
+  - `docs/VERSION_MANAGEMENT.md`
+  - clarifies Git/file versioning vs. runtime intelligence object versioning
+- Verified:
+  - `POST /api/sources/plans` returns `200`
+  - `GET /api/sources/plans` returns `200`
+  - `POST /api/sources/plans/{plan_id}/refresh` returns `200`
+  - `POST /api/sources/plans/{plan_id}/items/{item_id}/subscribe` returns `200`
+  - `/settings/sources` returns `200`
+  - frontend type-check passes

@@ -246,3 +246,7 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - clarified that attention should not be limited to feed URLs
   - introduced a unified attention-object model for source / person / community / repository / organization / event / topic / method
   - defined `Attention Dimensions V1`, policy-driven ranking, portfolio balancing, and why current source-plan quality is still structurally limited
+- Added `docs/ATTENTION_POLICY_ARCHITECTURE.md`:
+  - defined `attention candidate / policy / evaluation / decision / review` objects
+  - clarified that attention should be policy-driven, versioned, and gate-controlled rather than hardcoded scoring
+  - fixed the implementation direction as `search + LLM dynamic discovery` under `policy + versioning + quality gate` constraints

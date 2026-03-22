@@ -189,3 +189,8 @@
   - policy-driven query plans
   - object-level candidates such as `repository`
   - improved portfolio summaries with clearer diversity signals
+- Added source-intelligence quality drift detection to auto-evolution:
+  - runtime source-plan review now audits active plans for outdated policy versions, missing required buckets, insufficient diversity, domain-only method plans, and accepted plans that still have no selected candidates
+  - `api/evolution/status` now reports `source_plan_quality` alongside source-plan review
+  - `api/testing/issues` now records structured `source_plan_quality` issues when legacy or low-quality plans silently drift away from current attention-policy expectations
+- Added regression tests for source-plan quality issue generation in `services/api/tests/test_auto_evolution_self_test.py`.

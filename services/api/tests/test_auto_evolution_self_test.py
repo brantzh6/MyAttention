@@ -8,6 +8,8 @@ if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
 from feeds.auto_evolution import build_self_test_issue
+from feeds.auto_evolution import build_source_plan_quality_issues
+from feeds.auto_evolution import evaluate_source_plan_quality_snapshot
 from feeds.auto_evolution import is_voting_canary_successful
 from feeds.auto_evolution import update_voting_canary_state
 
@@ -75,7 +77,6 @@ class AutoEvolutionSelfTestIssueTest(unittest.TestCase):
             {"type": "voting_progress", "model": "qwen3.5-plus", "success": True},
             {"type": "voting_progress", "model": "deepseek-v3.2", "success": True},
             {"type": "voting_synthesizing"},
-            {"type": "voting_synthesis_content", "content": "【一句话判断】结果为 2"},
         ):
             state = update_voting_canary_state(state, event)
 
@@ -115,6 +116,43 @@ class AutoEvolutionSelfTestIssueTest(unittest.TestCase):
         self.assertIsNotNone(issue)
         self.assertEqual(issue["priority"], 0)
         self.assertEqual(issue["source_data"]["health"], "critical")
+
+    def test_source_plan_quality_detects_legacy_method_plan(self) -> None:
+        quality = evaluate_source_plan_quality_snapshot(
+            topic="multi agent research",
+            focus="method",
+            review_status="accepted",
+            policy_version=1,
+            live_policy_version=2,
+            item_types=["domain", "domain"],
+            bucket_counts={"implementation": 1, "authority": 1},
+            gate_status_counts={"needs_review": 2},
+            gate_policy={
+                "require_implementation_bucket": True,
+                "minimum_distinct_buckets": 4,
+            },
+        )
+
+        self.assertEqual(quality["status"], "degraded")
+        self.assertIn("outdated attention policy version", " ".join(quality["reasons"]))
+
+    def test_source_plan_quality_issue_is_emitted(self) -> None:
+        issues = build_source_plan_quality_issues(
+            {
+                "quality_findings": [
+                    {
+                        "plan_id": "12345678-1234-1234-1234-1234567890ab",
+                        "status": "degraded",
+                        "reasons": ["plan is still using an outdated attention policy version"],
+                        "summary": {"policy_version": 1, "live_policy_version": 2},
+                    }
+                ]
+            }
+        )
+
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0]["priority"], 0)
+        self.assertEqual(issues[0]["source_data"]["type"], "source_plan_quality")
 
 
 if __name__ == "__main__":

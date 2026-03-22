@@ -290,3 +290,22 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - Current known gap:
   - the system now produces object-level candidates, but many community-domain results are still noisy
   - the next implementation step should introduce a true discovery-adapter layer so generic web search becomes one channel rather than the only candidate generator
+- Auto-evolution now detects silent source-intelligence quality drift instead of only transport/runtime failures:
+  - source-plan review runtime now audits every active plan for:
+    - stale policy versions
+    - missing required buckets
+    - insufficient bucket diversity
+    - method plans that are still dominated by plain domains
+    - accepted plans that still contain only `needs_review` candidates
+  - new quality findings now surface in:
+    - `GET /api/evolution/status`
+    - `GET /api/evolution/contexts`
+    - `GET /api/testing/issues`
+  - `Source Plan Review Daemon` now records both process snapshots and quality snapshots into task artifacts and memory
+- Verified on live runtime:
+  - `api/evolution/status` now exposes `source_plan_quality` as a tracked component
+  - existing legacy method plans were automatically flagged as degraded instead of silently remaining `accepted`
+  - `api/testing/issues` now contains `source_plan_quality` issues for outdated or low-diversity plans
+- Current known gap:
+  - source-plan quality drift is now detected, but not yet auto-remediated
+  - log-health still overcounts SQL statement noise as critical errors and should be filtered separately

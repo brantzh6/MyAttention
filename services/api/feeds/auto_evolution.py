@@ -21,6 +21,7 @@ import aiohttp
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from db.session import get_db, get_db_context
 from db.models import SourcePlan
@@ -127,6 +128,118 @@ def build_source_plan_review_issues(snapshot: dict | None) -> list[dict[str, Any
                         "latest_version": latest_version,
                     },
                     "refreshed": refreshed,
+                },
+            }
+        )
+
+    return issues
+
+
+def evaluate_source_plan_quality_snapshot(
+    *,
+    topic: str,
+    focus: str,
+    review_status: str,
+    policy_version: int,
+    live_policy_version: int,
+    item_types: list[str],
+    bucket_counts: dict[str, int],
+    gate_status_counts: dict[str, int],
+    gate_policy: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    gate_policy = dict(gate_policy or {})
+    focus_value = str(focus or "").strip().lower()
+    normalized_item_types = [str(item_type or "").strip().lower() for item_type in item_types if item_type]
+    normalized_review_status = str(review_status or "").strip().lower()
+    distinct_item_types = sorted(set(normalized_item_types))
+    distinct_bucket_count = len([bucket for bucket, count in bucket_counts.items() if count > 0])
+    total_items = max(sum(bucket_counts.values()), len(normalized_item_types))
+    needs_review_items = int(gate_status_counts.get("needs_review", 0))
+    selected_items = int(gate_status_counts.get("selected", 0))
+
+    status = "healthy"
+    reasons: list[str] = []
+
+    if int(policy_version or 0) < int(live_policy_version or 0):
+        status = "degraded"
+        reasons.append("plan is still using an outdated attention policy version")
+
+    minimum_distinct_buckets = int(gate_policy.get("minimum_distinct_buckets", 1) or 1)
+    if distinct_bucket_count < minimum_distinct_buckets:
+        status = "degraded" if focus_value == "method" else "warning"
+        reasons.append("portfolio lacks enough bucket diversity for its current policy")
+
+    if gate_policy.get("require_authority_bucket") and bucket_counts.get("authority", 0) == 0:
+        status = "degraded"
+        reasons.append("portfolio is missing an authority bucket")
+    if gate_policy.get("require_research_bucket") and bucket_counts.get("research", 0) == 0:
+        status = "degraded"
+        reasons.append("portfolio is missing a research bucket")
+    if gate_policy.get("require_implementation_bucket") and bucket_counts.get("implementation", 0) == 0:
+        status = "degraded"
+        reasons.append("portfolio is missing an implementation bucket")
+
+    if focus_value == "method" and total_items > 0:
+        if not any(item_type in {"repository", "community", "person"} for item_type in distinct_item_types):
+            status = "degraded"
+            reasons.append("method plan is still dominated by generic domains instead of concrete objects")
+
+    if normalized_review_status == "accepted" and needs_review_items > 0 and needs_review_items >= max(2, total_items // 2):
+        status = "warning" if status == "healthy" else status
+        reasons.append("accepted plan still contains too many needs_review candidates")
+
+    if normalized_review_status == "accepted" and selected_items == 0 and total_items > 0:
+        status = "warning" if status == "healthy" else status
+        reasons.append("accepted plan has no clearly selected candidates")
+
+    if not reasons:
+        reasons.append("source plan currently satisfies runtime quality checks")
+
+    return {
+        "topic": topic,
+        "focus": focus_value,
+        "status": status,
+        "reasons": reasons,
+        "summary": {
+            "review_status": normalized_review_status,
+            "policy_version": int(policy_version or 0),
+            "live_policy_version": int(live_policy_version or 0),
+            "distinct_item_types": distinct_item_types,
+            "bucket_counts": dict(bucket_counts),
+            "gate_status_counts": dict(gate_status_counts),
+            "distinct_bucket_count": distinct_bucket_count,
+            "total_items": total_items,
+        },
+    }
+
+
+def build_source_plan_quality_issues(snapshot: dict | None) -> list[dict[str, Any]]:
+    snapshot = snapshot or {}
+    issues: list[dict[str, Any]] = []
+
+    for finding in snapshot.get("quality_findings", []) or []:
+        if str(finding.get("status") or "healthy") == "healthy":
+            continue
+
+        plan_id = str(finding.get("plan_id") or "unknown")
+        severity = "critical" if finding.get("status") == "degraded" else "warning"
+        priority = 0 if severity == "critical" else 1
+        reasons = list(finding.get("reasons") or [])
+        issues.append(
+            {
+                "priority": priority,
+                "category": "quality",
+                "auto_processible": False,
+                "title": f"[source-plan] quality drift: {plan_id[:8]}",
+                "description": "; ".join(reasons[:3]) or f"Source-plan quality drift detected for plan {plan_id}.",
+                "source_type": "system_health",
+                "source_id": plan_id,
+                "source_data": {
+                    "type": "source_plan_quality",
+                    "health": severity,
+                    "state": finding.get("status", "warning"),
+                    "summary": finding.get("summary", {}),
+                    "finding": finding,
                 },
             }
         )
@@ -262,6 +375,7 @@ class AutoEvolutionSystem:
         self._last_evolution_cycle = None
         self._last_collection_health = None
         self._last_source_plan_review = None
+        self._last_source_plan_quality = None
 
     async def start(self, llm_client=None):
         """启动自动进化系统"""
@@ -929,10 +1043,10 @@ class AutoEvolutionSystem:
         from memory.runtime import record_task_memory, upsert_procedural_memory
         from tasks.runtime import create_context_artifact, ensure_task_context, record_context_event
         from tasks.runtime import build_context_task_defaults
+        from attention.policies import resolve_attention_policy
 
         now = datetime.now(timezone.utc)
         due_plans: list[dict[str, Any]] = []
-
         async with get_db_context() as db:
             result = await db.execute(select(SourcePlan).where(SourcePlan.status == "active"))
             plans = result.scalars().all()
@@ -1006,6 +1120,68 @@ class AutoEvolutionSystem:
             "failures": failures,
             "healthy": not failures,
         }
+
+        quality_findings: list[dict[str, Any]] = []
+        async with get_db_context() as db:
+            result = await db.execute(
+                select(SourcePlan)
+                .where(SourcePlan.status == "active")
+                .options(selectinload(SourcePlan.items))
+            )
+            reviewed_plans = result.scalars().all()
+            for plan in reviewed_plans:
+                policy = await resolve_attention_policy(db, plan.focus)
+                plan_extra = dict(plan.extra or {})
+                policy_meta = dict(plan_extra.get("attention_policy", {}) or {})
+                bucket_counts: dict[str, int] = {}
+                gate_status_counts: dict[str, int] = {}
+                item_types: list[str] = []
+                for item in list(plan.items or []):
+                    evidence = dict(item.evidence or {})
+                    item_types.append(str(item.item_type or "domain"))
+                    bucket = str(evidence.get("object_bucket", "") or "")
+                    if bucket:
+                        bucket_counts[bucket] = bucket_counts.get(bucket, 0) + 1
+                    gate_status = str(evidence.get("gate_status", "") or "")
+                    if gate_status:
+                        gate_status_counts[gate_status] = gate_status_counts.get(gate_status, 0) + 1
+
+                quality = evaluate_source_plan_quality_snapshot(
+                    topic=plan.topic,
+                    focus=plan.focus,
+                    review_status=plan.review_status,
+                    policy_version=int(policy_meta.get("policy_version", 0) or 0),
+                    live_policy_version=int(policy.current_version or 0),
+                    item_types=item_types,
+                    bucket_counts=bucket_counts,
+                    gate_status_counts=gate_status_counts,
+                    gate_policy={
+                        **dict(policy.gate_policy or {}),
+                        "minimum_distinct_buckets": int(
+                            dict(policy.candidate_mix_policy or {}).get("minimum_distinct_buckets", 1) or 1
+                        ),
+                    },
+                )
+                quality_findings.append(
+                    {
+                        "plan_id": str(plan.id),
+                        "topic": plan.topic,
+                        "focus": plan.focus,
+                        **quality,
+                    }
+                )
+
+        quality_issues = [finding for finding in quality_findings if finding.get("status") != "healthy"]
+        quality_snapshot = {
+            "timestamp": now.isoformat(),
+            "plan_count": len(quality_findings),
+            "issue_count": len(quality_issues),
+            "quality_findings": quality_findings,
+        }
+        self._last_source_plan_quality = quality_snapshot
+
+        snapshot["quality_findings"] = quality_issues
+        snapshot["healthy"] = not failures and not quality_issues
         self._last_source_plan_review = snapshot
 
         async with get_db_context() as db:
@@ -1038,6 +1214,7 @@ class AutoEvolutionSystem:
                     "due_count": snapshot["due_count"],
                     "refreshed_count": len(refreshed),
                     "failure_count": len(failures),
+                    "quality_issue_count": len(quality_issues),
                 },
             )
             await record_task_memory(
@@ -1052,6 +1229,15 @@ class AutoEvolutionSystem:
                     "problem_type": "source_intelligence",
                     "thinking_framework": "source_intelligence",
                 },
+            )
+            await create_context_artifact(
+                db,
+                context=context,
+                task=None,
+                artifact_type="report",
+                title="Source plan quality snapshot",
+                summary="healthy" if not quality_issues else "degraded",
+                payload=quality_snapshot,
             )
             await upsert_procedural_memory(
                 db,
@@ -1070,11 +1256,28 @@ class AutoEvolutionSystem:
                     "due_count": snapshot["due_count"],
                     "refreshed_count": len(refreshed),
                     "failure_count": len(failures),
+                    "quality_issue_count": len(quality_issues),
                 },
             )
 
             processor = get_task_processor(db)
             for issue in build_source_plan_review_issues(snapshot):
+                classification = ClassificationResult(
+                    priority=issue["priority"],
+                    category=issue["category"],
+                    auto_processible=issue["auto_processible"],
+                    title=issue["title"],
+                    description=issue["description"],
+                    source_type=issue["source_type"],
+                    source_id=issue["source_id"],
+                    source_data=issue["source_data"],
+                    **build_context_task_defaults(
+                        context=context,
+                        assigned_brain="source-intelligence-brain",
+                    ),
+                )
+                await processor.create_task(classification)
+            for issue in build_source_plan_quality_issues(quality_snapshot):
                 classification = ClassificationResult(
                     priority=issue["priority"],
                     category=issue["category"],
@@ -1138,6 +1341,7 @@ class AutoEvolutionSystem:
         collection_health = self._last_collection_health or {}
         log_health = self._last_log_health or {}
         source_plan_review = self._last_source_plan_review or {}
+        source_plan_quality = self._last_source_plan_quality or {}
 
         health = "healthy"
         issues: list[str] = []
@@ -1153,9 +1357,14 @@ class AutoEvolutionSystem:
             if log_health.get("critical_errors", 0) > 0:
                 health = "degraded"
                 issues.append("critical_log_errors")
-            if source_plan_review and not source_plan_review.get("healthy", True):
+            review_failures = list(source_plan_review.get("failures", []) or [])
+            if review_failures:
                 health = "degraded"
                 issues.append("source_plan_review_failed")
+            quality_count = int(source_plan_quality.get("summary", {}).get("issue_count", 0) or 0)
+            if quality_count > 0:
+                health = "degraded"
+                issues.append("source_plan_quality_degraded")
         else:
             health = "stopped"
 
@@ -1171,6 +1380,7 @@ class AutoEvolutionSystem:
                 "self_test": True,
                 "collection_monitor": True,
                 "source_plan_review": True,
+                "source_plan_quality": True,
             },
             "intervals": {
                 "check_interval": self.check_interval,
@@ -1188,6 +1398,7 @@ class AutoEvolutionSystem:
                 "self_test": self_test,
                 "collection_health": collection_health,
                 "source_plan_review": self._last_source_plan_review,
+                "source_plan_quality": self._last_source_plan_quality,
             },
         }
 

@@ -70,6 +70,70 @@ def build_self_test_issue(snapshot: dict | None) -> dict | None:
     }
 
 
+def build_source_plan_review_issues(snapshot: dict | None) -> list[dict[str, Any]]:
+    snapshot = snapshot or {}
+    issues: list[dict[str, Any]] = []
+
+    for failure in snapshot.get("failures", []) or []:
+        plan_id = str(failure.get("plan_id") or "unknown")
+        issues.append(
+            {
+                "priority": 1,
+                "category": "reliability",
+                "auto_processible": False,
+                "title": f"[source-plan] refresh failed: {plan_id[:8]}",
+                "description": f"Scheduled source-plan refresh failed for plan {plan_id}.",
+                "source_type": "system_health",
+                "source_id": plan_id,
+                "source_data": {
+                    "type": "source_plan_review",
+                    "health": "warning",
+                    "state": "failed",
+                    "summary": {
+                        "plan_id": plan_id,
+                        "topic": failure.get("topic", ""),
+                        "status": failure.get("status"),
+                    },
+                    "failure": failure,
+                },
+            }
+        )
+
+    for refreshed in snapshot.get("refreshed", []) or []:
+        review_status = str(refreshed.get("review_status") or "").strip().lower()
+        current_version = int(refreshed.get("current_version") or 0)
+        latest_version = int(refreshed.get("latest_version") or 0)
+        if review_status != "needs_review" and latest_version <= current_version:
+            continue
+
+        plan_id = str(refreshed.get("plan_id") or "unknown")
+        issues.append(
+            {
+                "priority": 1,
+                "category": "quality",
+                "auto_processible": False,
+                "title": f"[source-plan] candidate needs review: {plan_id[:8]}",
+                "description": f"Scheduled refresh produced a candidate source-plan version that needs review for plan {plan_id}.",
+                "source_type": "system_health",
+                "source_id": plan_id,
+                "source_data": {
+                    "type": "source_plan_review",
+                    "health": "warning",
+                    "state": "needs_review",
+                    "summary": {
+                        "plan_id": plan_id,
+                        "topic": refreshed.get("topic", ""),
+                        "current_version": current_version,
+                        "latest_version": latest_version,
+                    },
+                    "refreshed": refreshed,
+                },
+            }
+        )
+
+    return issues
+
+
 def update_voting_canary_state(state: dict[str, Any], event: dict[str, Any]) -> dict[str, Any]:
     event_type = event.get("type")
 
@@ -860,8 +924,11 @@ class AutoEvolutionSystem:
                     await processor.process(task)
 
     async def _run_source_plan_review_once(self):
+        from feeds.task_classifier import ClassificationResult
+        from feeds.task_processor import get_task_processor
         from memory.runtime import record_task_memory, upsert_procedural_memory
         from tasks.runtime import create_context_artifact, ensure_task_context, record_context_event
+        from tasks.runtime import build_context_task_defaults
 
         now = datetime.now(timezone.utc)
         due_plans: list[dict[str, Any]] = []
@@ -1005,6 +1072,24 @@ class AutoEvolutionSystem:
                     "failure_count": len(failures),
                 },
             )
+
+            processor = get_task_processor(db)
+            for issue in build_source_plan_review_issues(snapshot):
+                classification = ClassificationResult(
+                    priority=issue["priority"],
+                    category=issue["category"],
+                    auto_processible=issue["auto_processible"],
+                    title=issue["title"],
+                    description=issue["description"],
+                    source_type=issue["source_type"],
+                    source_id=issue["source_id"],
+                    source_data=issue["source_data"],
+                    **build_context_task_defaults(
+                        context=context,
+                        assigned_brain="source-intelligence-brain",
+                    ),
+                )
+                await processor.create_task(classification)
 
     async def _run_evolution_cycle(self):
         """运行一次进化周期"""

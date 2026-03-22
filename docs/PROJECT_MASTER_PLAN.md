@@ -15,6 +15,7 @@
 - 任务与工作流研究：`docs/TASK_AND_WORKFLOW_MODEL_RESEARCH.md`
 - 任务与工作流设计：`docs/TASK_AND_WORKFLOW_MODEL.md`
 - 来源智能研究：`docs/SOURCE_INTELLIGENCE_RESEARCH.md`
+- 关注模型研究：`docs/ATTENTION_MODEL_RESEARCH.md`
 - 来源智能架构：`docs/SOURCE_INTELLIGENCE_ARCHITECTURE.md`
 - 记忆架构研究：`docs/MEMORY_ARCHITECTURE_RESEARCH.md`
 - 记忆架构设计：`docs/MEMORY_ARCHITECTURE.md`

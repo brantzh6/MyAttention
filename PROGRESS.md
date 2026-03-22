@@ -242,3 +242,7 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - Current known UI gap:
   - source-plan topic text corruption still makes some Chinese topics unreadable
   - evolution suggestions are still heuristic hints, not yet model-generated design/UX recommendations
+- Added `docs/ATTENTION_MODEL_RESEARCH.md`:
+  - clarified that attention should not be limited to feed URLs
+  - introduced a unified attention-object model for source / person / community / repository / organization / event / topic / method
+  - defined `Attention Dimensions V1`, policy-driven ranking, portfolio balancing, and why current source-plan quality is still structurally limited

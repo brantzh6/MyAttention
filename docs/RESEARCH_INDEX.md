@@ -16,6 +16,24 @@
   - 状态机
   - artifact / event / checkpoint / retry / durable execution
 
+- `docs/SOURCE_INTELLIGENCE_RESEARCH.md`
+  - 来源发现与来源执行分离
+  - 冷热数据分层
+  - 来源性质与执行策略矩阵
+  - agent-assisted retrieval 的边界
+
+- `docs/ATTENTION_MODEL_RESEARCH.md`
+  - 什么对象值得关注
+  - 为什么值得关注
+  - source / person / community / repo / event 的统一关注模型
+  - attention dimensions / policy / portfolio balancing
+
+- `docs/MEMORY_ARCHITECTURE_RESEARCH.md`
+  - session / task / semantic / episodic / procedural
+  - 记忆分层
+  - 记忆回忆策略
+  - 为什么进化依赖程序性和经验性记忆
+
 - `docs/KNOWLEDGE_LIFECYCLE_RESEARCH.md`
   - 信息 -> 事实 -> 知识 -> 洞察 -> 行动
   - 学科维度
@@ -34,12 +52,31 @@
   - 为什么搜索是信息流前置索引，而不是简单补充
   - 为什么信息流不能只盯 RSS 和最新内容
 
+- `docs/DEEP_RESEARCH_METHOD_RESEARCH.md`
+  - 深度研究方法为什么比搜索总结更适合作为高价值任务骨架
+  - 投票在深度研究中的正确位置
+  - 为什么不能把投票当成研究本身
+
 ## 下一步预期设计文档
 
+- `docs/PROBLEM_FRAMING_AND_METHOD_SELECTION.md`
 - `docs/BRAIN_CONTROL_ARCHITECTURE.md`
 - `docs/TASK_AND_WORKFLOW_MODEL.md`
-- `docs/MEMORY_ARCHITECTURE.md`
+- `docs/SOURCE_INTELLIGENCE_ARCHITECTURE.md`
 - `docs/KNOWLEDGE_ARCHITECTURE.md`
+- `docs/DEEP_RESEARCH_ARCHITECTURE.md`
+- `docs/VERSIONED_INTELLIGENCE_ARCHITECTURE.md`
+- `docs/TEMPORAL_AND_VERSIONED_DATA_RESEARCH.md`
+
+## 当前已完成设计文档
+
+- `docs/PROBLEM_FRAMING_AND_METHOD_SELECTION.md`
+- `docs/SOURCE_INTELLIGENCE_ARCHITECTURE.md`
+- `docs/MEMORY_ARCHITECTURE.md`
+- `docs/TASK_AND_WORKFLOW_MODEL.md`
+- `docs/BRAIN_CONTROL_ARCHITECTURE.md`
+- `docs/VERSIONED_INTELLIGENCE_ARCHITECTURE.md`
+- `docs/TEMPORAL_AND_VERSIONED_DATA_RESEARCH.md`
 
 ## 研究原则
 

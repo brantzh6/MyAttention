@@ -6,9 +6,10 @@ import {
   AlertTriangle,
   BrainCircuit,
   CheckCircle2,
+  Clock3,
+  Database,
   Loader2,
   RefreshCw,
-  ShieldAlert,
   TestTube2,
   Wrench,
 } from 'lucide-react'
@@ -21,8 +22,6 @@ interface ServiceState {
   name: string
   status: string
   running: boolean
-  details?: Record<string, unknown>
-  error?: string
 }
 
 interface SystemStatusPayload {
@@ -34,9 +33,7 @@ interface SystemStatusPayload {
     unhealthy: number
     error: number
   }
-  databases: ServiceState[]
   services: ServiceState[]
-  external: ServiceState[]
 }
 
 interface EvolutionStatusPayload {
@@ -44,7 +41,6 @@ interface EvolutionStatusPayload {
   health: string
   issues: string[]
   components: Record<string, boolean>
-  intervals: Record<string, number>
   last_results: Record<string, any>
   timestamp: string
 }
@@ -89,17 +85,181 @@ interface TestingIssue {
   updated_at?: string
 }
 
-function statusTone(status?: string) {
-  if (status === 'healthy' || status === 'running') return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-  if (status === 'degraded') return 'bg-amber-50 text-amber-700 ring-amber-200'
-  if (status === 'not_configured') return 'bg-slate-100 text-slate-600 ring-slate-200'
+interface ContextSummary {
+  id: string
+  context_type: string
+  title: string
+  goal?: string | null
+  owner_type?: string | null
+  owner_id?: string | null
+  status: string
+  priority: number
+  task_count: number
+  open_task_count: number
+  artifact_count: number
+  event_count: number
+  latest_event_at?: string | null
+  latest_artifact_at?: string | null
+  updated_at?: string | null
+  latest_event?: {
+    action?: string
+    result?: string
+    event_type?: string
+    reason?: string | null
+    created_at?: string | null
+  } | null
+  latest_artifact?: {
+    artifact_type?: string
+    title?: string
+    summary?: string | null
+    created_at?: string | null
+  } | null
+}
+
+interface ContextDetail extends ContextSummary {
+  tasks: Array<{
+    id: string
+    title: string
+    status: string
+    priority: number
+    source_type?: string | null
+    task_type?: string | null
+    assigned_brain?: string | null
+    updated_at?: string | null
+  }>
+  recent_events: Array<{
+    id: string
+    event_type?: string | null
+    action: string
+    result: string
+    reason?: string | null
+    created_at?: string | null
+  }>
+  recent_artifacts: Array<{
+    id: string
+    artifact_type: string
+    title: string
+    summary?: string | null
+    created_at?: string | null
+  }>
+}
+
+interface TaskMemoryItem {
+  id: string
+  context_id: string
+  memory_kind: string
+  title: string
+  summary?: string | null
+  created_at?: string | null
+}
+
+interface ProceduralMemoryItem {
+  id: string
+  memory_key: string
+  name: string
+  problem_type?: string | null
+  method_name?: string | null
+  validation_status: string
+  effectiveness_score: number
+  last_validated_at?: string | null
+}
+
+function tone(status?: string) {
+  if (status === 'healthy' || status === 'running' || status === 'active' || status === 'ok') {
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+  }
+  if (status === 'degraded' || status === 'pending' || status === 'warning') {
+    return 'bg-amber-50 text-amber-700 ring-amber-200'
+  }
   return 'bg-red-50 text-red-700 ring-red-200'
 }
 
-function statusIcon(status?: string) {
-  if (status === 'healthy' || status === 'running') return <CheckCircle2 className="h-4 w-4" />
-  if (status === 'degraded') return <AlertTriangle className="h-4 w-4" />
-  return <ShieldAlert className="h-4 w-4" />
+function formatTime(value?: string | null) {
+  if (!value) return '未记录'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function contextTypeLabel(type?: string) {
+  switch (type) {
+    case 'evolution':
+      return '进化'
+    case 'source_intelligence':
+      return '来源智能'
+    case 'system':
+      return '系统'
+    default:
+      return type || '未知'
+  }
+}
+
+function priorityLabel(priority: number) {
+  switch (priority) {
+    case 0:
+      return 'P0'
+    case 1:
+      return 'P1'
+    case 2:
+      return 'P2'
+    default:
+      return `P${priority}`
+  }
+}
+
+function artifactTypeLabel(type?: string | null) {
+  switch (type) {
+    case 'report':
+      return '报告快照'
+    case 'log':
+      return '日志证据'
+    case 'decision':
+      return '决策产物'
+    default:
+      return type || '未知产物'
+  }
+}
+
+function eventLabel(eventType?: string | null, action?: string | null) {
+  if (eventType === 'source_plan_review') return '建源计划评审'
+  if (eventType === 'collection_health') return '采集健康检查'
+  if (eventType === 'self_test') return '系统自测'
+  if (eventType === 'log_health') return '日志健康巡检'
+  if (action === 'dedupe_update') return '重复问题归并'
+  return eventType || action || '事件'
+}
+
+function buildContextGuidance(context?: ContextDetail | null) {
+  if (!context) {
+    return {
+      headline: '先选择一个上下文',
+      detail: '建议优先查看 source intelligence 或 evolution 上下文，确认它最近做了什么。',
+    }
+  }
+
+  if (context.context_type === 'source_intelligence') {
+    return {
+      headline: '重点看版本变化和待复核项',
+      detail: '先看最新快照，再看最近事件，最后看上下文任务。这样最容易判断这次 refresh 是变好还是变差。',
+    }
+  }
+
+  if (context.context_type === 'evolution') {
+    return {
+      headline: '重点看失败链路和恢复建议',
+      detail: '先看关键问题，再看最近事件和产物，确认它是在报错、观察，还是已经进入恢复动作。',
+    }
+  }
+
+  return {
+    headline: '先看目标，再看事件和产物',
+    detail: '不要先盯计数。先确认这个上下文要解决什么，再看最近做了什么、留下了什么证据。',
+  }
 }
 
 export function EvolutionDashboard() {
@@ -108,44 +268,69 @@ export function EvolutionDashboard() {
   const [collectionHealth, setCollectionHealth] = useState<CollectionHealthPayload | null>(null)
   const [mvpStatus, setMvpStatus] = useState<MvpStatusPayload | null>(null)
   const [issues, setIssues] = useState<TestingIssue[]>([])
+  const [contexts, setContexts] = useState<ContextSummary[]>([])
+  const [selectedContextId, setSelectedContextId] = useState<string | null>(null)
+  const [selectedContext, setSelectedContext] = useState<ContextDetail | null>(null)
+  const [taskMemories, setTaskMemories] = useState<TaskMemoryItem[]>([])
+  const [proceduralMemories, setProceduralMemories] = useState<ProceduralMemoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [runningSelfTest, setRunningSelfTest] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const load = async (silent = false) => {
-    if (!silent) {
-      setLoading(true)
-    } else {
+    if (silent) {
       setRefreshing(true)
+    } else {
+      setLoading(true)
     }
 
     try {
-      const [systemRes, evolutionRes, collectionRes, mvpRes, issuesRes] = await Promise.all([
+      const [systemRes, evolutionRes, collectionRes, mvpRes, issuesRes, contextsRes, taskMemoryRes, proceduralMemoryRes] = await Promise.all([
         fetch(`${API_URL}/api/settings/system`),
         fetch(`${API_URL}/api/evolution/status`),
         fetch(`${API_URL}/api/evolution/collection-health?fresh=true`),
         fetch(`${API_URL}/api/evolution/mvp-status`),
         fetch(`${API_URL}/api/testing/issues`),
+        fetch(`${API_URL}/api/evolution/contexts`),
+        fetch(`${API_URL}/api/evolution/memories/task`),
+        fetch(`${API_URL}/api/evolution/memories/procedural`),
       ])
 
-      if (!systemRes.ok || !evolutionRes.ok || !collectionRes.ok || !mvpRes.ok || !issuesRes.ok) {
+      if (!systemRes.ok || !evolutionRes.ok || !collectionRes.ok || !mvpRes.ok || !issuesRes.ok || !contextsRes.ok || !taskMemoryRes.ok || !proceduralMemoryRes.ok) {
         throw new Error('进化大脑数据加载失败')
       }
 
-      const [systemData, evolutionData, collectionData, mvpData, issuesData] = await Promise.all([
+      const [systemData, evolutionData, collectionData, mvpData, issuesData, contextsData, taskMemoryData, proceduralMemoryData] = await Promise.all([
         systemRes.json(),
         evolutionRes.json(),
         collectionRes.json(),
         mvpRes.json(),
         issuesRes.json(),
+        contextsRes.json(),
+        taskMemoryRes.json(),
+        proceduralMemoryRes.json(),
       ])
+
+      const nextContexts = Array.isArray(contextsData?.contexts) ? contextsData.contexts : []
+      const nextIssues = Array.isArray(issuesData?.issues) ? issuesData.issues : Array.isArray(issuesData) ? issuesData : []
 
       setSystemStatus(systemData)
       setEvolutionStatus(evolutionData)
       setCollectionHealth(collectionData)
       setMvpStatus(mvpData)
-      setIssues(Array.isArray(issuesData?.issues) ? issuesData.issues : Array.isArray(issuesData) ? issuesData : [])
+      setIssues(nextIssues)
+      setContexts(nextContexts)
+      setTaskMemories(Array.isArray(taskMemoryData?.memories) ? taskMemoryData.memories : [])
+      setProceduralMemories(Array.isArray(proceduralMemoryData?.memories) ? proceduralMemoryData.memories : [])
+
+      setSelectedContextId((current) => {
+        if (current && nextContexts.some((item: ContextSummary) => item.id === current)) {
+          return current
+        }
+        return nextContexts[0]?.id ?? null
+      })
+
       setError(null)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '加载失败')
@@ -156,13 +341,43 @@ export function EvolutionDashboard() {
   }
 
   useEffect(() => {
-    load()
+    void load()
     const timer = window.setInterval(() => {
       void load(true)
     }, 30000)
-
     return () => window.clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    if (!selectedContextId) {
+      setSelectedContext(null)
+      return
+    }
+
+    let cancelled = false
+
+    async function fetchDetail() {
+      try {
+        const response = await fetch(`${API_URL}/api/evolution/contexts/${selectedContextId}`)
+        if (!response.ok) {
+          throw new Error('上下文详情加载失败')
+        }
+        const data = await response.json()
+        if (!cancelled) {
+          setSelectedContext(data)
+        }
+      } catch (detailError) {
+        if (!cancelled) {
+          setError(detailError instanceof Error ? detailError.message : '上下文详情加载失败')
+        }
+      }
+    }
+
+    void fetchDetail()
+    return () => {
+      cancelled = true
+    }
+  }, [selectedContextId])
 
   const runSelfTestNow = async () => {
     setRunningSelfTest(true)
@@ -179,8 +394,9 @@ export function EvolutionDashboard() {
     }
   }
 
-  const criticalIssues = useMemo(() => issues.filter((item) => item.priority <= 1).slice(0, 6), [issues])
   const failedChecks = mvpStatus?.self_test?.failed_checks || []
+  const criticalIssues = useMemo(() => issues.filter((item) => item.priority <= 1).slice(0, 6), [issues])
+  const contextGuidance = useMemo(() => buildContextGuidance(selectedContext), [selectedContext])
 
   if (loading) {
     return (
@@ -199,9 +415,9 @@ export function EvolutionDashboard() {
               <BrainCircuit className="h-4 w-4" />
               进化大脑
             </div>
-            <h2 className="text-2xl font-semibold tracking-tight text-foreground">自测、监控、问题归并和恢复入口</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-foreground">持续监控、自测、归因和恢复入口</h2>
             <p className="max-w-3xl text-sm leading-6 text-muted-foreground">
-              这里应该是系统主动看自己、测自己、发现问题和驱动修复的主页面，而不是藏在通知设置里的附属面板。
+              这里展示的是持续运行中的进化上下文，而不是一组手动按钮。重点看系统正在监控什么、最近产出了什么快照、出了问题会落成什么任务。
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -225,18 +441,14 @@ export function EvolutionDashboard() {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         )}
 
         <div className="mt-6 grid gap-4 md:grid-cols-4">
           <div className="rounded-xl border bg-background p-4">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">试运行状态</p>
             <p className="mt-2 text-lg font-semibold">{mvpStatus?.trial_ready ? '可试运行' : '未就绪'}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              阻塞问题 {mvpStatus?.open_issues?.active_blockers_6h ?? 0} 个
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">近 6 小时阻塞 {mvpStatus?.open_issues?.active_blockers_6h ?? 0}</p>
           </div>
           <div className="rounded-xl border bg-background p-4">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">自测结果</p>
@@ -247,143 +459,314 @@ export function EvolutionDashboard() {
             <p className="text-xs uppercase tracking-wide text-muted-foreground">采集链路</p>
             <p className="mt-2 text-lg font-semibold">{collectionHealth?.summary?.status || 'unknown'}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              24h 原始写入 {collectionHealth?.summary?.raw_ingest_24h ?? 0}
+              24h 原始写入 {collectionHealth?.summary?.raw_ingest_24h ?? 0} / 事实层 {collectionHealth?.summary?.feed_items_24h ?? 0}
             </p>
           </div>
           <div className="rounded-xl border bg-background p-4">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">问题中心</p>
-            <p className="mt-2 text-lg font-semibold">{mvpStatus?.open_issues?.total ?? 0} 个问题</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              P0 {mvpStatus?.open_issues?.p0 ?? 0} / P1 {mvpStatus?.open_issues?.p1 ?? 0}
-            </p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">持续上下文</p>
+            <p className="mt-2 text-lg font-semibold">{contexts.length}</p>
+            <p className="mt-1 text-sm text-muted-foreground">运行中的观察与进化任务</p>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
-        <section className="space-y-6">
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <TestTube2 className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">当前自测覆盖</h3>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {failedChecks.length === 0 ? (
-                <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground md:col-span-2">
-                  当前没有失败自测。
-                </div>
-              ) : (
-                failedChecks.map((item, index) => (
-                  <div key={`${item.name}-${index}`} className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                    <p className="font-medium text-amber-900">{item.name}</p>
-                    <p className="mt-1 text-sm text-amber-700">{item.detail || '未返回更多细节'}</p>
-                  </div>
-                ))
-              )}
-            </div>
-            <div className="mt-4 rounded-lg border bg-background p-4 text-sm text-muted-foreground">
-              当前进化大脑已经覆盖日志、自测、投票 canary、采集健康，但真实 UI 巡检还需要继续升级到浏览器级操作。
-            </div>
+      <section className="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
+        <div className="rounded-2xl border bg-card p-4 shadow-sm">
+          <div className="mb-4 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold">持续上下文</h3>
           </div>
-
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">服务与基础设施</h3>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {[...(systemStatus?.services || []), ...(systemStatus?.databases || [])].map((service) => (
-                <div key={service.name} className="rounded-lg border bg-background p-4">
-                  <div className="flex items-center justify-between gap-3">
+          <div className="space-y-3">
+            {contexts.map((context) => {
+              const active = context.id === selectedContextId
+              return (
+                <button
+                  key={context.id}
+                  type="button"
+                  onClick={() => setSelectedContextId(context.id)}
+                  className={cn(
+                    'w-full rounded-xl border px-4 py-3 text-left transition-colors',
+                    active ? 'border-primary bg-primary/5' : 'hover:bg-muted/60',
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-foreground">{service.name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {service.error || (service.running ? '运行中' : '未运行')}
+                      <p className="text-sm font-semibold text-foreground">{context.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {contextTypeLabel(context.context_type)} · {priorityLabel(context.priority)} · {context.status}
                       </p>
                     </div>
-                    <span className={cn('inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ring-1', statusTone(service.status))}>
-                      {statusIcon(service.status)}
-                      {service.status}
+                    <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(context.status))}>
+                      {context.open_task_count} 开放任务
                     </span>
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="space-y-6">
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <Wrench className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">收集链路诊断</h3>
-            </div>
-            <div className="space-y-3 text-sm">
-              <div className="rounded-lg border bg-background p-4">
-                <p className="font-medium">待处理来源</p>
-                <p className="mt-2 text-muted-foreground">
-                  {(collectionHealth?.pending_sources_1h || []).join('，') || '无'}
-                </p>
-              </div>
-              <div className="rounded-lg border bg-background p-4">
-                <p className="font-medium">24 小时报错来源</p>
-                <p className="mt-2 text-muted-foreground">
-                  {(collectionHealth?.error_sources_24h || []).join('，') || '无'}
-                </p>
-              </div>
-              <div className="rounded-lg border bg-background p-4">
-                <p className="font-medium">Pipeline 状态</p>
-                <p className="mt-2 text-muted-foreground">
-                  {mvpStatus?.pipeline?.status || 'unknown'} / gathered {mvpStatus?.pipeline?.gathered ?? 0} / imported{' '}
-                  {mvpStatus?.pipeline?.imported ?? 0}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <ShieldAlert className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">高优先级问题</h3>
-            </div>
-            <div className="space-y-3">
-              {criticalIssues.length === 0 ? (
-                <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
-                  当前没有 P0 / P1 问题。
-                </div>
-              ) : (
-                criticalIssues.map((issue) => (
-                  <div key={issue.id} className="rounded-lg border bg-background p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-foreground">{issue.title}</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {issue.source_type} / {issue.status}
-                        </p>
-                      </div>
-                      <span className="rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700 ring-1 ring-red-200">
-                        P{issue.priority}
-                      </span>
-                    </div>
+                  {context.goal && <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{context.goal}</p>}
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                    <span>{context.task_count} 任务</span>
+                    <span>{context.event_count} 事件</span>
+                    <span>{context.artifact_count} 产物</span>
                   </div>
-                ))
+                  <p className="mt-2 text-[11px] text-muted-foreground">最近活动 {formatTime(context.updated_at || context.latest_event_at)}</p>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <section className="rounded-2xl border bg-card p-6 shadow-sm">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold">{selectedContext?.title || '未选择上下文'}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {selectedContext?.goal || '这个上下文还没有记录明确目标。'}
+                </p>
+              </div>
+              {selectedContext && (
+                <div className="flex flex-wrap gap-2">
+                  <span className={cn('inline-flex items-center rounded-full px-2.5 py-1 text-xs ring-1', tone(selectedContext.status))}>
+                    {selectedContext.status}
+                  </span>
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-700 ring-1 ring-slate-200">
+                    {contextTypeLabel(selectedContext.context_type)}
+                  </span>
+                </div>
               )}
             </div>
-          </div>
 
-          <div className="rounded-2xl border bg-card p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-primary" />
-              <h3 className="text-lg font-semibold">当前边界</h3>
+            <div className="mt-4 rounded-xl border bg-muted/30 p-4">
+              <div className="text-sm font-medium">{contextGuidance.headline}</div>
+              <div className="mt-1 text-sm text-muted-foreground">{contextGuidance.detail}</div>
             </div>
-            <ul className="space-y-3 text-sm text-muted-foreground">
-              <li>日志分析、接口自测和采集健康已经接入，但浏览器级 UI 巡检仍需继续强化。</li>
-              <li>新存储结构只完成了对象存储原始层和部分事实层，知识大脑的结构化层还没落完。</li>
-              <li>这个页面现在是进化大脑的正式入口，后续 UI 巡检和自动恢复记录也应收口到这里。</li>
-            </ul>
-          </div>
-        </section>
-      </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-4">
+              <div className="rounded-xl border bg-background p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">任务</p>
+                <p className="mt-2 text-lg font-semibold">{selectedContext?.task_count ?? 0}</p>
+              </div>
+              <div className="rounded-xl border bg-background p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">开放任务</p>
+                <p className="mt-2 text-lg font-semibold">{selectedContext?.open_task_count ?? 0}</p>
+              </div>
+              <div className="rounded-xl border bg-background p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">事件</p>
+                <p className="mt-2 text-lg font-semibold">{selectedContext?.event_count ?? 0}</p>
+              </div>
+              <div className="rounded-xl border bg-background p-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">产物</p>
+                <p className="mt-2 text-lg font-semibold">{selectedContext?.artifact_count ?? 0}</p>
+              </div>
+            </div>
+
+            {selectedContext?.latest_artifact && (
+              <div className="mt-6 rounded-xl border bg-background p-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Database className="h-4 w-4 text-muted-foreground" />
+                  最新快照
+                </div>
+                <p className="mt-2 text-sm font-semibold">{selectedContext.latest_artifact.title}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{selectedContext.latest_artifact.summary || '暂无摘要。'}</p>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {selectedContext.latest_artifact.artifact_type} · {formatTime(selectedContext.latest_artifact.created_at)}
+                </p>
+              </div>
+            )}
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-2">
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Clock3 className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">最近事件</h3>
+              </div>
+              <div className="mt-4 space-y-3">
+                {selectedContext?.recent_events?.length ? (
+                  selectedContext.recent_events.map((event) => (
+                    <div key={event.id} className="rounded-xl border bg-background p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium">{eventLabel(event.event_type, event.action)}</p>
+                        <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(event.result))}>
+                          {event.result}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">{event.reason || event.action}</p>
+                      <p className="mt-2 text-[11px] text-muted-foreground">{formatTime(event.created_at)}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">暂无事件。</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Wrench className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">最近产物</h3>
+              </div>
+              <div className="mt-4 space-y-3">
+                {selectedContext?.recent_artifacts?.length ? (
+                  selectedContext.recent_artifacts.map((artifact) => (
+                    <div key={artifact.id} className="rounded-xl border bg-background p-4">
+                      <p className="text-sm font-medium">{artifact.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{artifact.summary || '暂无摘要。'}</p>
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        {artifactTypeLabel(artifact.artifact_type)} · {formatTime(artifact.created_at)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">暂无产物。</p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-2">
+                <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">上下文任务</h3>
+              </div>
+              <div className="mt-4 space-y-3">
+                {selectedContext?.tasks?.length ? (
+                  selectedContext.tasks.map((task) => (
+                    <div key={task.id} className="rounded-xl border bg-background p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium">{task.title}</p>
+                        <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(task.status))}>
+                          {task.status}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {task.task_type || 'workflow'} · {task.source_type || 'unknown'} · {task.assigned_brain || 'unassigned'}
+                      </p>
+                      <p className="mt-2 text-[11px] text-muted-foreground">最近更新 {formatTime(task.updated_at)}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">这个上下文还没有挂接任务。</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="rounded-2xl border bg-card p-6 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">系统总览</h3>
+                </div>
+                <div className="mt-4 space-y-3 text-sm">
+                  <p className="text-muted-foreground">整体健康：{systemStatus?.overall_status || 'unknown'}</p>
+                  <p className="text-muted-foreground">进化状态：{evolutionStatus?.health || 'unknown'}</p>
+                  <p className="text-muted-foreground">服务总数：{systemStatus?.summary?.total ?? 0}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border bg-card p-6 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">关键问题</h3>
+                </div>
+                <div className="mt-4 space-y-3">
+                  {criticalIssues.length ? (
+                    criticalIssues.map((issue) => (
+                      <div key={issue.id} className="rounded-xl border bg-background p-4">
+                        <p className="text-sm font-medium">{issue.title}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          P{issue.priority} · {issue.source_type} · {issue.status}
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">当前没有 P0/P1 级问题。</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border bg-card p-6 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">人工采纳建议</h3>
+                </div>
+                <div className="mt-4 space-y-3 text-sm text-muted-foreground">
+                  <div className="rounded-xl border bg-background p-4">
+                    <p className="font-medium text-foreground">界面层级建议</p>
+                    <p className="mt-1">
+                      如果你发现事件、产物和任务看起来像同一类信息，优先调整展示层级，而不是继续增加字段。
+                    </p>
+                  </div>
+                  <div className="rounded-xl border bg-background p-4">
+                    <p className="font-medium text-foreground">建源策略建议</p>
+                    <p className="mt-1">
+                      如果同主题反复出现待复核候选，先检查 plan 分类和 review cadence，而不是马上新增更多 source。
+                    </p>
+                  </div>
+                  <div className="rounded-xl border bg-background p-4">
+                    <p className="font-medium text-foreground">说明</p>
+                    <p className="mt-1">
+                      这些建议不一定自动执行，它们是给主控脑和人工决策参考的可采纳建议。
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-6 xl:grid-cols-2">
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">任务记忆</h3>
+              </div>
+              <div className="mt-4 space-y-3">
+                {taskMemories.length ? (
+                  taskMemories.slice(0, 8).map((memory) => (
+                    <div key={memory.id} className="rounded-xl border bg-background p-4">
+                      <p className="text-sm font-medium">{memory.title}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{memory.summary || memory.memory_kind}</p>
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        {memory.memory_kind} · {formatTime(memory.created_at)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">暂无任务记忆。</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-2">
+                <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">程序性记忆</h3>
+              </div>
+              <div className="mt-4 space-y-3">
+                {proceduralMemories.length ? (
+                  proceduralMemories.slice(0, 8).map((memory) => (
+                    <div key={memory.id} className="rounded-xl border bg-background p-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium">{memory.name}</p>
+                        <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(memory.validation_status))}>
+                          {memory.validation_status}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {memory.problem_type || 'unknown'} · {memory.method_name || 'method'}
+                      </p>
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        score {memory.effectiveness_score.toFixed(2)} · {formatTime(memory.last_validated_at)}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">暂无程序性记忆。</p>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
     </div>
   )
 }

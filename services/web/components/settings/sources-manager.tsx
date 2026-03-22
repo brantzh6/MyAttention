@@ -167,6 +167,53 @@ const proxyModeLabels: Record<ProxyMode, string> = {
   never: '直连',
 }
 
+const focusLabels: Record<DiscoveryFocus, string> = {
+  authoritative: '权威理解',
+  latest: '最新动态',
+  frontier: '前沿研究',
+  method: '方法与工具',
+}
+
+const reviewStatusTone: Record<string, string> = {
+  accepted: 'bg-emerald-100 text-emerald-700',
+  draft: 'bg-slate-100 text-slate-700',
+  needs_review: 'bg-amber-100 text-amber-700',
+  merged: 'bg-slate-200 text-slate-700',
+}
+
+const itemStatusTone: Record<string, string> = {
+  active: 'bg-sky-100 text-sky-700',
+  stale: 'bg-amber-100 text-amber-700',
+  subscribed: 'bg-emerald-100 text-emerald-700',
+}
+
+function formatPlanTime(value: string | null) {
+  if (!value) return '未安排'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function buildPlanSummary(plan: SourcePlan) {
+  const subscribed = plan.items.filter((item) => item.status === 'subscribed')
+  const watch = plan.items.filter((item) => item.status !== 'subscribed' && item.monitoring_mode !== 'review')
+  const review = plan.items.filter((item) => item.status !== 'subscribed' && item.monitoring_mode === 'review')
+  return {
+    subscribed,
+    watch,
+    review,
+    avgAuthority:
+      plan.items.length > 0
+        ? plan.items.reduce((total, item) => total + item.authority_score, 0) / plan.items.length
+        : 0,
+  }
+}
+
 export function SourcesManager() {
   const [sources, setSources] = useState<Source[]>([])
   const [sourcePlans, setSourcePlans] = useState<SourcePlan[]>([])
@@ -541,164 +588,266 @@ export function SourcesManager() {
         </form>
 
         <div className="mt-6 space-y-4">
+          <div className="rounded-xl border border-dashed bg-muted/30 p-4 text-sm text-muted-foreground">
+            当前的 focus 分类仍然只是 V1：它帮助先把建源流程跑起来，但还不是最终科学分类。后面会基于研究继续调整。
+          </div>
           {sourcePlans.length === 0 ? (
             <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
               还没有 source plan。先围绕一个主题生成建源计划，再选择候选项进入真实信息源。
             </div>
           ) : (
             sourcePlans.map((plan) => (
-              <div key={plan.id} className="rounded-xl border p-4">
-                <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-semibold">{plan.topic}</h3>
-                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-700">
-                        {plan.focus}
-                      </span>
-                      <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        {plan.planning_brain}
-                      </span>
-                    </div>
-                    {plan.objective && (
-                      <p className="mt-1 text-sm text-muted-foreground">{plan.objective}</p>
-                    )}
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      review cadence: {plan.review_cadence_days} days · items: {plan.items.length} · review status: {plan.review_status} · current v{plan.current_version} / latest v{plan.latest_version}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      last reviewed: {plan.last_reviewed_at ? new Date(plan.last_reviewed_at).toLocaleString() : 'never'} · next due: {plan.next_review_due_at ? new Date(plan.next_review_due_at).toLocaleString() : 'not scheduled'}
-                    </p>
-                    {plan.latest_version > plan.current_version && (
-                      <p className="mt-1 text-xs text-amber-700">
-                        newer candidate version pending review
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void loadPlanVersions(plan.id)}
-                      disabled={loadingVersionsPlanId === plan.id}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
-                    >
-                      {loadingVersionsPlanId === plan.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Save className="h-4 w-4" />
-                      )}
-                      查看版本
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void refreshSourcePlan(plan.id)}
-                      disabled={refreshingPlanId === plan.id}
-                      className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
-                    >
-                      {refreshingPlanId === plan.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="h-4 w-4" />
-                      )}
-                      重新评审
-                    </button>
-                  </div>
-                </div>
+              <div key={plan.id} className="rounded-2xl border p-4 shadow-sm">
+                {(() => {
+                  const summary = buildPlanSummary(plan)
+                  const itemGroups = [
+                    {
+                      key: 'subscribed',
+                      title: '已进入长期跟踪',
+                      hint: '这些候选项已经被订阅成真实信息源。',
+                      items: summary.subscribed,
+                    },
+                    {
+                      key: 'watch',
+                      title: '持续观察候选',
+                      hint: '这些候选项更适合持续观察或动态抓取。',
+                      items: summary.watch,
+                    },
+                    {
+                      key: 'review',
+                      title: '待人工复核',
+                      hint: '这些候选项暂时不应直接固化，先看证据和方向。',
+                      items: summary.review,
+                    },
+                  ]
 
-                {planVersions[plan.id] && planVersions[plan.id].length > 0 && (
-                  <div className="mt-4 rounded-lg border bg-muted/30 p-3">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div className="text-sm font-medium">版本记录</div>
-                      <div className="text-xs text-muted-foreground">
-                        latest {planVersions[plan.id][0]?.trigger_type} · {planVersions[plan.id][0]?.decision_status}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {planVersions[plan.id].slice(0, 3).map((version) => (
-                        <div key={version.id} className="rounded-md border bg-background p-2">
-                          <div className="flex flex-wrap items-center gap-2 text-xs">
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
-                              v{version.version_number}
+                  return (
+                    <>
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg font-semibold">{plan.topic}</h3>
+                            <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-700">
+                              {focusLabels[plan.focus] || plan.focus}
                             </span>
-                            <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
-                              {version.trigger_type}
-                            </span>
-                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">
-                              {version.decision_status}
-                            </span>
-                            <span className="text-muted-foreground">
-                              {version.parent_version ? `from v${version.parent_version}` : 'baseline'}
-                            </span>
-                          </div>
-                          <div className="mt-2 text-sm">{version.change_reason}</div>
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            {version.evaluation?.reasons?.join?.(' · ') || 'No evaluation notes'}
-                          </div>
-                          {version.change_summary?.summary && (
-                            <div className="mt-2 grid gap-1 text-xs text-muted-foreground md:grid-cols-2">
-                              <div>
-                                avg score delta:{' '}
-                                {Number(version.change_summary.summary.average_score_delta ?? 0).toFixed(2)}
-                              </div>
-                              <div>
-                                evidence delta:{' '}
-                                {version.change_summary.summary.evidence_delta ?? 0}
-                              </div>
-                              <div>
-                                trusted delta:{' '}
-                                {version.change_summary.summary.trusted_count_delta ?? 0}
-                              </div>
-                              <div>
-                                stale:{' '}
-                                {version.change_summary.summary.stale_count ?? 0}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-4 grid gap-3">
-                  {plan.items.map((item) => (
-                    <div key={item.id} className="rounded-lg border bg-background p-3">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium">{item.name}</span>
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
-                              {item.authority_tier}
+                            <span
+                              className={cn(
+                                'rounded-full px-2 py-0.5 text-xs',
+                                reviewStatusTone[plan.review_status] || 'bg-slate-100 text-slate-700'
+                              )}
+                            >
+                              {plan.review_status}
                             </span>
                             <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                              {item.execution_strategy}
-                            </span>
-                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                              {item.status}
+                              {plan.planning_brain}
                             </span>
                           </div>
-                          <div className="mt-1 text-xs text-muted-foreground break-all">{item.url}</div>
-                          <div className="mt-2 text-sm text-muted-foreground">{item.rationale}</div>
-                          <div className="mt-2 text-xs text-muted-foreground">
-                            authority score: {item.authority_score.toFixed(2)} · review every {item.review_cadence_days} days
+                          {plan.objective && (
+                            <p className="max-w-3xl text-sm text-muted-foreground">{plan.objective}</p>
+                          )}
+                          <div className="grid gap-3 md:grid-cols-4">
+                            <div className="rounded-xl border bg-background p-3">
+                              <div className="text-xs text-muted-foreground">当前状态</div>
+                              <div className="mt-1 text-sm font-medium">
+                                v{plan.current_version} / v{plan.latest_version}
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                平均 authority {summary.avgAuthority.toFixed(2)}
+                              </div>
+                            </div>
+                            <div className="rounded-xl border bg-background p-3">
+                              <div className="text-xs text-muted-foreground">已订阅</div>
+                              <div className="mt-1 text-sm font-medium">{summary.subscribed.length}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">进入真实信息流</div>
+                            </div>
+                            <div className="rounded-xl border bg-background p-3">
+                              <div className="text-xs text-muted-foreground">持续观察</div>
+                              <div className="mt-1 text-sm font-medium">{summary.watch.length}</div>
+                              <div className="mt-1 text-xs text-muted-foreground">候选但未固化</div>
+                            </div>
+                            <div className="rounded-xl border bg-background p-3">
+                              <div className="text-xs text-muted-foreground">复查节奏</div>
+                              <div className="mt-1 text-sm font-medium">{plan.review_cadence_days} 天</div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                下次 {formatPlanTime(plan.next_review_due_at)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="rounded-xl border bg-muted/40 p-3 text-xs text-muted-foreground">
+                            上次评审：{formatPlanTime(plan.last_reviewed_at)} · 下次到期：{formatPlanTime(plan.next_review_due_at)}
+                            {plan.latest_version > plan.current_version && (
+                              <span className="ml-2 font-medium text-amber-700">
+                                当前存在待复核的新候选版本
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => void subscribePlanItem(plan, item)}
-                          disabled={subscribingPlanItemId === item.id || item.status === 'subscribed'}
-                          className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
-                        >
-                          {subscribingPlanItemId === item.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Plus className="h-4 w-4" />
-                          )}
-                          订阅为信息源
-                        </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => void loadPlanVersions(plan.id)}
+                            disabled={loadingVersionsPlanId === plan.id}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
+                          >
+                            {loadingVersionsPlanId === plan.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4" />
+                            )}
+                            查看版本
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void refreshSourcePlan(plan.id)}
+                            disabled={refreshingPlanId === plan.id}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
+                          >
+                            {refreshingPlanId === plan.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="h-4 w-4" />
+                            )}
+                            重新评审
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+
+                      {planVersions[plan.id] && planVersions[plan.id].length > 0 && (
+                        <div className="mt-4 rounded-xl border bg-muted/30 p-4">
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <div className="text-sm font-medium">版本记录</div>
+                              <div className="text-xs text-muted-foreground">看清这次为什么变、变了什么、是否接受</div>
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              latest {planVersions[plan.id][0]?.trigger_type} · {planVersions[plan.id][0]?.decision_status}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            {planVersions[plan.id].slice(0, 3).map((version) => (
+                              <div key={version.id} className="rounded-xl border bg-background p-3">
+                                <div className="flex flex-wrap items-center gap-2 text-xs">
+                                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">
+                                    v{version.version_number}
+                                  </span>
+                                  <span className="rounded-full bg-muted px-2 py-0.5 text-muted-foreground">
+                                    {version.trigger_type}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      'rounded-full px-2 py-0.5',
+                                      reviewStatusTone[version.decision_status] || 'bg-slate-100 text-slate-700'
+                                    )}
+                                  >
+                                    {version.decision_status}
+                                  </span>
+                                  <span className="text-muted-foreground">
+                                    {version.parent_version ? `from v${version.parent_version}` : 'baseline'}
+                                  </span>
+                                </div>
+                                <div className="mt-2 text-sm font-medium">{version.change_reason}</div>
+                                <div className="mt-1 text-xs text-muted-foreground">
+                                  {version.evaluation?.reasons?.join?.(' · ') || 'No evaluation notes'}
+                                </div>
+                                {version.change_summary?.summary && (
+                                  <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-4">
+                                    <div className="rounded-lg border bg-muted/40 p-2">
+                                      avg score delta {Number(version.change_summary.summary.average_score_delta ?? 0).toFixed(2)}
+                                    </div>
+                                    <div className="rounded-lg border bg-muted/40 p-2">
+                                      evidence delta {version.change_summary.summary.evidence_delta ?? 0}
+                                    </div>
+                                    <div className="rounded-lg border bg-muted/40 p-2">
+                                      trusted delta {version.change_summary.summary.trusted_count_delta ?? 0}
+                                    </div>
+                                    <div className="rounded-lg border bg-muted/40 p-2">
+                                      stale {version.change_summary.summary.stale_count ?? 0}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-4 space-y-4">
+                        {itemGroups.map((group) => (
+                          <div key={group.key} className="rounded-xl border bg-background p-4">
+                            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                              <div>
+                                <div className="text-sm font-medium">{group.title}</div>
+                                <div className="text-xs text-muted-foreground">{group.hint}</div>
+                              </div>
+                              <div className="rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">
+                                {group.items.length} 项
+                              </div>
+                            </div>
+                            {group.items.length === 0 ? (
+                              <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                                当前没有内容。
+                              </div>
+                            ) : (
+                              <div className="grid gap-3">
+                                {group.items.map((item) => (
+                                  <div key={item.id} className="rounded-lg border bg-card p-3">
+                                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                      <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                          <span className="font-medium">{item.name}</span>
+                                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+                                            {item.authority_tier}
+                                          </span>
+                                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                            {item.execution_strategy}
+                                          </span>
+                                          <span
+                                            className={cn(
+                                              'rounded-full px-2 py-0.5 text-xs',
+                                              itemStatusTone[item.status] || 'bg-slate-100 text-slate-700'
+                                            )}
+                                          >
+                                            {item.status}
+                                          </span>
+                                        </div>
+                                        <div className="mt-1 text-xs text-muted-foreground break-all">{item.url}</div>
+                                        <div className="mt-2 text-sm text-muted-foreground">{item.rationale}</div>
+                                        <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
+                                          <div className="rounded-lg border bg-muted/40 p-2">
+                                            authority {item.authority_score.toFixed(2)}
+                                          </div>
+                                          <div className="rounded-lg border bg-muted/40 p-2">
+                                            review every {item.review_cadence_days} days
+                                          </div>
+                                          <div className="rounded-lg border bg-muted/40 p-2">
+                                            mode {item.monitoring_mode}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => void subscribePlanItem(plan, item)}
+                                        disabled={subscribingPlanItemId === item.id || item.status === 'subscribed'}
+                                        className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
+                                      >
+                                        {subscribingPlanItemId === item.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Plus className="h-4 w-4" />
+                                        )}
+                                        {item.status === 'subscribed' ? '已订阅' : '订阅为信息源'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             ))
           )}

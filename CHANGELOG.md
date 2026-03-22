@@ -159,3 +159,7 @@
   - repeated `topic + focus` creation now reuses a single source plan and advances its version
   - duplicate active plans are merged toward a canonical plan and older rows are marked `inactive/merged`
   - source-plan list responses now canonicalize duplicate topic/focus entries before they reach the UI
+- Improved source-intelligence and evolution UI readability:
+  - source plans now separate plan summary, version history, and grouped candidate sources
+  - source candidates are grouped into subscribed / watch / review sections instead of one flat list
+  - evolution now adds context guidance, clearer event/artifact labels, and manual-adoption suggestions for non-automatic improvements such as UI rework

@@ -235,3 +235,10 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - Current known gap:
   - duplicate control is now stable for repeated plan creation, including whitespace variants
   - some existing Chinese topic text in old source-plan rows is still encoding-corrupted and needs a separate storage/display fix
+- Improved source-intelligence and evolution visualization:
+  - source-plan cards are now split into clearer layers: plan status, version/review status, and grouped source candidates
+  - source candidates are grouped into subscribed / watch / review buckets instead of one long flat list
+  - evolution contexts now show guidance, clearer event labels, clearer artifact labels, and a manual-adoption suggestions area
+- Current known UI gap:
+  - source-plan topic text corruption still makes some Chinese topics unreadable
+  - evolution suggestions are still heuristic hints, not yet model-generated design/UX recommendations

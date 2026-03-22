@@ -100,6 +100,10 @@ interface SourcePlan {
   review_cadence_days: number
   current_version: number
   latest_version: number
+  policy_id: string
+  policy_version: number
+  policy_name: string
+  policy_decision_status: string
   last_reviewed_at: string | null
   next_review_due_at: string | null
   created_at: string | null
@@ -680,6 +684,26 @@ export function SourcesManager() {
                                 当前存在待复核的新候选版本
                               </span>
                             )}
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div className="rounded-xl border bg-background p-3">
+                              <div className="text-xs text-muted-foreground">Attention Policy</div>
+                              <div className="mt-1 text-sm font-medium">
+                                {plan.policy_name || plan.policy_id || '未绑定'}
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {plan.policy_id ? `${plan.policy_id} · v${plan.policy_version}` : '当前还是默认策略'}
+                              </div>
+                            </div>
+                            <div className="rounded-xl border bg-background p-3">
+                              <div className="text-xs text-muted-foreground">策略门禁结果</div>
+                              <div className="mt-1 text-sm font-medium">
+                                {plan.policy_decision_status || 'draft'}
+                              </div>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                用来判断这次 refresh 是可接受还是需要人工复核
+                              </div>
+                            </div>
                           </div>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">

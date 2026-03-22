@@ -250,3 +250,27 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - defined `attention candidate / policy / evaluation / decision / review` objects
   - clarified that attention should be policy-driven, versioned, and gate-controlled rather than hardcoded scoring
   - fixed the implementation direction as `search + LLM dynamic discovery` under `policy + versioning + quality gate` constraints
+- Attention policy foundation is now live in source intelligence:
+  - migration `012_attention_policy_foundation.sql`
+  - `attention_policies`
+  - `attention_policy_versions`
+  - `services/api/attention/policies.py`
+- Source discovery now resolves a persisted attention policy per focus and applies policy-driven portfolio selection:
+  - `POST /api/sources/discover` now returns `policy_id / policy_version / portfolio_summary`
+  - candidates now carry `object_bucket / policy_score / gate_status / selection_reason`
+  - current implementation still uses domain-backed candidates, but selection is no longer a pure score sort
+- Source-plan creation and refresh now persist attention-policy metadata:
+  - source plans now surface `policy_id / policy_version / policy_name / policy_decision_status`
+  - source-plan items now retain attention evidence such as `object_bucket` and `selection_reason`
+- The sources UI now shows the active attention policy and current policy gate decision on each plan card.
+- Verified:
+  - migration `012_attention_policy_foundation.sql` applied successfully
+  - `POST /api/sources/discover` returns `200` with live policy metadata
+  - `POST /api/sources/plans` returns `200` with persisted policy metadata
+  - Python compile passes for `attention/policies.py`, `routers/feeds.py`, and `db/models.py`
+  - attention-policy unit tests pass
+  - frontend type-check passes
+  - `python manage.py health --json` returns overall `healthy`
+- Current known gap:
+  - policy-driven selection is now live, but candidate quality is still too community-heavy for method topics such as multi-agent research
+  - the next iteration should expand candidate object types beyond pure domains and improve method-topic query planning before UI redesign

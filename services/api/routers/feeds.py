@@ -12,8 +12,10 @@ from sqlalchemy import String as SqlString, cast, or_, select
 from sqlalchemy.orm import joinedload
 
 from config import get_settings
+from attention import apply_attention_policy, resolve_attention_policy
 from db.models import FeedItem as FeedItemModel
 from db.models import Source as SourceModel
+from db.models import AttentionPolicy as AttentionPolicyModel
 from db.models import SourcePlan as SourcePlanModel
 from db.models import SourcePlanItem as SourcePlanItemModel
 from db.models import SourcePlanVersion as SourcePlanVersionModel
@@ -129,12 +131,21 @@ class SourceDiscoveryCandidate(BaseModel):
     matched_queries: List[str]
     sample_titles: List[str]
     sample_snippets: List[str]
+    object_bucket: str = "authority"
+    policy_id: str = ""
+    policy_version: int = 1
+    policy_score: float = 0.0
+    gate_status: str = "candidate"
+    selection_reason: str = ""
 
 
 class SourceDiscoveryResponse(BaseModel):
     topic: str
     focus: SourceDiscoveryFocus
     queries: List[str]
+    policy_id: str = ""
+    policy_version: int = 1
+    portfolio_summary: Dict[str, Any] = {}
     candidates: List[SourceDiscoveryCandidate]
 
 
@@ -160,6 +171,9 @@ class SourcePlanItemResponse(BaseModel):
     rationale: str
     status: str
     evidence: Dict[str, Any]
+    object_bucket: str = ""
+    gate_status: str = ""
+    selection_reason: str = ""
 
 
 class SourcePlanResponse(BaseModel):
@@ -173,6 +187,10 @@ class SourcePlanResponse(BaseModel):
     review_cadence_days: int
     current_version: int = 1
     latest_version: int = 1
+    policy_id: str = ""
+    policy_version: int = 1
+    policy_name: str = ""
+    policy_decision_status: str = ""
     last_reviewed_at: Optional[datetime] = None
     next_review_due_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
@@ -355,6 +373,38 @@ def _focus_category(focus: SourceDiscoveryFocus) -> str:
     return "AI研究"
 
 
+def _candidate_to_attention_payload(candidate: SourceDiscoveryCandidate) -> Dict[str, Any]:
+    return {
+        "domain": candidate.domain,
+        "name": candidate.name,
+        "url": candidate.url,
+        "authority_tier": candidate.authority_tier,
+        "authority_score": candidate.authority_score,
+        "recommendation": candidate.recommendation,
+        "recommendation_reason": candidate.recommendation_reason,
+        "evidence_count": candidate.evidence_count,
+        "matched_queries": list(candidate.matched_queries),
+        "sample_titles": list(candidate.sample_titles),
+        "sample_snippets": list(candidate.sample_snippets),
+        "object_bucket": candidate.object_bucket,
+        "policy_id": candidate.policy_id,
+        "policy_version": candidate.policy_version,
+        "policy_score": candidate.policy_score,
+        "gate_status": candidate.gate_status,
+        "selection_reason": candidate.selection_reason,
+    }
+
+
+def _attention_policy_name(policy_id: str) -> str:
+    if policy_id == "source-latest-v1":
+        return "Latest Intelligence Attention V1"
+    if policy_id == "source-frontier-v1":
+        return "Frontier Research Attention V1"
+    if policy_id == "source-method-v1":
+        return "Method Intelligence Attention V1"
+    return "Authoritative Source Attention V1"
+
+
 def _source_id_from_domain(domain: str) -> str:
     cleaned = "".join(ch if ch.isalnum() else "_" for ch in domain.lower())
     return cleaned.strip("_") or "discovered_source"
@@ -391,6 +441,7 @@ def _review_cadence_for_candidate(
 
 
 def _serialize_source_plan_item(item: SourcePlanItemModel) -> SourcePlanItemResponse:
+    evidence = dict(item.evidence or {})
     return SourcePlanItemResponse(
         id=str(item.id),
         item_type=item.item_type,
@@ -404,13 +455,18 @@ def _serialize_source_plan_item(item: SourcePlanItemModel) -> SourcePlanItemResp
         review_cadence_days=item.review_cadence_days,
         rationale=item.rationale or "",
         status=item.status,
-        evidence=item.evidence or {},
+        evidence=evidence,
+        object_bucket=str(evidence.get("object_bucket", "")),
+        gate_status=str(evidence.get("gate_status", "")),
+        selection_reason=str(evidence.get("selection_reason", "")),
     )
 
 
 def _serialize_source_plan(plan: SourcePlanModel) -> SourcePlanResponse:
     items = sorted(list(plan.items or []), key=lambda item: (item.authority_score or 0.0), reverse=True)
     extra = dict(plan.extra or {})
+    policy_meta = dict(extra.get("attention_policy", {}) or {})
+    latest_evaluation = dict(extra.get("latest_evaluation", {}) or {})
     return SourcePlanResponse(
         id=str(plan.id),
         topic=plan.topic,
@@ -422,6 +478,10 @@ def _serialize_source_plan(plan: SourcePlanModel) -> SourcePlanResponse:
         review_cadence_days=plan.review_cadence_days,
         current_version=plan.current_version or 1,
         latest_version=plan.latest_version or 1,
+        policy_id=str(policy_meta.get("policy_id", "")),
+        policy_version=int(policy_meta.get("policy_version", 1) or 1),
+        policy_name=str(policy_meta.get("policy_name", "")),
+        policy_decision_status=str(latest_evaluation.get("decision_status", "")),
         last_reviewed_at=_parse_datetime_value(extra.get("last_reviewed_at")),
         next_review_due_at=_parse_datetime_value(extra.get("next_review_due_at")),
         created_at=plan.created_at,
@@ -552,7 +612,7 @@ async def _apply_source_plan_refresh(
         normalized_trigger = "manual_refresh"
     reviewed_at = datetime.now(timezone.utc)
 
-    await _refresh_source_plan_items(plan, focus, plan.review_cadence_days, limit)
+    await _refresh_source_plan_items(db, plan, focus, plan.review_cadence_days, limit)
     candidate_snapshot = _snapshot_source_plan(plan)
     diff = _diff_source_plan_snapshots(previous_snapshot, candidate_snapshot)
     evaluation = _evaluate_source_plan_refresh(diff)
@@ -875,13 +935,15 @@ def _subscribe_candidate_to_source(
 
 
 async def _refresh_source_plan_items(
+    db: AsyncSession,
     plan: SourcePlanModel,
     focus: SourceDiscoveryFocus,
     review_cadence_days: int,
     limit: int,
 ) -> SourcePlanModel:
     discovery = await _run_source_discovery(
-        SourceDiscoveryRequest(topic=plan.topic, focus=focus, limit=limit)
+        SourceDiscoveryRequest(topic=plan.topic, focus=focus, limit=limit),
+        db,
     )
 
     existing_by_key = {item.object_key: item for item in list(plan.items or [])}
@@ -912,6 +974,12 @@ async def _refresh_source_plan_items(
                 "sample_titles": candidate.sample_titles,
                 "sample_snippets": candidate.sample_snippets,
                 "evidence_count": candidate.evidence_count,
+                "object_bucket": candidate.object_bucket,
+                "policy_id": candidate.policy_id,
+                "policy_version": candidate.policy_version,
+                "policy_score": candidate.policy_score,
+                "gate_status": candidate.gate_status,
+                "selection_reason": candidate.selection_reason,
             },
             "status": "subscribed" if subscribed else "active",
         }
@@ -936,6 +1004,12 @@ async def _refresh_source_plan_items(
     plan.extra = {
         **dict(plan.extra or {}),
         "queries": discovery.queries,
+        "attention_policy": {
+            "policy_id": discovery.policy_id,
+            "policy_version": discovery.policy_version,
+            "policy_name": _attention_policy_name(discovery.policy_id),
+        },
+        "latest_portfolio_summary": discovery.portfolio_summary,
         "last_refresh_result_count": len(discovery.candidates),
         "last_refreshed_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -1009,9 +1083,10 @@ def _domain_quality_adjustment(domain: str, focus: SourceDiscoveryFocus) -> floa
     return score
 
 
-async def _run_source_discovery(body: SourceDiscoveryRequest) -> SourceDiscoveryResponse:
+async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) -> SourceDiscoveryResponse:
     search = AliyunWebSearch()
     classifier = get_authority_classifier()
+    policy = await resolve_attention_policy(db, body.focus)
     queries = _discovery_queries(body.topic, body.focus)
     aggregated: dict[str, dict[str, Any]] = {}
 
@@ -1090,7 +1165,21 @@ async def _run_source_discovery(body: SourceDiscoveryRequest) -> SourceDiscovery
             )
         )
 
-    return SourceDiscoveryResponse(topic=body.topic, focus=body.focus, queries=queries, candidates=candidates)
+    attention_result = apply_attention_policy(
+        policy,
+        body.focus,
+        [_candidate_to_attention_payload(candidate) for candidate in candidates],
+        body.limit,
+    )
+    return SourceDiscoveryResponse(
+        topic=body.topic,
+        focus=body.focus,
+        queries=queries,
+        policy_id=attention_result.policy_id,
+        policy_version=attention_result.policy_version,
+        portfolio_summary=attention_result.portfolio_summary,
+        candidates=[SourceDiscoveryCandidate(**payload) for payload in attention_result.selected],
+    )
     return Source(
         id=source.id,
         name=source.name,
@@ -1292,7 +1381,7 @@ async def create_source(body: SourceCreate):
 
 
 @router.post("/sources/discover", response_model=SourceDiscoveryResponse)
-async def discover_sources(body: SourceDiscoveryRequest):
+async def discover_sources(body: SourceDiscoveryRequest, db: AsyncSession = Depends(get_db)):
     """
     Discover candidate sources for a topic using web search + authority scoring.
 
@@ -1301,7 +1390,7 @@ async def discover_sources(body: SourceDiscoveryRequest):
     - not limited to existing RSS list
     - produces candidates for long-term monitoring decisions
     """
-    return await _run_source_discovery(body)
+    return await _run_source_discovery(body, db)
 
 
 @router.get("/sources/plans", response_model=List[SourcePlanResponse])
@@ -1414,7 +1503,8 @@ async def create_source_plan(
         return _serialize_source_plan(refreshed)
 
     discovery = await _run_source_discovery(
-        SourceDiscoveryRequest(topic=body.topic, focus=body.focus, limit=body.limit)
+        SourceDiscoveryRequest(topic=body.topic, focus=body.focus, limit=body.limit),
+        db,
     )
 
     plan = SourcePlanModel(
@@ -1427,7 +1517,15 @@ async def create_source_plan(
         status="active",
         review_status="draft",
         review_cadence_days=body.review_cadence_days,
-        extra={"queries": discovery.queries},
+        extra={
+            "queries": discovery.queries,
+            "attention_policy": {
+                "policy_id": discovery.policy_id,
+                "policy_version": discovery.policy_version,
+                "policy_name": _attention_policy_name(discovery.policy_id),
+            },
+            "latest_portfolio_summary": discovery.portfolio_summary,
+        },
     )
     plan.extra = {
         **dict(plan.extra or {}),
@@ -1446,6 +1544,12 @@ async def create_source_plan(
             "sample_titles": candidate.sample_titles,
             "sample_snippets": candidate.sample_snippets,
             "evidence_count": candidate.evidence_count,
+            "object_bucket": candidate.object_bucket,
+            "policy_id": candidate.policy_id,
+            "policy_version": candidate.policy_version,
+            "policy_score": candidate.policy_score,
+            "gate_status": candidate.gate_status,
+            "selection_reason": candidate.selection_reason,
         }
         rationale = (
             f"{candidate.recommendation_reason}；执行策略={strategy}；"
@@ -1564,6 +1668,7 @@ async def refresh_source_plan(
 async def subscribe_discovered_source(
     domain: str,
     body: SourceDiscoveryRequest,
+    db: AsyncSession = Depends(get_db),
 ):
     """
     Convert a discovered domain into a tracked source.
@@ -1572,7 +1677,7 @@ async def subscribe_discovered_source(
     discovered site URL as a managed source entry so the project can continue
     calibrating and later refine fetch strategy.
     """
-    discovery = await _run_source_discovery(body)
+    discovery = await _run_source_discovery(body, db)
     candidate = next((item for item in discovery.candidates if item.domain == _normalize_domain(domain)), None)
     if candidate is None:
         raise HTTPException(status_code=404, detail="Discovered candidate not found")
@@ -1612,6 +1717,12 @@ async def subscribe_source_plan_item(
         matched_queries=list((item.evidence or {}).get("matched_queries", [])),
         sample_titles=list((item.evidence or {}).get("sample_titles", [])),
         sample_snippets=list((item.evidence or {}).get("sample_snippets", [])),
+        object_bucket=str((item.evidence or {}).get("object_bucket", "")),
+        policy_id=str((item.evidence or {}).get("policy_id", "")),
+        policy_version=int((item.evidence or {}).get("policy_version", 1) or 1),
+        policy_score=float((item.evidence or {}).get("policy_score", 0.0) or 0.0),
+        gate_status=str((item.evidence or {}).get("gate_status", "")),
+        selection_reason=str((item.evidence or {}).get("selection_reason", "")),
     )
     previous_snapshot = _snapshot_source_plan(item.plan)
     source = _subscribe_candidate_to_source(candidate, SourceDiscoveryFocus(item.plan.focus))

@@ -163,3 +163,16 @@
   - source plans now separate plan summary, version history, and grouped candidate sources
   - source candidates are grouped into subscribed / watch / review sections instead of one flat list
   - evolution now adds context guidance, clearer event/artifact labels, and manual-adoption suggestions for non-automatic improvements such as UI rework
+- Added attention-policy persistence and runtime selection for source intelligence:
+  - `migrations/012_attention_policy_foundation.sql`
+  - `attention_policies`
+  - `attention_policy_versions`
+  - `services/api/attention/policies.py`
+- `POST /api/sources/discover` is now policy-aware:
+  - returns `policy_id / policy_version / portfolio_summary`
+  - candidate results now include `object_bucket / policy_score / gate_status / selection_reason`
+  - discovery is no longer a pure authority sort; it now applies policy-driven portfolio balancing and gate checks
+- Source-plan creation and refresh now persist attention-policy metadata into plan and item state:
+  - source plans expose active policy metadata to the UI
+  - source-plan items retain attention evidence such as bucket, gate status, and selection rationale
+- Updated the sources UI so each plan now shows the active attention policy and current policy gate decision instead of hiding that logic in backend state.

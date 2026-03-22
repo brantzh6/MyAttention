@@ -1072,6 +1072,58 @@ class SourcePlanVersion(Base):
     plan = relationship("SourcePlan", back_populates="versions")
 
 
+class AttentionPolicy(Base):
+    """Configurable attention policy for dynamic discovery and evaluation."""
+    __tablename__ = "attention_policies"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    policy_id = Column(String(100), nullable=False, unique=True)
+    name = Column(String(255), nullable=False)
+    focus = Column(String(50), nullable=False, default="authoritative")
+    description = Column(Text)
+    problem_type = Column(String(100), default="source_intelligence")
+    thinking_framework = Column(String(100), default="attention_model")
+    candidate_mix_policy = Column(JSON, default=dict)
+    scoring_policy = Column(JSON, default=dict)
+    gate_policy = Column(JSON, default=dict)
+    execution_policy = Column(JSON, default=dict)
+    status = Column(String(20), default="active")
+    current_version = Column(Integer, default=1)
+    latest_version = Column(Integer, default=1)
+    extra = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    versions = relationship(
+        "AttentionPolicyVersion",
+        back_populates="policy",
+        cascade="all, delete-orphan",
+    )
+
+
+class AttentionPolicyVersion(Base):
+    """Version history for attention policies."""
+    __tablename__ = "attention_policy_versions"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    policy_id_ref = Column(UUID(as_uuid=True), ForeignKey("attention_policies.id", ondelete="CASCADE"))
+    version_number = Column(Integer, nullable=False)
+    parent_version = Column(Integer)
+    change_reason = Column(Text)
+    candidate_mix_policy = Column(JSON, default=dict)
+    scoring_policy = Column(JSON, default=dict)
+    gate_policy = Column(JSON, default=dict)
+    execution_policy = Column(JSON, default=dict)
+    decision_status = Column(String(20), default="accepted")
+    created_by = Column(String(100), default="system")
+    accepted_at = Column(DateTime(timezone=True))
+    extra = Column("metadata", JSON, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    policy = relationship("AttentionPolicy", back_populates="versions")
+
+
 class TaskMemory(Base):
     """Scoped memory for task and context recovery."""
     __tablename__ = "task_memories"

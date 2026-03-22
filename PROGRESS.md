@@ -228,3 +228,10 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - `POST /api/sources/plans/{plan_id}/items/{item_id}/subscribe` returns `200`
   - `/settings/sources` returns `200`
   - frontend type-check passes
+- Duplicate source-plan control is now live:
+  - repeated `topic + focus` creation reuses the same plan and advances its version
+  - duplicate active plans with the same merge key are merged toward a canonical plan and older rows are marked `inactive/merged`
+  - source-plan list responses now canonicalize duplicate topic/focus entries before they reach the UI
+- Current known gap:
+  - duplicate control is now stable for repeated plan creation, including whitespace variants
+  - some existing Chinese topic text in old source-plan rows is still encoding-corrupted and needs a separate storage/display fix

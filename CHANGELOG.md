@@ -154,3 +154,8 @@
   - source-plan review snapshots now persist into the `source_intelligence` runtime context
   - evolution status now reports `source_plan_review` and degrades when this recurring review loop fails
 - Added `docs/VERSION_MANAGEMENT.md` to separate Git/file versioning from runtime intelligence-object versioning.
+- Added canonical duplicate control for repeated source-plan creation:
+  - owner keys are now ASCII-safe hashed identifiers instead of raw topic text
+  - repeated `topic + focus` creation now reuses a single source plan and advances its version
+  - duplicate active plans are merged toward a canonical plan and older rows are marked `inactive/merged`
+  - source-plan list responses now canonicalize duplicate topic/focus entries before they reach the UI

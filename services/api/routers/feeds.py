@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
@@ -276,6 +277,31 @@ def _normalize_domain(value: str) -> str:
     return domain.lower().removeprefix("www.")
 
 
+def _normalize_plan_topic(value: str) -> str:
+    return " ".join(value.strip().lower().split())
+
+
+def _topic_merge_key(value: str) -> str:
+    normalized = _normalize_plan_topic(value)
+    compact = "".join(normalized.split())
+    return compact or normalized
+
+
+def _source_plan_match_score(plan: SourcePlanModel) -> tuple[int, int, datetime]:
+    return (
+        int(plan.current_version or 0),
+        len(list(plan.items or [])),
+        plan.updated_at or plan.created_at or datetime.min.replace(tzinfo=timezone.utc),
+    )
+
+
+def _source_plan_owner_key(topic: str, focus: SourceDiscoveryFocus | str) -> str:
+    focus_value = focus.value if isinstance(focus, SourceDiscoveryFocus) else str(focus)
+    topic_key = _topic_merge_key(topic)
+    digest = hashlib.sha1(f"{focus_value}:{topic_key}".encode("utf-8")).hexdigest()[:16]
+    return f"source-plan:{focus_value}:{digest}"
+
+
 def _discovery_queries(topic: str, focus: SourceDiscoveryFocus) -> list[str]:
     topic = topic.strip()
     if focus == SourceDiscoveryFocus.LATEST:
@@ -508,6 +534,74 @@ def _build_review_schedule_metadata(
         "last_review_trigger": trigger_type,
         "last_refresh_result_count": result_count,
     }
+
+
+async def _apply_source_plan_refresh(
+    db: AsyncSession,
+    *,
+    plan: SourcePlanModel,
+    limit: int,
+    trigger_type: str,
+    change_reason: str,
+) -> SourcePlanModel:
+    focus = SourceDiscoveryFocus(plan.focus)
+    previous_snapshot = _snapshot_source_plan(plan)
+    previous_current_version = int(plan.current_version or 1)
+    normalized_trigger = trigger_type.strip().lower() if trigger_type else "manual_refresh"
+    if normalized_trigger not in {"manual_refresh", "scheduled_refresh", "manual_rebuild"}:
+        normalized_trigger = "manual_refresh"
+    reviewed_at = datetime.now(timezone.utc)
+
+    await _refresh_source_plan_items(plan, focus, plan.review_cadence_days, limit)
+    candidate_snapshot = _snapshot_source_plan(plan)
+    diff = _diff_source_plan_snapshots(previous_snapshot, candidate_snapshot)
+    evaluation = _evaluate_source_plan_refresh(diff)
+    next_version = int(plan.latest_version or plan.current_version or 1) + 1
+
+    if evaluation["decision_status"] == "accepted":
+        plan.current_version = next_version
+        plan.latest_version = next_version
+        plan.review_status = "accepted"
+    else:
+        _apply_source_plan_snapshot(plan, previous_snapshot)
+        plan.latest_version = next_version
+        plan.review_status = "needs_review"
+
+    plan.extra = {
+        **dict(plan.extra or {}),
+        **_build_review_schedule_metadata(
+            plan,
+            reviewed_at=reviewed_at,
+            trigger_type=normalized_trigger,
+            result_count=len(candidate_snapshot.get("items", [])),
+        ),
+        "latest_diff": diff,
+        "latest_evaluation": evaluation,
+    }
+
+    db.add(
+        _build_source_plan_version_record(
+            plan,
+            version_number=next_version,
+            parent_version=previous_current_version,
+            trigger_type=normalized_trigger,
+            decision_status=evaluation["decision_status"],
+            change_reason=change_reason,
+            change_summary=diff,
+            plan_snapshot=candidate_snapshot,
+            evaluation=evaluation,
+        )
+    )
+    await db.commit()
+
+    refreshed = (
+        await db.execute(
+            select(SourcePlanModel)
+            .where(SourcePlanModel.id == plan.id)
+            .options(joinedload(SourcePlanModel.items))
+        )
+    ).scalars().unique().one()
+    return refreshed
 
 
 def _apply_source_plan_snapshot(plan: SourcePlanModel, snapshot: Dict[str, Any]) -> None:
@@ -1219,7 +1313,18 @@ async def list_source_plans(db: AsyncSession = Depends(get_db)):
         .order_by(SourcePlanModel.updated_at.desc().nullslast(), SourcePlanModel.created_at.desc())
     )
     plans = (await db.execute(stmt)).scalars().unique().all()
-    return [_serialize_source_plan(plan) for plan in plans]
+    canonical_plans: dict[tuple[str, str], SourcePlanModel] = {}
+    for plan in plans:
+        key = (_topic_merge_key(plan.topic), plan.focus)
+        existing = canonical_plans.get(key)
+        if existing is None:
+            canonical_plans[key] = plan
+            continue
+        existing_version = int(existing.current_version or existing.latest_version or 1)
+        candidate_version = int(plan.current_version or plan.latest_version or 1)
+        if candidate_version > existing_version or (plan.updated_at or plan.created_at) > (existing.updated_at or existing.created_at):
+            canonical_plans[key] = plan
+    return [_serialize_source_plan(plan) for plan in canonical_plans.values()]
 
 
 @router.get("/sources/plans/{plan_id}/versions", response_model=List[SourcePlanVersionResponse])
@@ -1245,6 +1350,69 @@ async def create_source_plan(
     This is the first brain-facing control object for the information brain:
     it stores what to watch, why to watch it, and how it should be reviewed.
     """
+    existing_stmt = (
+        select(SourcePlanModel)
+        .where(
+            SourcePlanModel.status == "active",
+            SourcePlanModel.focus == body.focus.value,
+        )
+        .options(joinedload(SourcePlanModel.items))
+    )
+    existing_plans = (await db.execute(existing_stmt)).scalars().unique().all()
+    requested_owner_key = _source_plan_owner_key(body.topic, body.focus)
+    matching_plans = [
+        plan
+        for plan in existing_plans
+        if (
+            _topic_merge_key(plan.topic) == _topic_merge_key(body.topic)
+            or (plan.owner_id or "") == requested_owner_key
+            or _topic_merge_key(body.topic) in {
+                _topic_merge_key(alias)
+                for alias in list(dict(plan.extra or {}).get("topic_aliases", []))
+                if alias
+            }
+        )
+    ]
+    existing_plan = None
+    if matching_plans:
+        matching_plans.sort(key=_source_plan_match_score, reverse=True)
+        existing_plan = matching_plans[0]
+        if len(matching_plans) > 1:
+            for duplicate_plan in matching_plans[1:]:
+                duplicate_plan.status = "inactive"
+                duplicate_plan.review_status = "merged"
+                duplicate_plan.extra = {
+                    **dict(duplicate_plan.extra or {}),
+                    "merged_into_plan_id": str(existing_plan.id),
+                    "merge_reason": "Merged duplicate source plan with the same normalized topic and focus.",
+                    "merged_at": datetime.now(timezone.utc).isoformat(),
+                }
+    if existing_plan is not None:
+        existing_plan.topic = body.topic
+        existing_plan.owner_id = requested_owner_key
+        if body.objective.strip():
+            existing_plan.objective = body.objective.strip()
+        existing_plan.review_cadence_days = body.review_cadence_days
+        existing_plan.extra = {
+            **dict(existing_plan.extra or {}),
+            "queries": _discovery_queries(body.topic, body.focus),
+            "topic_merge_key": _topic_merge_key(body.topic),
+            "topic_aliases": sorted(
+                {
+                    *set(dict(existing_plan.extra or {}).get("topic_aliases", [])),
+                    body.topic.strip(),
+                }
+            ),
+        }
+        refreshed = await _apply_source_plan_refresh(
+            db,
+            plan=existing_plan,
+            limit=body.limit,
+            trigger_type="manual_rebuild",
+            change_reason="Reused existing source plan for the same normalized topic and focus.",
+        )
+        return _serialize_source_plan(refreshed)
+
     discovery = await _run_source_discovery(
         SourceDiscoveryRequest(topic=body.topic, focus=body.focus, limit=body.limit)
     )
@@ -1254,13 +1422,18 @@ async def create_source_plan(
         focus=body.focus.value,
         objective=body.objective or f"Build and maintain a source plan for {body.topic}.",
         owner_type="system",
-        owner_id=f"source-plan:{body.topic.strip().lower()}",
+        owner_id=_source_plan_owner_key(body.topic, body.focus),
         planning_brain="source-intelligence-brain",
         status="active",
         review_status="draft",
         review_cadence_days=body.review_cadence_days,
         extra={"queries": discovery.queries},
     )
+    plan.extra = {
+        **dict(plan.extra or {}),
+        "topic_aliases": [body.topic.strip()],
+        "topic_merge_key": _topic_merge_key(body.topic),
+    }
     db.add(plan)
     await db.flush()
 
@@ -1373,67 +1546,17 @@ async def refresh_source_plan(
     if plan is None:
         raise HTTPException(status_code=404, detail="Source plan not found")
 
-    focus = SourceDiscoveryFocus(plan.focus)
-    previous_snapshot = _snapshot_source_plan(plan)
-    previous_current_version = int(plan.current_version or 1)
-    normalized_trigger = trigger_type.strip().lower() if trigger_type else "manual_refresh"
-    if normalized_trigger not in {"manual_refresh", "scheduled_refresh"}:
-        normalized_trigger = "manual_refresh"
-    reviewed_at = datetime.now(timezone.utc)
-
-    await _refresh_source_plan_items(plan, focus, plan.review_cadence_days, limit)
-    candidate_snapshot = _snapshot_source_plan(plan)
-    diff = _diff_source_plan_snapshots(previous_snapshot, candidate_snapshot)
-    evaluation = _evaluate_source_plan_refresh(diff)
-    next_version = int(plan.latest_version or plan.current_version or 1) + 1
-
-    if evaluation["decision_status"] == "accepted":
-        plan.current_version = next_version
-        plan.latest_version = next_version
-        plan.review_status = "accepted"
-    else:
-        _apply_source_plan_snapshot(plan, previous_snapshot)
-        plan.latest_version = next_version
-        plan.review_status = "needs_review"
-
-    plan.extra = {
-        **dict(plan.extra or {}),
-        **_build_review_schedule_metadata(
-            plan,
-            reviewed_at=reviewed_at,
-            trigger_type=normalized_trigger,
-            result_count=len(candidate_snapshot.get("items", [])),
+    refreshed = await _apply_source_plan_refresh(
+        db,
+        plan=plan,
+        limit=limit,
+        trigger_type=trigger_type,
+        change_reason=(
+            "Scheduled source-plan refresh from topic-driven discovery."
+            if trigger_type == "scheduled_refresh"
+            else "Manual source-plan refresh from topic-driven discovery."
         ),
-        "latest_diff": diff,
-        "latest_evaluation": evaluation,
-    }
-
-    db.add(
-        _build_source_plan_version_record(
-            plan,
-            version_number=next_version,
-            parent_version=previous_current_version,
-            trigger_type=normalized_trigger,
-            decision_status=evaluation["decision_status"],
-            change_reason=(
-                "Scheduled source-plan refresh from topic-driven discovery."
-                if normalized_trigger == "scheduled_refresh"
-                else "Manual source-plan refresh from topic-driven discovery."
-            ),
-            change_summary=diff,
-            plan_snapshot=candidate_snapshot,
-            evaluation=evaluation,
-        )
     )
-    await db.commit()
-
-    refreshed = (
-        await db.execute(
-            select(SourcePlanModel)
-            .where(SourcePlanModel.id == plan.id)
-            .options(joinedload(SourcePlanModel.items))
-        )
-    ).scalars().unique().one()
     return _serialize_source_plan(refreshed)
 
 

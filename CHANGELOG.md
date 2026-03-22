@@ -91,3 +91,12 @@
 - Closed the MVP self-evolution loop for feed collection health: `system_health` tasks can now auto-trigger the pipeline, verify recovery through collection health, and persist remediation evidence in task history.
 - Added `/api/evolution/mvp-status` as a trial-run status surface for self-test, collection health, pipeline state, recent actions, and active blockers.
 - Updated collection health issue generation so feed collection degradations are auto-processible by the self-evolution task pipeline.
+- Fixed a runtime reliability gap where `MyAttentionWatchdog` had been installed as a manual-start service, allowing the frontend to stay down with no active recovery process.
+- Hardened Windows service installation so `MyAttentionApi`, `MyAttentionWeb`, and `MyAttentionWatchdog` now use auto-start plus service failure restart policies.
+- Verified watchdog-based frontend recovery by stopping `web` and confirming the watchdog restarted it successfully.
+- Promoted the live `MyAttentionPostgres` and `MyAttentionRedis` services to `AUTO_START` with failure restart policies so a reboot no longer leaves core infrastructure down by default.
+- Fixed conversation/message ORM drift against PostgreSQL by mapping `Conversation.extra` and `Message.extra` back onto the existing `metadata` columns.
+- Restored `use_voting=true` conversation creation and conversation listing after the schema mismatch had broken the chat conversation layer.
+- Added browser-based UI smoke checks for `/chat` and `/evolution`, and wired them into `auto_evolution` self-test instead of relying only on API/status probes.
+- Added `POST /api/evolution/self-test/run` and an evolution dashboard action so self-test can be triggered on demand.
+- Fixed `chat-voting-canary` false negatives by validating the real voting chain up to synthesis start, rather than waiting for the entire long-form final answer to finish streaming.

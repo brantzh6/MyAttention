@@ -159,10 +159,27 @@ async def get_evolution_status(db: AsyncSession = Depends(get_db)):
 
     return {
         "status": "running" if status["running"] else "stopped",
+        "health": status.get("health", "unknown"),
+        "issues": status.get("issues", []),
         "components": status["components"],
         "intervals": status["intervals"],
         "last_results": status.get("last_results", {}),
         "timestamp": datetime.now().isoformat()
+    }
+
+
+@router.post("/self-test/run")
+async def run_self_test_now():
+    """Manually trigger one self-test cycle."""
+    from feeds.auto_evolution import get_auto_evolution_system
+
+    system = get_auto_evolution_system()
+    await system._run_self_test_once()
+    status = system.get_status()
+    return {
+        "status": "ok",
+        "self_test": status.get("last_results", {}).get("self_test", {}),
+        "timestamp": datetime.now().isoformat(),
     }
 
 

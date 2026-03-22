@@ -1,8 +1,11 @@
+import asyncio
+
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 from enum import Enum
+from urllib.parse import urlparse
 
 from sqlalchemy import String as SqlString, cast, or_, select
 from sqlalchemy.orm import joinedload
@@ -20,6 +23,7 @@ from feeds.persistence import (
 )
 from feeds.proxy_config import load_proxy_settings, normalize_proxy_mode, should_use_proxy
 from feeds.raw_ingest import persist_import_item_raw
+from knowledge.web_search import AliyunWebSearch
 from db import get_db, AsyncSession
 
 router = APIRouter()
@@ -96,6 +100,40 @@ class FeedsReadBackend(str, Enum):
     HYBRID = "hybrid"
 
 
+class SourceDiscoveryFocus(str, Enum):
+    LATEST = "latest"
+    AUTHORITATIVE = "authoritative"
+    FRONTIER = "frontier"
+    METHOD = "method"
+
+
+class SourceDiscoveryRequest(BaseModel):
+    topic: str = Field(..., min_length=2, description="需要研究或持续关注的主题")
+    focus: SourceDiscoveryFocus = Field(SourceDiscoveryFocus.AUTHORITATIVE, description="发现目标")
+    limit: int = Field(12, ge=3, le=30, description="返回候选源数量")
+
+
+class SourceDiscoveryCandidate(BaseModel):
+    domain: str
+    name: str
+    url: str
+    authority_tier: str
+    authority_score: float
+    recommendation: str
+    recommendation_reason: str
+    evidence_count: int
+    matched_queries: List[str]
+    sample_titles: List[str]
+    sample_snippets: List[str]
+
+
+class SourceDiscoveryResponse(BaseModel):
+    topic: str
+    focus: SourceDiscoveryFocus
+    queries: List[str]
+    candidates: List[SourceDiscoveryCandidate]
+
+
 # ── Import models ────────────────────────────────────
 
 class ImportItem(BaseModel):
@@ -146,6 +184,221 @@ def _source_to_api_model(source: _FeedSource) -> Source:
         proxy_settings,
         PROXY_DOMAINS,
     )
+
+
+def _normalize_domain(value: str) -> str:
+    parsed = urlparse(value if "://" in value else f"https://{value}")
+    domain = parsed.netloc or parsed.path
+    return domain.lower().removeprefix("www.")
+
+
+def _discovery_queries(topic: str, focus: SourceDiscoveryFocus) -> list[str]:
+    topic = topic.strip()
+    if focus == SourceDiscoveryFocus.LATEST:
+        return [
+            f"{topic} 最新 动态 官方",
+            f"{topic} latest news official",
+            f"{topic} release notes blog",
+        ]
+    if focus == SourceDiscoveryFocus.FRONTIER:
+        return [
+            f"{topic} frontier research lab paper",
+            f"{topic} 最新 研究 论文 实验室",
+            f"{topic} conference workshop research",
+        ]
+    if focus == SourceDiscoveryFocus.METHOD:
+        return [
+            f"{topic} open source framework github docs",
+            f"{topic} skill workflow agent community",
+            f"{topic} best practices benchmark",
+        ]
+    return [
+        f"{topic} 官方 权威 机构",
+        f"{topic} authoritative source organization",
+        f"{topic} review standard society institute",
+    ]
+
+
+def _discovery_recommendation(
+    focus: SourceDiscoveryFocus,
+    tier: str,
+    evidence_count: int,
+) -> tuple[str, str]:
+    if tier == "S":
+        return "subscribe", "权威等级高，适合作为长期关注对象"
+    if focus in {SourceDiscoveryFocus.FRONTIER, SourceDiscoveryFocus.METHOD} and tier == "A" and evidence_count >= 2:
+        return "subscribe", "在前沿或方法情报场景下，多次命中，适合长期观察"
+    if focus == SourceDiscoveryFocus.LATEST and tier in {"A", "B"}:
+        return "monitor", "适合作为动态观察源，但需继续校准其质量"
+    if tier == "A":
+        return "monitor", "具备一定权威性，建议先纳入观察而非直接固化"
+    return "review", "候选源价值未稳定，建议人工复核或继续搜索"
+
+
+def _focus_category(focus: SourceDiscoveryFocus) -> str:
+    if focus == SourceDiscoveryFocus.METHOD:
+        return "开发者"
+    if focus == SourceDiscoveryFocus.FRONTIER:
+        return "AI研究"
+    if focus == SourceDiscoveryFocus.LATEST:
+        return "科技"
+    return "AI研究"
+
+
+def _source_id_from_domain(domain: str) -> str:
+    cleaned = "".join(ch if ch.isalnum() else "_" for ch in domain.lower())
+    return cleaned.strip("_") or "discovered_source"
+
+
+def _domain_quality_adjustment(domain: str, focus: SourceDiscoveryFocus) -> float:
+    domain = domain.lower()
+    positive = {
+        SourceDiscoveryFocus.METHOD: (
+            "github.com",
+            "openreview.net",
+            "arxiv.org",
+            "docs.",
+            "readthedocs",
+            "anthropic.com",
+            "openai.com",
+            "langchain.com",
+            "langchain-ai.github.io",
+            "microsoft.github.io",
+            "developer.aliyun.com",
+            "openclaw.cc",
+        ),
+        SourceDiscoveryFocus.FRONTIER: (
+            "arxiv.org",
+            "openreview.net",
+            "nature.com",
+            "science.org",
+            "acm.org",
+            "ieee.org",
+            ".edu",
+            ".ac.",
+        ),
+        SourceDiscoveryFocus.AUTHORITATIVE: (
+            ".gov",
+            ".gov.cn",
+            ".edu",
+            ".org",
+            "who.int",
+            "oecd.org",
+            "w3.org",
+        ),
+        SourceDiscoveryFocus.LATEST: (
+            "reuters.com",
+            "bloomberg.com",
+            "ft.com",
+            "wsj.com",
+            "techcrunch.com",
+            "theverge.com",
+            "wired.com",
+        ),
+    }
+    negative = (
+        "toutiao.com",
+        "baijiahao.baidu.com",
+        "bilibili.com",
+        "weibo.com",
+        "zhihu.com",
+        "csdn.net",
+        "blog.csdn.net",
+        "m.blog.csdn.net",
+    )
+
+    score = 0.0
+    if any(token in domain for token in positive.get(focus, ())):
+        score += 0.25
+    if any(token in domain for token in negative):
+        score -= 0.3
+    if domain.startswith("m."):
+        score -= 0.1
+    return score
+
+
+async def _run_source_discovery(body: SourceDiscoveryRequest) -> SourceDiscoveryResponse:
+    search = AliyunWebSearch()
+    classifier = get_authority_classifier()
+    queries = _discovery_queries(body.topic, body.focus)
+    aggregated: dict[str, dict[str, Any]] = {}
+
+    for query in queries:
+        result = await asyncio.to_thread(
+            search.search,
+            query,
+            search.ENGINE_ADVANCED,
+            search.TIME_ONE_MONTH if body.focus == SourceDiscoveryFocus.LATEST else search.TIME_NO_LIMIT,
+            True,
+            False,
+            True,
+            body.limit,
+        )
+        if not result.get("success"):
+            continue
+
+        for item in result.get("results", []):
+            domain = _normalize_domain(item.link or item.source or "")
+            if not domain:
+                continue
+
+            authority = classifier.classify(item.link or domain, item.title, _focus_category(body.focus))
+            adjusted_score = max(0.0, min(1.0, authority.score + _domain_quality_adjustment(domain, body.focus)))
+            candidate = aggregated.setdefault(
+                domain,
+                {
+                    "domain": domain,
+                    "name": domain,
+                    "url": item.link or f"https://{domain}",
+                    "authority_tier": authority.tier,
+                    "authority_score": adjusted_score,
+                    "evidence_count": 0,
+                    "matched_queries": [],
+                    "sample_titles": [],
+                    "sample_snippets": [],
+                },
+            )
+            candidate["authority_tier"] = authority.tier if adjusted_score >= candidate["authority_score"] else candidate["authority_tier"]
+            candidate["authority_score"] = max(candidate["authority_score"], adjusted_score)
+            candidate["evidence_count"] += 1
+            if query not in candidate["matched_queries"]:
+                candidate["matched_queries"].append(query)
+            if item.title and len(candidate["sample_titles"]) < 3:
+                candidate["sample_titles"].append(item.title)
+            snippet = (item.snippet or item.main_text or "").strip()
+            if snippet and len(candidate["sample_snippets"]) < 2:
+                candidate["sample_snippets"].append(snippet[:220])
+
+    ranked = sorted(
+        [item for item in aggregated.values() if item["authority_score"] >= 0.45],
+        key=lambda item: (item["authority_score"], item["evidence_count"]),
+        reverse=True,
+    )[: body.limit]
+
+    candidates: list[SourceDiscoveryCandidate] = []
+    for item in ranked:
+        recommendation, reason = _discovery_recommendation(
+            body.focus,
+            item["authority_tier"],
+            item["evidence_count"],
+        )
+        candidates.append(
+            SourceDiscoveryCandidate(
+                domain=item["domain"],
+                name=item["name"],
+                url=item["url"],
+                authority_tier=item["authority_tier"],
+                authority_score=item["authority_score"],
+                recommendation=recommendation,
+                recommendation_reason=reason,
+                evidence_count=item["evidence_count"],
+                matched_queries=item["matched_queries"],
+                sample_titles=item["sample_titles"],
+                sample_snippets=item["sample_snippets"],
+            )
+        )
+
+    return SourceDiscoveryResponse(topic=body.topic, focus=body.focus, queries=queries, candidates=candidates)
     return Source(
         id=source.id,
         name=source.name,
@@ -344,6 +597,57 @@ async def create_source(body: SourceCreate):
     )
     fetcher.add_source(new)
     return _source_to_api_model(new)
+
+
+@router.post("/sources/discover", response_model=SourceDiscoveryResponse)
+async def discover_sources(body: SourceDiscoveryRequest):
+    """
+    Discover candidate sources for a topic using web search + authority scoring.
+
+    This is a minimum source-intelligence step:
+    - topic-driven
+    - not limited to existing RSS list
+    - produces candidates for long-term monitoring decisions
+    """
+    return await _run_source_discovery(body)
+
+
+@router.post("/sources/discover/{domain}/subscribe", response_model=Source)
+async def subscribe_discovered_source(
+    domain: str,
+    body: SourceDiscoveryRequest,
+):
+    """
+    Convert a discovered domain into a tracked source.
+
+    This does not auto-invent a verified RSS endpoint. It subscribes to the
+    discovered site URL as a managed source entry so the project can continue
+    calibrating and later refine fetch strategy.
+    """
+    discovery = await _run_source_discovery(body)
+    candidate = next((item for item in discovery.candidates if item.domain == _normalize_domain(domain)), None)
+    if candidate is None:
+        raise HTTPException(status_code=404, detail="Discovered candidate not found")
+
+    fetcher = get_feed_fetcher()
+    source_id = _source_id_from_domain(candidate.domain)
+    existing = next((src for src in fetcher.get_sources() if src.id == source_id or _normalize_domain(src.url) == candidate.domain), None)
+    if existing is not None:
+        return _source_to_api_model(existing)
+
+    tags = [body.focus.value, "discovered", candidate.authority_tier]
+    new_source = _FeedSource(
+        id=source_id,
+        name=candidate.name,
+        url=candidate.url,
+        category=_focus_category(body.focus),
+        tags=tags,
+        enabled=True,
+        proxy_mode=ProxyMode.AUTO.value,
+        use_proxy=False,
+    )
+    fetcher.add_source(new_source)
+    return _source_to_api_model(new_source)
 
 
 @router.delete("/sources/{source_id}")

@@ -18,6 +18,49 @@ router = APIRouter()
 DEFAULT_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 
+def _looks_corrupted_title(value: Optional[str]) -> bool:
+    if not value:
+        return False
+    text = value.strip()
+    if not text:
+        return False
+    question_marks = text.count("?")
+    return "�" in text or (question_marks >= 3 and question_marks / max(len(text), 1) >= 0.3)
+
+
+def _build_conversation_title(content: Optional[str]) -> str:
+    if not content:
+        return "新对话"
+    title = " ".join(content.strip().split())
+    if not title:
+        return "新对话"
+    if len(title) > 50:
+        title = f"{title[:50].strip()}..."
+    return title
+
+
+async def _resolve_conversation_title(db: AsyncSession, conv: Conversation) -> str:
+    if conv.title and not _looks_corrupted_title(conv.title):
+        return conv.title
+
+    query = (
+        select(Message.content)
+        .where(
+            Message.conversation_id == conv.id,
+            Message.role == MessageRole.USER,
+        )
+        .order_by(Message.created_at.asc())
+        .limit(1)
+    )
+    result = await db.execute(query)
+    first_message = result.scalar_one_or_none()
+    fallback_title = _build_conversation_title(first_message)
+    if _looks_corrupted_title(fallback_title):
+        fallback_title = "新对话"
+    conv.title = fallback_title
+    return fallback_title
+
+
 # Request/Response Models
 class ConversationCreate(BaseModel):
     title: Optional[str] = None
@@ -127,6 +170,11 @@ async def list_conversations(
     )
     result = await db.execute(query)
     conversations = result.scalars().all()
+    for conversation in conversations:
+        original_title = conversation.title
+        resolved_title = await _resolve_conversation_title(db, conversation)
+        if resolved_title != original_title:
+            conversation.title = resolved_title
     
     return ConversationListResponse(
         conversations=[
@@ -165,10 +213,15 @@ async def get_conversation(
     
     if not conv:
         raise HTTPException(status_code=404, detail="Conversation not found")
+
+    original_title = conv.title
+    resolved_title = await _resolve_conversation_title(db, conv)
+    if resolved_title != original_title:
+        conv.title = resolved_title
     
     return ConversationResponse(
         id=str(conv.id),
-        title=conv.title,
+        title=resolved_title,
         model=conv.model,
         use_voting=conv.use_voting,
         summary=conv.summary,

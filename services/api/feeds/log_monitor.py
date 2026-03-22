@@ -33,7 +33,7 @@ LOG_SOURCES = {
         "encoding": "utf-8",
     },
     "web_frontend": {
-        "path": "services/web/frontend.log",
+        "path": ".runtime/logs/web.log",
         "encoding": "utf-8",
     },
 }
@@ -232,6 +232,24 @@ class LogMonitor:
                 "category": "frontend",
                 "description": "前端请求失败",
                 "suggestion": "检查网络状态，添加错误边界"
+            },
+            r"cannot\s+find\s+module\s+'.*\.js'": {
+                "severity": "critical",
+                "category": "frontend",
+                "description": "前端构建产物模块缺失",
+                "suggestion": "清理 Next 构建缓存并重建前端，检查 dev/build 产物是否漂移"
+            },
+            r"webpack-runtime": {
+                "severity": "high",
+                "category": "frontend",
+                "description": "前端 webpack 运行时错误",
+                "suggestion": "检查 Next.js 开发缓存、热更新状态和构建产物一致性"
+            },
+            r"page(notfounderror|.*cannot\s+find\s+module\s+for\s+page)": {
+                "severity": "high",
+                "category": "frontend",
+                "description": "前端页面模块加载失败",
+                "suggestion": "检查页面路由、构建缓存和缺失页面引用"
             },
         }
 

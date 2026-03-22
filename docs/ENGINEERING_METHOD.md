@@ -14,6 +14,8 @@
 4. 事实优先，判断基于日志、测试、指标和真实运行结果。
 5. 质量内建，测试和可观测性不是收尾工作。
 6. 演进式实现，每一阶段都要可运行、可验证、可回退。
+7. 主动研究与纠偏，不能机械附和需求或假设；应评估可行性、合理性、替代路线与潜在错误。
+8. 研发过程是循环反馈优化过程，不按线性瀑布假设推进；遇到关键分歧、风险或证据冲突时，应及时回到讨论与校准。
 
 ### 1.2 适用范围
 
@@ -33,11 +35,13 @@
 
 1. 确认任务是否服务于项目主线。
 2. 明确问题、目标、边界、风险与验收标准。
-3. 产出方案或补充现有方案。
-4. 落设计文档并完成评审确认。
-5. 再开始编码。
-6. 编码后完成相应层级测试与人工验证。
-7. 更新实现文档、进度文档、已知问题与后续计划。
+3. 对需求和假设做研究、质疑和替代方案评估，必要时先纠偏再继续。
+4. 产出方案或补充现有方案。
+5. 落设计文档并完成评审确认。
+6. 再开始编码。
+7. 编码后完成相应层级测试与人工验证。
+8. 更新实现文档、进度文档、已知问题与后续计划。
+9. 将有效方法、失败方法、重要决策和过程产物沉淀入仓库，确保可追溯与可复制。
 
 ### 2.2 任务分级
 
@@ -174,6 +178,15 @@
 ### 5.1 定位
 
 自我进化系统不是“以后再做”的增强项，而是项目核心基础设施。它负责把运行问题、测试问题、性能问题和重复问题沉淀成可处理的任务闭环。
+
+补充要求：
+
+- 进化大脑的主控 agent 必须具备研究、质疑、纠偏和替代路线建议能力。
+- 它不能只执行已有规则，也不能只附和用户或上游代理的想法。
+- 它应持续比较：
+  - 当前方法是否仍然有效
+  - 是否已有更好的方法、工具、skill、agent team 模式
+  - 当前路线是否偏离项目总目标
 
 ### 5.2 最小闭环
 
@@ -338,3 +351,13 @@
 - 测试策略：[TESTING.md](./TESTING.md)
 - 存储层架构：[STORAGE_ARCHITECTURE.md](./STORAGE_ARCHITECTURE.md)
 - 信息流数据架构：[FEED_DATA_ARCHITECTURE.md](./FEED_DATA_ARCHITECTURE.md)
+---
+
+## 10. Encoding And I18N
+
+- All source code, config, SQL, JSON, Markdown, TOML, and script templates must use UTF-8.
+- Business code must not rely on OS default encodings, especially Windows console encoding.
+- New frontend UI copy must go through centralized i18n resources instead of ad hoc hardcoded strings.
+- Mojibake, replacement characters, and question-mark fallback are functional defects, not cosmetic defects.
+- Encoding consistency checks and real UI inspections must be part of automated testing and the evolution loop.
+- Detailed policy: [ENCODING_AND_I18N_STANDARD.md](./ENCODING_AND_I18N_STANDARD.md)

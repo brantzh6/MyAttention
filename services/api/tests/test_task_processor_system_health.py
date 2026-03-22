@@ -10,6 +10,7 @@ if str(API_ROOT) not in sys.path:
 from feeds.task_processor import (
     build_system_health_recovery_plan,
     is_system_health_improved,
+    make_ascii_safe,
 )
 
 
@@ -35,6 +36,18 @@ class TaskProcessorSystemHealthTest(unittest.TestCase):
         self.assertTrue(is_system_health_improved("degraded", "healthy"))
         self.assertFalse(is_system_health_improved("healthy", "degraded"))
         self.assertFalse(is_system_health_improved("degraded", "degraded"))
+
+    def test_make_ascii_safe_normalizes_nested_unicode_payload(self) -> None:
+        sanitized = make_ascii_safe(
+            {
+                "message": "添加到定期汇总报告",
+                "nested": ["进化大脑", {"label": "智能对话"}],
+            }
+        )
+
+        self.assertEqual(sanitized["message"], "?????????")
+        self.assertEqual(sanitized["nested"][0], "????")
+        self.assertEqual(sanitized["nested"][1]["label"], "????")
 
 
 if __name__ == "__main__":

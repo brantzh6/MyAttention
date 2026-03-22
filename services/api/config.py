@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     
     # LLM API Keys
     qwen_api_key: str = ""
+    qwen_base_url: str = ""
     glm_api_key: str = ""
     kimi_api_key: str = ""
     anthropic_api_key: str = ""
@@ -48,6 +49,27 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
+
+
+def get_effective_qwen_base_url(settings: Settings | None = None) -> str:
+    settings = settings or get_settings()
+    configured = (settings.qwen_base_url or "").strip()
+    if configured:
+        return configured.rstrip("/")
+
+    api_key = (settings.qwen_api_key or "").strip()
+    if api_key.startswith("sk-sp-"):
+        return "https://coding.dashscope.aliyuncs.com/v1"
+
+    return "https://dashscope.aliyuncs.com/compatible-mode/v1"
+
+
+def get_effective_qwen_default_model(settings: Settings | None = None) -> str:
+    settings = settings or get_settings()
+    base_url = get_effective_qwen_base_url(settings)
+    if "coding.dashscope.aliyuncs.com" in base_url:
+        return "qwen3.5-plus"
+    return "qwen-max"
 
 
 def create_qdrant_client(settings: Settings | None = None) -> QdrantClient:

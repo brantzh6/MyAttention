@@ -1,59 +1,150 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
-import { Send, Vote, Loader2, FileText, Globe, Rss, Upload as UploadIcon, BookOpen, MessageSquare, Plus, Trash2, ChevronLeft, ChevronRight, RefreshCw, Brain, ChevronDown, Lightbulb, ChevronUp, Database, CheckCircle } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { apiClient } from '@/lib/api-client'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  BookOpen,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Database,
+  FileText,
+  Globe,
+  Lightbulb,
+  Loader2,
+  MessageSquare,
+  Plus,
+  RefreshCw,
+  Rss,
+  Send,
+  Trash2,
+  Upload as UploadIcon,
+  Vote,
+} from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
+import { apiClient } from '@/lib/api-client'
+import { cn } from '@/lib/utils'
+
 const API_URL = process.env.API_URL || 'http://localhost:8000'
 
-function MarkdownContent({ content, className }: { content: string; className?: string }) {
-  return (
-    <div className={cn('prose-chat', className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-        {content}
-      </ReactMarkdown>
-    </div>
-  )
-}
-
-// Available models on Bailian platform
 const AVAILABLE_MODELS = [
-  { provider: 'qwen', model: 'qwen-max', name: '通义千问 Max', supportsSearch: true, supportsThinking: false },
+  { provider: 'qwen', model: 'qwen-max', name: 'Qwen Max', supportsSearch: true, supportsThinking: false },
   { provider: 'qwen', model: 'qwen3.5-plus', name: 'Qwen 3.5 Plus', supportsSearch: true, supportsThinking: true },
   { provider: 'qwen', model: 'MiniMax-M2.5', name: 'MiniMax M2.5', supportsSearch: true, supportsThinking: false },
   { provider: 'qwen', model: 'deepseek-v3.2', name: 'DeepSeek V3.2', supportsSearch: true, supportsThinking: true },
   { provider: 'qwen', model: 'glm-5', name: 'GLM-5', supportsSearch: false, supportsThinking: true },
   { provider: 'qwen', model: 'kimi-k2.5', name: 'Kimi K2.5', supportsSearch: false, supportsThinking: false },
-]
+] as const
+
+type AvailableModel = (typeof AVAILABLE_MODELS)[number]
+
+type Locale = 'zh-CN' | 'en'
+
+const TEXT: Record<Locale, Record<string, string>> = {
+  'zh-CN': {
+    chatHistory: '\u4f1a\u8bdd\u5386\u53f2',
+    newChat: '\u65b0\u5bf9\u8bdd',
+    noConversation: '\u6682\u65e0\u4f1a\u8bdd',
+    startTitle: '\u5f00\u59cb\u5bf9\u8bdd',
+    startDesc: '\u5411 AI \u63d0\u95ee\uff0c\u83b7\u53d6\u57fa\u4e8e\u77e5\u8bc6\u5e93\u548c\u591a\u6a21\u578b\u6295\u7968\u7684\u667a\u80fd\u56de\u7b54\u3002',
+    thinking: '\u601d\u8003\u8fc7\u7a0b',
+    finalVerdict: '\u6700\u7ec8\u88c1\u51b3',
+    modelViews: '\u6a21\u578b\u89c2\u70b9',
+    directAnswer: '\u76f4\u63a5\u56de\u7b54',
+    rerunTurn: '\u91cd\u8dd1\u672c\u8f6e',
+    sources: '\u5f15\u7528\u6765\u6e90',
+    webSearch: '\u8054\u7f51\u641c\u7d22',
+    deepThinking: '\u6df1\u5ea6\u601d\u8003',
+    voting: '\u591a\u6a21\u578b\u6295\u7968',
+    knowledgeBase: '\u77e5\u8bc6\u5e93',
+    allKnowledgeBases: '\u5168\u90e8\u77e5\u8bc6\u5e93',
+    selected: '\u5df2\u9009',
+    docs: '\u6587\u6863',
+    selectKnowledgeBases: '\u9009\u62e9\u8981\u641c\u7d22\u7684\u77e5\u8bc6\u5e93\uff08\u53ef\u591a\u9009\uff09',
+    inputPlaceholder: '\u8f93\u5165\u4f60\u7684\u95ee\u9898...',
+    deleteConversation: '\u786e\u5b9a\u8981\u5220\u9664\u8fd9\u4e2a\u4f1a\u8bdd\u5417\uff1f',
+    online: '\u8054\u7f51',
+    connecting: '\u8fde\u63a5\u540e\u7aef\u670d\u52a1...',
+    callingApi: '\u8c03\u7528 API...',
+    thinkingStatus: '\u6a21\u578b\u6b63\u5728\u601d\u8003...',
+    generating: '\u6b63\u5728\u751f\u6210\u56de\u7b54...',
+    voteStarted: '\u6295\u7968\u5f00\u59cb',
+    voteStreaming: '\u6b63\u5728\u8f93\u51fa',
+    voteCompleted: '\u5b8c\u6210',
+    voteFailed: '\u5931\u8d25',
+    synthesizing: '\u6b63\u5728\u7efc\u5408\u88c1\u51b3...',
+    processing: '\u5904\u7406\u4e2d...',
+    noContent: '\u6682\u65e0\u5185\u5bb9',
+    summary: '\u6458\u8981',
+    connectionFailed: '\u8fde\u63a5\u5931\u8d25',
+    today: '\u4eca\u5929',
+    yesterday: '\u6628\u5929',
+    daysAgo: '\u5929\u524d',
+    modelsUnit: '\u4e2a\u6a21\u578b',
+    noAvailableModels: '\u65e0\u53ef\u7528\u6a21\u578b',
+    votingModelsLabel: '\u672c\u8f6e\u53c2\u4e0e\u6a21\u578b',
+    primaryDecision: '\u4e3b\u88c1',
+    supportEvidence: '\u8865\u5145',
+  },
+  en: {
+    chatHistory: 'Conversations',
+    newChat: 'New chat',
+    noConversation: 'No conversations',
+    startTitle: 'Start a conversation',
+    startDesc: 'Ask AI and get answers grounded in knowledge bases and multi-model voting.',
+    thinking: 'Thinking',
+    finalVerdict: 'Final verdict',
+    modelViews: 'Model viewpoints',
+    directAnswer: 'Direct answer',
+    rerunTurn: 'Rerun turn',
+    sources: 'Sources',
+    webSearch: 'Web search',
+    deepThinking: 'Deep thinking',
+    voting: 'Voting',
+    knowledgeBase: 'Knowledge base',
+    allKnowledgeBases: 'All knowledge bases',
+    selected: 'Selected',
+    docs: 'docs',
+    selectKnowledgeBases: 'Choose knowledge bases to search',
+    inputPlaceholder: 'Enter your question...',
+    deleteConversation: 'Delete this conversation?',
+    online: 'Online',
+    connecting: 'Connecting to backend...',
+    callingApi: 'Calling API...',
+    thinkingStatus: 'Model is thinking...',
+    generating: 'Generating response...',
+    voteStarted: 'Voting started',
+    voteStreaming: 'Streaming',
+    voteCompleted: 'Completed',
+    voteFailed: 'Failed',
+    synthesizing: 'Synthesizing final answer...',
+    processing: 'Processing...',
+    noContent: 'No content',
+    summary: 'Summary',
+    connectionFailed: 'Connection failed',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    daysAgo: 'days ago',
+    modelsUnit: 'models',
+    noAvailableModels: 'none',
+    votingModelsLabel: 'Voting models',
+    primaryDecision: 'Primary',
+    supportEvidence: 'Support',
+  },
+}
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  thinking?: string  // 模型思考过程
+  thinking?: string
   sources?: { title: string; url: string; source?: string; score?: number }[]
   isVoting?: boolean
-  votingResults?: {
-    model: string
-    content: string
-    success: boolean
-    error?: string
-  }[]
+  votingResults?: { model: string; content: string; success: boolean; error?: string }[]
   searchEnabled?: boolean
   modelUsed?: string
-}
-
-// State for real-time voting display
-interface VotingState {
-  isActive: boolean
-  models: string[]
-  modelContents: Record<string, string>  // Real-time content from each model
-  modelStatus: Record<string, 'pending' | 'streaming' | 'completed' | 'failed'>
-  synthesisContent: string  // Real-time synthesis content
-  isSynthesizing: boolean
 }
 
 interface Conversation {
@@ -67,129 +158,176 @@ interface Conversation {
 interface KnowledgeBase {
   id: string
   name: string
-  description: string
   document_count: number
-  chunk_count: number
-  status: string
+}
+
+interface VotingState {
+  isActive: boolean
+  models: string[]
+  modelContents: Record<string, string>
+  modelStatus: Record<string, 'pending' | 'streaming' | 'completed' | 'failed'>
+  synthesisContent: string
+  isSynthesizing: boolean
+}
+
+function MarkdownContent({ content }: { content: string }) {
+  return (
+    <div className="prose-chat">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  )
+}
+
+function detectLocale(): Locale {
+  if (typeof window === 'undefined') return 'zh-CN'
+
+  const saved = window.localStorage.getItem('myattention.locale')
+  if (saved === 'zh-CN' || saved === 'en') {
+    return saved
+  }
+
+  const docLang = document.documentElement.lang?.toLowerCase()
+  if (docLang?.startsWith('en')) return 'en'
+
+  return 'zh-CN'
+}
+
+function t(locale: Locale, key: string) {
+  return TEXT[locale][key] || key
+}
+
+function formatRelativeDate(locale: Locale, value: string | null) {
+  if (!value) return ''
+  const date = new Date(value)
+  const diff = Date.now() - date.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  if (days === 0) return t(locale, 'today')
+  if (days === 1) return t(locale, 'yesterday')
+  if (days < 7) return `${days}${locale === 'zh-CN' ? t(locale, 'daysAgo') : ` ${t(locale, 'daysAgo')}`}`
+  return date.toLocaleDateString(locale)
+}
+
+function sourceMeta(type?: string) {
+  if (type === 'rss') return { Icon: Rss, color: 'text-orange-500' }
+  if (type === 'web') return { Icon: Globe, color: 'text-blue-500' }
+  if (type === 'upload') return { Icon: UploadIcon, color: 'text-emerald-500' }
+  if (type === 'documentation') return { Icon: BookOpen, color: 'text-cyan-500' }
+  return { Icon: FileText, color: 'text-slate-500' }
+}
+
+function parseVerdictSections(content: string) {
+  const sections: { title: string; body: string }[] = []
+  const pattern = /\u3010([^\u3011]+)\u3011\s*([\s\S]*?)(?=\u3010[^\u3011]+\u3011|$)/g
+  let match: RegExpExecArray | null
+
+  while ((match = pattern.exec(content)) !== null) {
+    const title = match[1]?.trim()
+    const body = match[2]?.trim()
+    if (title && body) {
+      sections.push({ title, body })
+    }
+  }
+
+  return sections
+}
+
+function looksCorruptedTitle(value?: string | null) {
+  if (!value) return false
+  const text = value.trim()
+  if (!text) return false
+
+  const questionMarks = text.split('').filter(char => char === '?').length
+  return text.includes('�') || (questionMarks >= 3 && questionMarks / text.length >= 0.3)
+}
+
+function formatConversationTitle(locale: Locale, value?: string | null) {
+  if (!value || looksCorruptedTitle(value)) {
+    return t(locale, 'newChat')
+  }
+  return value
+}
+
+function getVotingCandidateRole(model: AvailableModel, enableSearch: boolean, enableThinking: boolean) {
+  if (enableSearch && enableThinking) {
+    if (model.supportsSearch && model.supportsThinking) return 'primary'
+    if (model.supportsSearch || model.supportsThinking) return 'support'
+    return 'excluded'
+  }
+  if (enableSearch) return model.supportsSearch ? 'primary' : 'excluded'
+  if (enableThinking) return model.supportsThinking ? 'primary' : 'excluded'
+  return 'primary'
 }
 
 export function ChatInterface() {
+  const [locale, setLocale] = useState<Locale>('zh-CN')
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [useVoting, setUseVoting] = useState(false)
-  const [enableSearch, setEnableSearch] = useState(false)  // Web search toggle
-  const [enableThinking, setEnableThinking] = useState(false)  // Thinking mode toggle
-  const [useRag, setUseRag] = useState(true)  // Knowledge base retrieval toggle
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0])  // Model selection
+  const [enableSearch, setEnableSearch] = useState(false)
+  const [enableThinking, setEnableThinking] = useState(false)
+  const [useRag, setUseRag] = useState(true)
+  const [selectedModel, setSelectedModel] = useState<AvailableModel>(AVAILABLE_MODELS[0])
   const [showModelDropdown, setShowModelDropdown] = useState(false)
-  const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({})  // Track expanded thinking sections
-  const [expandedVotingResults, setExpandedVotingResults] = useState<Record<string, Record<number, boolean>>>({})  // Track expanded voting cards
-  const [votingState, setVotingState] = useState<VotingState>({
-    isActive: false,
-    models: [],
-    modelContents: {},
-    modelStatus: {},
-    synthesisContent: '',
-    isSynthesizing: false,
-  })
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const modelDropdownRef = useRef<HTMLDivElement>(null)
-
-  // Conversation state
+  const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({})
+  const [expandedVotingResults, setExpandedVotingResults] = useState<Record<string, Record<number, boolean>>>({})
+  const [votingState, setVotingState] = useState<VotingState>({ isActive: false, models: [], modelContents: {}, modelStatus: {}, synthesisContent: '', isSynthesizing: false })
   const [conversations, setConversations] = useState<Conversation[]>([])
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [loadingConversations, setLoadingConversations] = useState(true)
-  const [userProfile, setUserProfile] = useState<{ preferences: any[]; facts: any[] } | null>(null)
-  const [chatStatus, setChatStatus] = useState<string>('')  // 对话状态显示
-
-  // Knowledge base state
   const [knowledgeBases, setKnowledgeBases] = useState<KnowledgeBase[]>([])
-  const [selectedKbIds, setSelectedKbIds] = useState<string[]>([])  // Selected KB IDs
+  const [selectedKbIds, setSelectedKbIds] = useState<string[]>([])
   const [showKbDropdown, setShowKbDropdown] = useState(false)
+  const [chatStatus, setChatStatus] = useState('')
+
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const modelDropdownRef = useRef<HTMLDivElement>(null)
   const kbDropdownRef = useRef<HTMLDivElement>(null)
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  useEffect(() => setLocale(detectLocale()), [])
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [messages])
 
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
-
-  // Close model dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node)) {
-        setShowModelDropdown(false)
-      }
-      if (kbDropdownRef.current && !kbDropdownRef.current.contains(event.target as Node)) {
-        setShowKbDropdown(false)
-      }
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node)) setShowModelDropdown(false)
+      if (kbDropdownRef.current && !kbDropdownRef.current.contains(event.target as Node)) setShowKbDropdown(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Load knowledge bases
-  const loadKnowledgeBases = useCallback(async () => {
-    try {
-      const data = await apiClient.getKnowledgeBases()
-      setKnowledgeBases(data.knowledge_bases)
-    } catch (error) {
-      console.error('Failed to load knowledge bases:', error)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadKnowledgeBases()
-  }, [loadKnowledgeBases])
-
-  // Load conversations on mount
   const loadConversations = useCallback(async () => {
     setLoadingConversations(true)
     try {
       const res = await apiClient.listConversations(1, 50)
       setConversations(res.conversations)
-    } catch (error) {
-      console.error('Failed to load conversations:', error)
     } finally {
       setLoadingConversations(false)
     }
   }, [])
 
-  // Load user profile (memories)
-  const loadUserProfile = useCallback(async () => {
+  const loadKnowledgeBases = useCallback(async () => {
     try {
-      const profile = await apiClient.getUserProfile()
-      setUserProfile(profile)
+      const data = await apiClient.getKnowledgeBases()
+      setKnowledgeBases(data.knowledge_bases.map((kb: any) => ({ id: kb.id, name: kb.name, document_count: kb.document_count })))
     } catch (error) {
-      console.error('Failed to load user profile:', error)
+      console.error('Failed to load knowledge bases:', error)
     }
   }, [])
 
-  useEffect(() => {
-    loadConversations()
-    loadUserProfile()
-  }, [loadConversations, loadUserProfile])
-
-  // Load conversation messages
   const loadConversationMessages = useCallback(async (conversationId: string) => {
     try {
       const msgs = await apiClient.getMessages(conversationId, 100)
       setMessages(msgs.map((m: any) => ({
         id: m.id,
-        role: m.role as 'user' | 'assistant',
+        role: m.role,
         content: m.content,
+        thinking: m.thinking,
         sources: m.sources || [],
         isVoting: !!m.voting_results,
-        votingResults: m.voting_results?.individual_results?.map((r: any) => ({
-          model: r.model,
-          content: r.content || '',
-          success: r.success,
-          error: r.error,
-        })),
+        votingResults: m.voting_results?.individual_results?.map((r: any) => ({ model: r.model, content: r.content || '', success: r.success, error: r.error })),
+        searchEnabled: m.search_enabled,
         modelUsed: m.model,
       })))
       setCurrentConversationId(conversationId)
@@ -198,605 +336,375 @@ export function ChatInterface() {
     }
   }, [])
 
-  const handleSelectConversation = (id: string) => {
-    loadConversationMessages(id)
+  useEffect(() => {
+    loadConversations()
+    loadKnowledgeBases()
+  }, [loadConversations, loadKnowledgeBases])
+
+  const resetVotingState = () => {
+    setVotingState({ isActive: false, models: [], modelContents: {}, modelStatus: {}, synthesisContent: '', isSynthesizing: false })
   }
 
-  const handleNewConversation = () => {
-    setCurrentConversationId(null)
-    setMessages([])
-  }
+  const sendMessage = useCallback(async (
+    message: string,
+    options?: {
+      clearInput?: boolean
+      useVoting?: boolean
+      enableSearch?: boolean
+      enableThinking?: boolean
+      selectedModel?: typeof AVAILABLE_MODELS[number]
+    },
+  ) => {
+    const trimmed = message.trim()
+    if (!trimmed || isLoading) return
 
-  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    if (!confirm('确定要删除这个会话吗？')) return
-    
-    try {
-      await apiClient.deleteConversation(id)
-      loadConversations()
-      if (currentConversationId === id) {
-        handleNewConversation()
-      }
-    } catch (error) {
-      console.error('Failed to delete conversation:', error)
-    }
-  }
+    const effectiveUseVoting = options?.useVoting ?? useVoting
+    const effectiveEnableSearch = options?.enableSearch ?? enableSearch
+    const effectiveModel = options?.selectedModel ?? selectedModel
+    const requestedThinking = options?.enableThinking ?? enableThinking
+    const effectiveEnableThinking = effectiveUseVoting ? requestedThinking : (requestedThinking && effectiveModel.supportsThinking)
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return ''
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    
-    if (days === 0) return '今天'
-    if (days === 1) return '昨天'
-    if (days < 7) return `${days}天前`
-    return date.toLocaleDateString()
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content: input.trim(),
-    }
-
-    setMessages(prev => [...prev, userMessage])
-    const currentInput = input.trim()
-    setInput('')
+    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', content: trimmed }])
+    if (options?.clearInput) setInput('')
     setIsLoading(true)
-    
-    // Show detailed initial status immediately - no waiting
-    const modelInfo = useVoting ? '多模型投票' : selectedModel.name
-    const searchInfo = enableSearch ? ' | 联网搜索' : ''
-    const thinkingInfo = enableThinking && selectedModel.supportsThinking ? ' | 深度思考' : ''
-    setChatStatus(`连接后端服务... 模型: ${modelInfo}${searchInfo}${thinkingInfo}`)
+    setChatStatus(`${t(locale, 'connecting')} ${effectiveUseVoting ? t(locale, 'voting') : effectiveModel.name}`)
 
-    const assistantId = (Date.now() + 1).toString()
-    // Don't add empty assistant message yet, add it when content arrives
-    let assistantMessageAdded = false
+    const assistantId = `${Date.now() + 1}`
+    let assistantAdded = false
+    let sources: Message['sources'] = []
 
     try {
-      setChatStatus(`调用 API 接口... 模型: ${modelInfo}${searchInfo}${thinkingInfo}`)
+      setChatStatus(`${t(locale, 'callingApi')} ${effectiveUseVoting ? t(locale, 'voting') : effectiveModel.name}`)
       const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: currentInput,
-          use_voting: useVoting,
+          message: trimmed,
+          use_voting: effectiveUseVoting,
           use_rag: useRag,
-          enable_search: enableSearch,
-          enable_thinking: useVoting ? enableThinking : (enableThinking && selectedModel.supportsThinking),
+          enable_search: effectiveEnableSearch,
+          enable_thinking: effectiveEnableThinking,
           conversation_id: currentConversationId,
-          provider: useVoting ? undefined : selectedModel.provider,
-          model: useVoting ? undefined : selectedModel.model,
+          provider: effectiveUseVoting ? undefined : effectiveModel.provider,
+          model: effectiveUseVoting ? undefined : effectiveModel.model,
           kb_ids: useRag && selectedKbIds.length > 0 ? selectedKbIds : undefined,
         }),
       })
-
       if (!res.ok) throw new Error(`API error: ${res.status}`)
 
       const reader = res.body?.getReader()
       const decoder = new TextDecoder()
-      let sources: Message['sources'] = []
-      let newConversationId: string | null = null
-
       if (reader) {
-        let sseBuffer = ''
+        let buffer = ''
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
-
-          sseBuffer += decoder.decode(value, { stream: true })
-          // Split on double-newline (SSE event boundary)
-          const parts = sseBuffer.split('\n\n')
-          sseBuffer = parts.pop() || ''  // Keep incomplete trailing part
-
+          buffer += decoder.decode(value, { stream: true })
+          const parts = buffer.split('\n\n')
+          buffer = parts.pop() || ''
           for (const part of parts) {
-            const lines = part.split('\n')
-            for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            const data = line.slice(6).trim()
-            if (data === '[DONE]') continue
-
-            try {
-              const parsed = JSON.parse(data)
-
-              // Handle status updates from backend
-              if (parsed.status) {
-                setChatStatus(parsed.status)
-                continue
-              }
-
-              // Handle voting events
-              if (parsed.type === 'voting_start') {
-                const modelList = parsed.models?.join(', ') || ''
-                setChatStatus(`多模型投票开始: ${modelList}`)
-                // Initialize voting state
-                const initialStatus: Record<string, 'pending' | 'streaming' | 'completed' | 'failed'> = {}
-                const initialContents: Record<string, string> = {}
-                for (const model of (parsed.models || [])) {
-                  initialStatus[model] = 'pending'
-                  initialContents[model] = ''
+            for (const line of part.split('\n')) {
+              if (!line.startsWith('data: ')) continue
+              const data = line.slice(6).trim()
+              if (data === '[DONE]') continue
+              try {
+                const parsed = JSON.parse(data)
+                if (parsed.status) {
+                  setChatStatus(parsed.status)
+                  continue
                 }
-                setVotingState({
-                  isActive: true,
-                  models: parsed.models || [],
-                  modelContents: initialContents,
-                  modelStatus: initialStatus,
-                  synthesisContent: '',
-                  isSynthesizing: false,
-                })
-                // Add assistant message placeholder for voting
-                if (!assistantMessageAdded) {
-                  assistantMessageAdded = true
-                  setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '' }])
+                if (parsed.conversation_id && !currentConversationId) {
+                  setCurrentConversationId(parsed.conversation_id)
                 }
-                continue
-              }
-
-              // Handle real-time content from individual models
-              if (parsed.type === 'voting_model_content') {
-                setVotingState(prev => ({
-                  ...prev,
-                  modelContents: {
-                    ...prev.modelContents,
-                    [parsed.model]: (prev.modelContents[parsed.model] || '') + parsed.content,
-                  },
-                  modelStatus: {
-                    ...prev.modelStatus,
-                    [parsed.model]: 'streaming',
-                  },
-                }))
-                setChatStatus(`${parsed.model} 正在输出...`)
-                continue
-              }
-              
-              if (parsed.type === 'voting_progress') {
-                const statusText = parsed.success ? '完成' : '失败'
-                const errorInfo = !parsed.success && parsed.error ? `: ${parsed.error}` : ''
-                setChatStatus(`${parsed.model} ${statusText}${errorInfo} (${parsed.completed}/${parsed.total})`)
-                // Update model status
-                setVotingState(prev => ({
-                  ...prev,
-                  modelStatus: {
-                    ...prev.modelStatus,
-                    [parsed.model]: parsed.success ? 'completed' : 'failed',
-                  },
-                }))
-                continue
-              }
-              
-              if (parsed.type === 'voting_synthesizing') {
-                setChatStatus('正在综合各模型观点...')
-                setVotingState(prev => ({
-                  ...prev,
-                  isSynthesizing: true,
-                }))
-                continue
-              }
-
-              // Handle real-time synthesis content
-              if (parsed.type === 'voting_synthesis_content') {
-                setVotingState(prev => ({
-                  ...prev,
-                  synthesisContent: prev.synthesisContent + parsed.content,
-                }))
-                // Update message content in real-time
-                setMessages(prev => prev.map(m =>
-                  m.id === assistantId
-                    ? { ...m, content: m.content + parsed.content }
-                    : m
-                ))
-                continue
-              }
-              
-              if (parsed.type === 'voting_result') {
-                setChatStatus('')
-                // Reset voting state
-                setVotingState({
-                  isActive: false,
-                  models: [],
-                  modelContents: {},
-                  modelStatus: {},
-                  synthesisContent: '',
-                  isSynthesizing: false,
-                })
-                setMessages(prev => prev.map(m =>
-                  m.id === assistantId
-                    ? {
-                        ...m,
-                        content: parsed.consensus,
-                        isVoting: true,
-                        sources: parsed.sources || sources,
-                        searchEnabled: parsed.search_enabled,
-                        votingResults: parsed.individual_results?.map((r: any) => ({
-                          model: r.model,
-                          content: r.content || '',
-                          success: r.success,
-                          error: r.error,
-                        })),
-                      }
-                    : m
-                ))
-                continue
-              }
-
-              // Capture conversation_id from response
-              if (parsed.conversation_id && !newConversationId) {
-                newConversationId = parsed.conversation_id
-                setCurrentConversationId(newConversationId)
-              }
-
-              if (parsed.error) {
-                setChatStatus('')
-                if (!assistantMessageAdded) {
-                  assistantMessageAdded = true
-                  setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: `Error: ${parsed.error}` }])
-                } else {
-                  setMessages(prev => prev.map(m =>
-                    m.id === assistantId ? { ...m, content: `Error: ${parsed.error}` } : m
-                  ))
+                if (parsed.sources?.length) sources = parsed.sources
+                if (parsed.type === 'voting_start') {
+                  const modelStatus: VotingState['modelStatus'] = {}
+                  const modelContents: VotingState['modelContents'] = {}
+                  for (const model of parsed.models || []) {
+                    modelStatus[model] = 'pending'
+                    modelContents[model] = ''
+                  }
+                  setVotingState({ isActive: true, models: parsed.models || [], modelContents, modelStatus, synthesisContent: '', isSynthesizing: false })
+                  if (!assistantAdded) {
+                    assistantAdded = true
+                    setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '', isVoting: true }])
+                  }
+                  setChatStatus(`${t(locale, 'voteStarted')}: ${(parsed.models || []).join(', ')}`)
+                  continue
                 }
-                break
-              }
-
-              if (parsed.sources && parsed.sources.length > 0) {
-                sources = parsed.sources
-              }
-
-              // Capture search status and model info
-              const searchEnabled = parsed.search_enabled
-              const modelUsed = parsed.model
-
-              // Handle thinking content from backend
-              if (parsed.thinking) {
-                setChatStatus('模型正在思考...')
-                if (!assistantMessageAdded) {
-                  assistantMessageAdded = true
-                  setMessages(prev => [...prev, {
+                if (parsed.type === 'voting_model_content') {
+                  setVotingState(prev => ({
+                    ...prev,
+                    modelContents: { ...prev.modelContents, [parsed.model]: `${prev.modelContents[parsed.model] || ''}${parsed.content}` },
+                    modelStatus: { ...prev.modelStatus, [parsed.model]: 'streaming' },
+                  }))
+                  setChatStatus(`${parsed.model} ${t(locale, 'voteStreaming')}`)
+                  continue
+                }
+                if (parsed.type === 'voting_progress') {
+                  setVotingState(prev => ({
+                    ...prev,
+                    modelStatus: { ...prev.modelStatus, [parsed.model]: parsed.success ? 'completed' : 'failed' },
+                  }))
+                  continue
+                }
+                if (parsed.type === 'voting_synthesizing') {
+                  setVotingState(prev => ({ ...prev, isSynthesizing: true }))
+                  setChatStatus(t(locale, 'synthesizing'))
+                  continue
+                }
+                if (parsed.type === 'voting_synthesis_content') {
+                  setVotingState(prev => ({ ...prev, synthesisContent: `${prev.synthesisContent}${parsed.content}` }))
+                  setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, content: `${m.content}${parsed.content}`, isVoting: true } : m)))
+                  continue
+                }
+                if (parsed.type === 'voting_result' || parsed.consensus) {
+                  resetVotingState()
+                  const votingResults = parsed.individual_results?.map((r: any) => ({ model: r.model, content: r.content || '', success: r.success, error: r.error }))
+                  const payload = {
                     id: assistantId,
-                    role: 'assistant',
-                    content: '',
-                    thinking: parsed.thinking,
-                  }])
-                  // Auto-expand thinking for this message
-                  setExpandedThinking(prev => ({ ...prev, [assistantId]: true }))
-                } else {
-                  setMessages(prev => prev.map(m =>
-                    m.id === assistantId
-                      ? { ...m, thinking: (m.thinking || '') + parsed.thinking }
-                      : m
-                  ))
-                }
-                continue
-              }
-
-              if (parsed.content) {
-                setChatStatus('正在生成回复...')
-                // Add assistant message on first content
-                if (!assistantMessageAdded) {
-                  assistantMessageAdded = true
-                  setMessages(prev => [...prev, {
-                    id: assistantId,
-                    role: 'assistant',
-                    content: parsed.content,
-                    sources,
-                    searchEnabled: searchEnabled,
-                    modelUsed: modelUsed,
-                  }])
-                } else {
-                  setMessages(prev => prev.map(m =>
-                    m.id === assistantId
-                      ? { 
-                          ...m, 
-                          content: m.content + parsed.content,
-                          sources,
-                          searchEnabled: searchEnabled !== undefined ? searchEnabled : m.searchEnabled,
-                          modelUsed: modelUsed || m.modelUsed,
-                        }
-                      : m
-                  ))
-                }
-              }
-
-              if (parsed.consensus) {
-                setChatStatus('')
-                if (!assistantMessageAdded) {
-                  assistantMessageAdded = true
-                  setMessages(prev => [...prev, {
-                    id: assistantId,
-                    role: 'assistant',
-                    content: parsed.consensus,
+                    role: 'assistant' as const,
+                    content: parsed.consensus || '',
                     isVoting: true,
                     sources: parsed.sources || sources,
                     searchEnabled: parsed.search_enabled,
-                    votingResults: parsed.individual_results?.map((r: any) => ({
-                      model: r.model,
-                      content: r.content || '',
-                      success: r.success,
-                      error: r.error,
-                    })),
-                  }])
-                } else {
-                  setMessages(prev => prev.map(m =>
-                    m.id === assistantId
-                      ? {
-                          ...m,
-                          content: parsed.consensus,
-                          isVoting: true,
-                          sources: parsed.sources || sources,
-                          searchEnabled: parsed.search_enabled,
-                          votingResults: parsed.individual_results?.map((r: any) => ({
-                            model: r.model,
-                            content: r.content || '',
-                            success: r.success,
-                            error: r.error,
-                          })),
-                        }
-                      : m
-                  ))
+                    votingResults,
+                  }
+                  if (!assistantAdded) {
+                    assistantAdded = true
+                    setMessages(prev => [...prev, payload])
+                  } else {
+                    setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, ...payload } : m)))
+                  }
+                  continue
                 }
+                if (parsed.error) {
+                  const errorContent = `${t(locale, 'connectionFailed')}: ${parsed.error}`
+                  if (!assistantAdded) {
+                    assistantAdded = true
+                    setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: errorContent }])
+                  } else {
+                    setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, content: errorContent } : m)))
+                  }
+                  continue
+                }
+                if (parsed.thinking) {
+                  setChatStatus(t(locale, 'thinkingStatus'))
+                  if (!assistantAdded) {
+                    assistantAdded = true
+                    setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '', thinking: parsed.thinking }])
+                    setExpandedThinking(prev => ({ ...prev, [assistantId]: true }))
+                  } else {
+                    setMessages(prev => prev.map(m => (m.id === assistantId ? { ...m, thinking: `${m.thinking || ''}${parsed.thinking}` } : m)))
+                  }
+                  continue
+                }
+                if (parsed.content) {
+                  setChatStatus(t(locale, 'generating'))
+                  const payload = {
+                    id: assistantId,
+                    role: 'assistant' as const,
+                    content: parsed.content,
+                    sources,
+                    searchEnabled: parsed.search_enabled,
+                    modelUsed: parsed.model,
+                  }
+                  if (!assistantAdded) {
+                    assistantAdded = true
+                    setMessages(prev => [...prev, payload])
+                  } else {
+                    setMessages(prev => prev.map(m => (
+                      m.id === assistantId
+                        ? {
+                            ...m,
+                            content: `${m.content}${parsed.content}`,
+                            sources,
+                            searchEnabled: parsed.search_enabled ?? m.searchEnabled,
+                            modelUsed: parsed.model || m.modelUsed,
+                          }
+                        : m
+                    )))
+                  }
+                }
+              } catch {
+                // Ignore malformed SSE chunks.
               }
-            } catch {
-              // skip unparseable lines
             }
           }
-          }  // end parts loop
         }
       }
-
-      // Refresh conversations list to show new/updated conversation
       loadConversations()
     } catch (err: any) {
-      setChatStatus('')
-      const errorContent = `连接失败: ${err.message}`
-      if (!assistantMessageAdded) {
-        setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: errorContent }])
-      } else {
-        setMessages(prev => prev.map(m =>
-          m.id === assistantId ? { ...m, content: errorContent } : m
-        ))
-      }
+      resetVotingState()
+      setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: `${t(locale, 'connectionFailed')}: ${err.message}` }])
     } finally {
       setIsLoading(false)
       setChatStatus('')
     }
+  }, [currentConversationId, enableSearch, enableThinking, isLoading, loadConversations, locale, selectedKbIds, selectedModel, useRag, useVoting])
+
+  const handleRerunMessage = async (assistantIndex: number) => {
+    if (isLoading) return
+    const assistantMessage = messages[assistantIndex]
+    const previousUserMessage = [...messages.slice(0, assistantIndex)].reverse().find(message => message.role === 'user')
+    if (!assistantMessage || assistantMessage.role !== 'assistant' || !previousUserMessage) return
+    const rerunModel = assistantMessage.modelUsed ? AVAILABLE_MODELS.find(model => model.model === assistantMessage.modelUsed) : undefined
+    await sendMessage(previousUserMessage.content, {
+      useVoting: assistantMessage.isVoting ?? false,
+      enableSearch: assistantMessage.searchEnabled ?? enableSearch,
+      enableThinking,
+      selectedModel: rerunModel ?? selectedModel,
+    })
   }
+
+  const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm(t(locale, 'deleteConversation'))) return
+    await apiClient.deleteConversation(id)
+    loadConversations()
+    if (currentConversationId === id) {
+      setCurrentConversationId(null)
+      setMessages([])
+    }
+  }
+
+  const votingCandidates = AVAILABLE_MODELS
+    .map(model => ({ model, role: getVotingCandidateRole(model, enableSearch, enableThinking) }))
+    .filter(item => item.role !== 'excluded')
+
+  const primaryVotingCandidates = votingCandidates.filter(item => item.role === 'primary')
+  const supportVotingCandidates = votingCandidates.filter(item => item.role === 'support')
 
   return (
     <div className="flex h-full">
-      {/* Sidebar - Conversation List */}
       {sidebarCollapsed ? (
         <div className="w-12 border-r bg-card flex flex-col items-center py-4">
-          <button
-            onClick={handleNewConversation}
-            title="新对话"
-            className="p-2 rounded hover:bg-muted transition-colors"
-          >
+          <button onClick={() => { setCurrentConversationId(null); setMessages([]) }} title={t(locale, 'newChat')} className="p-2 rounded hover:bg-muted transition-colors">
             <Plus className="h-5 w-5" />
           </button>
-          <button
-            onClick={() => setSidebarCollapsed(false)}
-            title="展开侧边栏"
-            className="p-2 rounded hover:bg-muted transition-colors mt-auto"
-          >
+          <button onClick={() => setSidebarCollapsed(false)} title={t(locale, 'chatHistory')} className="p-2 rounded hover:bg-muted transition-colors mt-auto">
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
       ) : (
-        <div className="w-64 border-r bg-card flex flex-col">
-          {/* Sidebar Header */}
+        <div className="w-72 border-r bg-card flex flex-col">
           <div className="p-3 border-b flex items-center justify-between">
-            <h3 className="font-medium text-sm">会话历史</h3>
+            <h3 className="font-medium text-sm">{t(locale, 'chatHistory')}</h3>
             <div className="flex gap-1">
-              <button
-                onClick={loadConversations}
-                className="p-1.5 rounded hover:bg-muted transition-colors"
-              >
-                <RefreshCw className={cn('h-4 w-4', loadingConversations && 'animate-spin')} />
-              </button>
-              <button
-                onClick={() => setSidebarCollapsed(true)}
-                className="p-1.5 rounded hover:bg-muted transition-colors"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
+              <button onClick={loadConversations} className="p-1.5 rounded hover:bg-muted transition-colors"><RefreshCw className={cn('h-4 w-4', loadingConversations && 'animate-spin')} /></button>
+              <button onClick={() => setSidebarCollapsed(true)} className="p-1.5 rounded hover:bg-muted transition-colors"><ChevronLeft className="h-4 w-4" /></button>
             </div>
           </div>
-
-          {/* New Chat Button */}
           <div className="p-2">
-            <button
-              onClick={handleNewConversation}
-              className="w-full flex items-center justify-start px-3 py-2 rounded-md border bg-background hover:bg-muted text-sm font-medium transition-colors"
-            >
+            <button onClick={() => { setCurrentConversationId(null); setMessages([]) }} className="w-full flex items-center justify-start px-3 py-2 rounded-md border bg-background hover:bg-muted text-sm font-medium transition-colors">
               <Plus className="h-4 w-4 mr-2" />
-              新对话
+              {t(locale, 'newChat')}
             </button>
           </div>
-
-          {/* User Memory Summary */}
-          {userProfile && (userProfile.preferences.length > 0 || userProfile.facts.length > 0) && (
-            <div className="px-2 pb-2">
-              <div className="p-2 rounded-md bg-muted/50 border border-dashed">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1">
-                  <Brain className="h-3 w-3" />
-                  已记住的偏好
-                </div>
-                <div className="text-xs text-muted-foreground space-y-0.5">
-                  {userProfile.preferences.slice(0, 2).map((p, i) => (
-                    <div key={i} className="truncate">{p.content}</div>
-                  ))}
-                  {userProfile.preferences.length > 2 && (
-                    <div className="opacity-60">+{userProfile.preferences.length - 2} 条更多...</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Conversation List */}
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {loadingConversations ? (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
+              <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
             ) : conversations.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                <p>暂无会话</p>
-              </div>
-            ) : (
-              conversations.map(conv => (
-                <div
-                  key={conv.id}
-                  className={cn(
-                    'group relative rounded-lg p-2 cursor-pointer hover:bg-accent transition-colors',
-                    currentConversationId === conv.id && 'bg-accent'
-                  )}
-                  onClick={() => handleSelectConversation(conv.id)}
-                >
-                  <div className="flex items-start gap-2">
-                    <MessageSquare className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {conv.title || '新对话'}
-                      </div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-2">
-                        <span>{conv.message_count} 条消息</span>
-                        <span>{formatDate(conv.last_message_at || conv.created_at)}</span>
-                      </div>
+              <div className="text-center py-8 text-muted-foreground text-sm"><MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" /><p>{t(locale, 'noConversation')}</p></div>
+            ) : conversations.map(conv => (
+              <div key={conv.id} className={cn('group relative rounded-lg p-2 cursor-pointer hover:bg-accent transition-colors', currentConversationId === conv.id && 'bg-accent')} onClick={() => loadConversationMessages(conv.id)}>
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{formatConversationTitle(locale, conv.title)}</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2">
+                      <span>{conv.message_count}</span>
+                      <span>{formatRelativeDate(locale, conv.last_message_at || conv.created_at)}</span>
                     </div>
-                    <button
-                      className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-all"
-                      onClick={(e) => handleDeleteConversation(conv.id, e)}
-                    >
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </button>
                   </div>
+                  <button className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-muted transition-all" onClick={(e) => handleDeleteConversation(conv.id, e)}>
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </button>
                 </div>
-              ))
-            )}
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
-        {/* Messages area */}
         <div className="flex-1 overflow-auto p-6">
           {messages.length === 0 ? (
             <div className="h-full flex items-center justify-center">
-              <div className="text-center text-muted-foreground">
+              <div className="text-center text-muted-foreground max-w-lg">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">开始对话</p>
-                <p className="text-sm mt-1">向 AI 提问，获取基于知识库的智能回答</p>
-                {userProfile && userProfile.preferences.length > 0 && (
-                  <p className="text-xs mt-3 text-primary/70">
-                    系统已加载 {userProfile.preferences.length} 条用户偏好
-                  </p>
-                )}
+                <p className="text-lg font-medium">{t(locale, 'startTitle')}</p>
+                <p className="text-sm mt-1">{t(locale, 'startDesc')}</p>
               </div>
             </div>
           ) : (
-            <div className="space-y-6 max-w-3xl mx-auto">
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    'flex',
-                    message.role === 'user' ? 'justify-end' : 'justify-start'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'max-w-[80%] rounded-lg p-4',
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                    )}
-                  >
-                    {/* Thinking process (collapsible) - shown ABOVE content */}
-                    {message.thinking && (
-                      <div className="mb-2 border border-amber-200/50 rounded-md overflow-hidden">
-                        <button
-                          type="button"
-                          onClick={() => setExpandedThinking(prev => ({ ...prev, [message.id]: !prev[message.id] }))}
-                          className="w-full flex items-center gap-1.5 px-3 py-1.5 text-xs text-amber-700 bg-amber-50/50 hover:bg-amber-50 transition-colors"
-                        >
-                          <Lightbulb className="h-3 w-3" />
-                          <span>思考过程</span>
-                          {expandedThinking[message.id] ? <ChevronUp className="h-3 w-3 ml-auto" /> : <ChevronDown className="h-3 w-3 ml-auto" />}
+            <div className="space-y-6 max-w-4xl mx-auto">
+              {messages.map((message, index) => (
+                <div key={message.id} className={cn('flex', message.role === 'user' ? 'justify-end' : 'justify-start')}>
+                  <div className={cn('max-w-[85%] rounded-2xl p-4 shadow-sm', message.role === 'user' ? 'bg-primary text-primary-foreground' : message.isVoting ? 'bg-white border border-amber-200' : 'bg-muted')}>
+                    {message.role === 'assistant' && (
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                          <span className={cn('px-2 py-1 rounded-full', message.isVoting ? 'bg-amber-100 text-amber-800' : 'bg-background/60')}>{message.isVoting ? t(locale, 'finalVerdict') : t(locale, 'directAnswer')}</span>
+                          {message.searchEnabled && <span className="px-2 py-1 rounded-full bg-blue-100 text-blue-700 flex items-center gap-1"><Globe className="h-3 w-3" />{t(locale, 'online')}</span>}
+                          {message.modelUsed && <span className="px-2 py-1 rounded-full bg-background/60">{message.modelUsed}</span>}
+                        </div>
+                        <button type="button" onClick={() => handleRerunMessage(index)} disabled={isLoading} className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border bg-background hover:bg-muted disabled:opacity-50">
+                          <RefreshCw className={cn('h-3 w-3', isLoading && 'animate-spin')} />
+                          {t(locale, 'rerunTurn')}
                         </button>
-                        {expandedThinking[message.id] && (
-                          <div className="px-3 py-2 text-xs text-muted-foreground bg-amber-50/20 max-h-64 overflow-y-auto">
-                            <MarkdownContent content={message.thinking} />
-                          </div>
-                        )}
                       </div>
                     )}
 
-                    {/* Main content with Markdown rendering */}
-                    <MarkdownContent content={message.content} />
-                    
-                    {/* Model and search status indicator */}
-                    {message.role === 'assistant' && (message.modelUsed || message.searchEnabled !== undefined) && (
-                      <div className="mt-2 flex items-center gap-2 text-[10px] text-muted-foreground">
-                        {message.modelUsed && (
-                          <span className="px-1.5 py-0.5 rounded bg-background/50">
-                            {message.modelUsed}
-                          </span>
-                        )}
-                        {message.searchEnabled && (
-                          <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 flex items-center gap-1">
-                            <Globe className="h-2.5 w-2.5" />
-                            联网
-                          </span>
-                        )}
+                    {message.thinking && (
+                      <div className="mb-3 border border-amber-200 rounded-xl overflow-hidden">
+                        <button type="button" onClick={() => setExpandedThinking(prev => ({ ...prev, [message.id]: !prev[message.id] }))} className="w-full flex items-center gap-2 px-3 py-2 text-xs text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors">
+                          <Lightbulb className="h-3 w-3" />
+                          {t(locale, 'thinking')}
+                          {expandedThinking[message.id] ? <ChevronUp className="h-3 w-3 ml-auto" /> : <ChevronDown className="h-3 w-3 ml-auto" />}
+                        </button>
+                        {expandedThinking[message.id] && <div className="px-3 py-2 text-xs text-muted-foreground bg-amber-50/40 max-h-64 overflow-y-auto"><MarkdownContent content={message.thinking} /></div>}
                       </div>
                     )}
-                    
-                    {message.sources && message.sources.filter(s => !s.score || s.score >= 0.5).length > 0 && (
+
+                    {message.isVoting ? (
+                      <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50/70 p-3">
+                        <div className="flex items-center gap-2 mb-3"><Vote className="h-4 w-4 text-amber-700" /><div className="text-sm font-semibold text-amber-900">{t(locale, 'finalVerdict')}</div></div>
+                        {parseVerdictSections(message.content).length > 0 ? (
+                          <div className="grid gap-3 md:grid-cols-2">
+                            {parseVerdictSections(message.content).map((section, sectionIndex) => (
+                              <div
+                                key={`${message.id}-section-${sectionIndex}`}
+                                className={cn(
+                                  'rounded-lg border p-3 bg-white/80',
+                                  sectionIndex === 0 && 'md:col-span-2 border-amber-300 bg-amber-100/70',
+                                )}
+                              >
+                                <div className="text-xs font-semibold uppercase tracking-wide text-amber-900/80 mb-2">
+                                  {section.title}
+                                </div>
+                                <MarkdownContent content={section.body} />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <MarkdownContent content={message.content || t(locale, 'noContent')} />
+                        )}
+                      </div>
+                    ) : (
+                      <MarkdownContent content={message.content} />
+                    )}
+
+                    {message.sources && message.sources.filter(source => !source.score || source.score >= 0.5).length > 0 && (
                       <div className="mt-3 pt-3 border-t border-border/50">
-                        <p className="text-xs font-medium mb-2 opacity-70">引用来源:</p>
+                        <p className="text-xs font-medium mb-2 opacity-70">{t(locale, 'sources')}</p>
                         <div className="space-y-1.5">
-                          {message.sources.filter(s => !s.score || s.score >= 0.5).map((source, i) => {
-                            const sourceType = source.source || 'manual'
-                            const SourceIcon = sourceType === 'rss' ? Rss
-                              : sourceType === 'web' ? Globe
-                              : sourceType === 'upload' ? UploadIcon
-                              : sourceType === 'documentation' ? BookOpen
-                              : FileText
-                            const typeColor = sourceType === 'rss' ? 'text-orange-500'
-                              : sourceType === 'web' ? 'text-purple-500'
-                              : sourceType === 'upload' ? 'text-green-500'
-                              : sourceType === 'documentation' ? 'text-cyan-500'
-                              : 'text-blue-500'
+                          {message.sources.filter(source => !source.score || source.score >= 0.5).map((source, i) => {
+                            const { Icon, color } = sourceMeta(source.source)
                             return (
                               <div key={i} className="flex items-center gap-2 text-xs">
-                                <SourceIcon className={cn('h-3 w-3 flex-shrink-0', typeColor)} />
-                                {source.url ? (
-                                  <a
-                                    href={source.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="underline opacity-70 hover:opacity-100 truncate"
-                                  >
-                                    {source.title}
-                                  </a>
-                                ) : (
-                                  <span className="opacity-70 truncate">{source.title}</span>
-                                )}
-                                {source.score != null && (
-                                  <span className="flex-shrink-0 px-1.5 py-0.5 rounded bg-background/50 text-[10px] font-mono opacity-60">
-                                    {(source.score * 100).toFixed(0)}%
-                                  </span>
-                                )}
+                                <Icon className={cn('h-3 w-3 flex-shrink-0', color)} />
+                                {source.url ? <a href={source.url} target="_blank" rel="noopener noreferrer" className="underline opacity-70 hover:opacity-100 truncate">{source.title}</a> : <span className="opacity-70 truncate">{source.title}</span>}
                               </div>
                             )
                           })}
@@ -804,49 +712,25 @@ export function ChatInterface() {
                       </div>
                     )}
 
-                    {/* Voting results - expandable cards */}
                     {message.votingResults && message.votingResults.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-border/50">
-                        <p className="text-xs font-medium mb-2 opacity-70">各模型观点:</p>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs font-medium opacity-70">{t(locale, 'modelViews')}</p>
+                          <span className="text-[10px] text-muted-foreground">{message.votingResults.length} {t(locale, 'modelsUnit')}</span>
+                        </div>
                         <div className="space-y-2">
                           {message.votingResults.map((result, i) => {
                             const isExpanded = expandedVotingResults[message.id]?.[i] ?? false
-                            const toggleExpand = () => {
-                              setExpandedVotingResults(prev => ({
-                                ...prev,
-                                [message.id]: {
-                                  ...(prev[message.id] || {}),
-                                  [i]: !isExpanded,
-                                },
-                              }))
-                            }
                             return (
-                              <div key={i} className="border border-border/30 rounded-md overflow-hidden">
-                                <button
-                                  type="button"
-                                  onClick={toggleExpand}
-                                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs bg-muted/30 hover:bg-muted/50 transition-colors"
-                                >
-                                  <span className="font-medium">{result.model}</span>
-                                  {!result.success && (
-                                    <span className="text-destructive">(失败)</span>
-                                  )}
-                                  {isExpanded ? <ChevronUp className="h-3 w-3 ml-auto" /> : <ChevronDown className="h-3 w-3 ml-auto" />}
+                              <div key={i} className="border border-border/40 rounded-xl overflow-hidden bg-background/80">
+                                <button type="button" onClick={() => setExpandedVotingResults(prev => ({ ...prev, [message.id]: { ...(prev[message.id] || {}), [i]: !isExpanded } }))} className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/50 transition-colors">
+                                  <span className={cn('inline-flex h-2.5 w-2.5 rounded-full', result.success ? 'bg-emerald-500' : 'bg-destructive')} />
+                                  <span className="text-sm font-medium">{result.model}</span>
+                                  <span className="text-xs text-muted-foreground ml-auto">{result.success ? t(locale, 'summary') : t(locale, 'voteFailed')}</span>
+                                  {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                                 </button>
-                                {!isExpanded && result.content && (
-                                  <div className="px-3 py-1.5 text-xs text-muted-foreground line-clamp-2">
-                                    {result.content.slice(0, 150)}{result.content.length > 150 ? '...' : ''}
-                                  </div>
-                                )}
-                                {isExpanded && (
-                                  <div className="px-3 py-2 text-xs max-h-80 overflow-y-auto">
-                                    {result.success ? (
-                                      <MarkdownContent content={result.content} />
-                                    ) : (
-                                      <span className="text-destructive">{result.error || '模型调用失败'}</span>
-                                    )}
-                                  </div>
-                                )}
+                                {!isExpanded && <div className="px-3 pb-3 text-xs text-muted-foreground">{result.success ? `${result.content.slice(0, 180)}${result.content.length > 180 ? '...' : ''}` : (result.error || t(locale, 'voteFailed'))}</div>}
+                                {isExpanded && <div className="px-3 pb-3 text-sm max-h-80 overflow-y-auto">{result.success ? <MarkdownContent content={result.content} /> : <div className="text-destructive">{result.error || t(locale, 'voteFailed')}</div>}</div>}
                               </div>
                             )
                           })}
@@ -856,264 +740,76 @@ export function ChatInterface() {
                   </div>
                 </div>
               ))}
-              
+
               {isLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-muted rounded-lg p-4 max-w-[80%] w-full">
-                    {/* Voting progress display */}
-                    {votingState.isActive && votingState.models.length > 0 && (
-                      <div className="space-y-3 mb-3">
-                        <div className="text-xs font-medium text-muted-foreground">
-                          多模型并行查询中...
-                        </div>
-                        {votingState.models.map((model) => {
-                          const status = votingState.modelStatus[model]
-                          const content = votingState.modelContents[model] || ''
-                          const statusColor = status === 'completed' ? 'text-green-500' 
-                            : status === 'failed' ? 'text-red-500'
-                            : status === 'streaming' ? 'text-blue-500'
-                            : 'text-muted-foreground'
-                          const statusIcon = status === 'completed' ? '✓' 
-                            : status === 'failed' ? '✗'
-                            : status === 'streaming' ? '●'
-                            : '○'
-                          return (
-                            <div key={model} className="border border-border/30 rounded-md overflow-hidden">
-                              <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50">
-                                <span className={cn('text-xs', statusColor)}>{statusIcon}</span>
-                                <span className="text-xs font-medium">{model}</span>
-                                <span className={cn('text-xs ml-auto', statusColor)}>
-                                  {status === 'pending' && '等待中'}
-                                  {status === 'streaming' && '输出中...'}
-                                  {status === 'completed' && '已完成'}
-                                  {status === 'failed' && '失败'}
-                                </span>
-                              </div>
-                              {content && (
-                                <div className="px-3 py-2 text-xs max-h-32 overflow-y-auto">
-                                  <MarkdownContent content={content.length > 500 ? content.slice(-500) + '...' : content} />
-                                </div>
-                              )}
+                  <div className="bg-muted rounded-2xl p-4 max-w-[85%] w-full">
+                    {votingState.isActive && votingState.models.length > 0 ? (
+                      <div className="space-y-3">
+                        {votingState.models.map(model => (
+                          <div key={model} className="border border-border/30 rounded-xl overflow-hidden bg-background/80">
+                            <div className="flex items-center gap-2 px-3 py-2 bg-muted/40">
+                              <span className={cn('inline-flex h-2.5 w-2.5 rounded-full', votingState.modelStatus[model] === 'completed' ? 'bg-emerald-500' : votingState.modelStatus[model] === 'failed' ? 'bg-destructive' : votingState.modelStatus[model] === 'streaming' ? 'bg-blue-500' : 'bg-slate-400')} />
+                              <span className="text-sm font-medium">{model}</span>
+                              <span className="text-xs ml-auto text-muted-foreground">{votingState.modelStatus[model]}</span>
                             </div>
-                          )
-                        })}
-                        {votingState.isSynthesizing && (
-                          <div className="border border-primary/30 rounded-md overflow-hidden">
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/10">
-                              <Loader2 className="h-3 w-3 animate-spin text-primary" />
-                              <span className="text-xs font-medium text-primary">综合分析中...</span>
-                            </div>
-                            {votingState.synthesisContent && (
-                              <div className="px-3 py-2 text-xs max-h-48 overflow-y-auto">
-                                <MarkdownContent content={votingState.synthesisContent} />
-                              </div>
-                            )}
+                            {votingState.modelContents[model] && <div className="px-3 py-2 text-xs max-h-32 overflow-y-auto"><MarkdownContent content={votingState.modelContents[model]} /></div>}
                           </div>
-                        )}
+                        ))}
+                        {votingState.isSynthesizing && <div className="border border-amber-300 rounded-xl p-3 bg-amber-50/70"><div className="flex items-center gap-2 text-amber-800 text-sm font-medium mb-2"><Loader2 className="h-4 w-4 animate-spin" />{t(locale, 'synthesizing')}</div>{votingState.synthesisContent && <MarkdownContent content={votingState.synthesisContent} />}</div>}
                       </div>
-                    )}
-                    {/* Default loading indicator */}
-                    {!votingState.isActive && (
-                      <div className="flex items-center gap-3">
-                        <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground">{chatStatus || '处理中...'}</span>
-                      </div>
-                    )}
-                    {/* Simple status when voting but not showing cards */}
-                    {votingState.isActive && (
-                      <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border/30">
-                        <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-                        <span className="text-sm text-muted-foreground">{chatStatus || '处理中...'}</span>
-                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3"><Loader2 className="h-4 w-4 animate-spin flex-shrink-0" /><span className="text-sm text-muted-foreground">{chatStatus || t(locale, 'processing')}</span></div>
                     )}
                   </div>
                 </div>
               )}
-              
+
               <div ref={messagesEndRef} />
             </div>
           )}
         </div>
 
-        {/* Input area */}
         <div className="border-t p-4">
-          <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
+          <form onSubmit={async (e) => { e.preventDefault(); await sendMessage(input, { clearInput: true }) }} className="max-w-4xl mx-auto">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              {/* Model selector */}
               <div className="relative" ref={modelDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setShowModelDropdown(!showModelDropdown)}
-                  className={cn(
-                    'flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors',
-                    'bg-muted text-muted-foreground hover:bg-muted/80',
-                    useVoting && 'opacity-50 cursor-not-allowed'
-                  )}
-                  disabled={useVoting}
-                  title={useVoting ? '投票模式下自动选择多个模型' : '选择模型'}
-                >
-                  <span className="max-w-[120px] truncate">{selectedModel.name}</span>
+                <button type="button" onClick={() => setShowModelDropdown(prev => !prev)} className={cn('flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors', 'bg-muted text-muted-foreground hover:bg-muted/80', useVoting && 'opacity-50 cursor-not-allowed')} disabled={useVoting}>
+                  <span className="max-w-[140px] truncate">{selectedModel.name}</span>
                   <ChevronDown className="h-3 w-3" />
                 </button>
                 {showModelDropdown && !useVoting && (
-                  <div className="absolute bottom-full left-0 mb-1 w-52 bg-popover border rounded-lg shadow-lg z-[100] py-1 max-h-64 overflow-y-auto">
-                    {AVAILABLE_MODELS.map((model, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => {
-                          setSelectedModel(model)
-                          setShowModelDropdown(false)
-                        }}
-                        className={cn(
-                          'w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2',
-                          selectedModel.model === model.model && 'bg-accent'
-                        )}
-                      >
+                  <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl border border-border bg-background shadow-2xl ring-1 ring-black/5 z-[100] py-1 max-h-64 overflow-y-auto isolate">
+                    {AVAILABLE_MODELS.map(model => (
+                      <button key={model.model} type="button" onClick={() => { setSelectedModel(model); setShowModelDropdown(false) }} className={cn('w-full px-3 py-2 text-left text-sm hover:bg-accent transition-colors flex items-center justify-between gap-2', selectedModel.model === model.model && 'bg-accent')}>
                         <span className="truncate">{model.name}</span>
                         <div className="flex items-center gap-1 flex-shrink-0">
-                          {model.supportsSearch && (
-                            <span title="支持联网搜索"><Globe className="h-3 w-3 text-blue-500" /></span>
-                          )}
-                          {model.supportsThinking && (
-                            <span title="支持深度思考"><Lightbulb className="h-3 w-3 text-amber-500" /></span>
-                          )}
+                          {model.supportsSearch && <Globe className="h-3 w-3 text-blue-500" />}
+                          {model.supportsThinking && <Lightbulb className="h-3 w-3 text-amber-500" />}
                         </div>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
-
-              <button
-                type="button"
-                onClick={() => setEnableSearch(!enableSearch)}
-                className={cn(
-                  'flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors',
-                  enableSearch
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
-                  !selectedModel.supportsSearch && !useVoting && 'opacity-50 cursor-not-allowed'
-                )}
-                disabled={!selectedModel.supportsSearch && !useVoting}
-                title={!selectedModel.supportsSearch && !useVoting ? '当前模型不支持联网搜索' : ''}
-              >
-                <Globe className="h-3 w-3" />
-                联网搜索
-              </button>
-              <button
-                type="button"
-                onClick={() => setEnableThinking(!enableThinking)}
-                className={cn(
-                  'flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors',
-                  enableThinking
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80',
-                  !selectedModel.supportsThinking && !useVoting && 'opacity-50 cursor-not-allowed'
-                )}
-                disabled={!selectedModel.supportsThinking && !useVoting}
-                title={!selectedModel.supportsThinking && !useVoting ? '当前模型不支持深度思考' : ''}
-              >
-                <Lightbulb className="h-3 w-3" />
-                深度思考
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const newVoting = !useVoting
-                  setUseVoting(newVoting)
-                  // Default: turn off RAG when entering voting mode
-                  if (newVoting) {
-                    setUseRag(false)
-                  }
-                }}
-                className={cn(
-                  'flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors',
-                  useVoting
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                )}
-              >
-                <Vote className="h-3 w-3" />
-                多模型投票
-              </button>
-              <button
-                type="button"
-                onClick={() => setUseRag(!useRag)}
-                className={cn(
-                  'flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors',
-                  useRag
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                )}
-              >
-                <Database className="h-3 w-3" />
-                知识库
-              </button>
-              {/* Knowledge base selector dropdown */}
+              <button type="button" onClick={() => setEnableSearch(prev => !prev)} disabled={!selectedModel.supportsSearch && !useVoting} className={cn('flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors', enableSearch ? 'bg-blue-500 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80', !selectedModel.supportsSearch && !useVoting && 'opacity-50 cursor-not-allowed')}><Globe className="h-3 w-3" />{t(locale, 'webSearch')}</button>
+              <button type="button" onClick={() => setEnableThinking(prev => !prev)} disabled={!selectedModel.supportsThinking && !useVoting} className={cn('flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors', enableThinking ? 'bg-amber-500 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80', !selectedModel.supportsThinking && !useVoting && 'opacity-50 cursor-not-allowed')}><Lightbulb className="h-3 w-3" />{t(locale, 'deepThinking')}</button>
+              <button type="button" onClick={() => { const next = !useVoting; setUseVoting(next); if (next) setUseRag(false) }} className={cn('flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors', useVoting ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/80')}><Vote className="h-3 w-3" />{t(locale, 'voting')}</button>
+              <button type="button" onClick={() => setUseRag(prev => !prev)} className={cn('flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors', useRag ? 'bg-emerald-500 text-white' : 'bg-muted text-muted-foreground hover:bg-muted/80')}><Database className="h-3 w-3" />{t(locale, 'knowledgeBase')}</button>
               {useRag && knowledgeBases.length > 0 && (
                 <div className="relative" ref={kbDropdownRef}>
-                  <button
-                    type="button"
-                    onClick={() => setShowKbDropdown(!showKbDropdown)}
-                    className={cn(
-                      'flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors border',
-                      selectedKbIds.length > 0
-                        ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                        : 'bg-background border-border text-muted-foreground hover:bg-muted'
-                    )}
-                  >
-                    {selectedKbIds.length === 0 ? '全部知识库' : `已选 ${selectedKbIds.length} 个`}
+                  <button type="button" onClick={() => setShowKbDropdown(prev => !prev)} className={cn('flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors border', selectedKbIds.length > 0 ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-background border-border text-muted-foreground hover:bg-muted')}>
+                    {selectedKbIds.length === 0 ? t(locale, 'allKnowledgeBases') : `${t(locale, 'selected')} ${selectedKbIds.length}`}
                     <ChevronDown className="h-3 w-3" />
                   </button>
                   {showKbDropdown && (
-                    <div className="absolute bottom-full left-0 mb-1 bg-background border rounded-lg shadow-lg min-w-[200px] max-h-64 overflow-y-auto z-10">
-                      <div className="p-2 border-b text-xs text-muted-foreground">
-                        选择要搜索的知识库（可多选）
-                      </div>
+                    <div className="absolute bottom-full left-0 mb-1 min-w-[220px] max-h-64 overflow-y-auto rounded-xl border border-border bg-background shadow-2xl ring-1 ring-black/5 z-[100] isolate">
+                      <div className="p-2 border-b text-xs text-muted-foreground">{t(locale, 'selectKnowledgeBases')}</div>
                       <div className="p-1">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedKbIds([])}
-                          className={cn(
-                            'w-full text-left px-3 py-1.5 text-xs rounded hover:bg-muted flex items-center gap-2',
-                            selectedKbIds.length === 0 && 'bg-muted'
-                          )}
-                        >
-                          <div className={cn(
-                            'w-4 h-4 border rounded flex items-center justify-center',
-                            selectedKbIds.length === 0 && 'bg-emerald-500 border-emerald-500'
-                          )}>
-                            {selectedKbIds.length === 0 && <CheckCircle className="h-3 w-3 text-white" />}
-                          </div>
-                          全部知识库
-                        </button>
+                        <button type="button" onClick={() => setSelectedKbIds([])} className={cn('w-full text-left px-3 py-1.5 text-xs rounded hover:bg-muted', selectedKbIds.length === 0 && 'bg-muted')}>{t(locale, 'allKnowledgeBases')}</button>
                         {knowledgeBases.map(kb => (
-                          <button
-                            key={kb.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedKbIds(prev =>
-                                prev.includes(kb.id)
-                                  ? prev.filter(id => id !== kb.id)
-                                  : [...prev, kb.id]
-                              )
-                            }}
-                            className={cn(
-                              'w-full text-left px-3 py-1.5 text-xs rounded hover:bg-muted flex items-center gap-2',
-                              selectedKbIds.includes(kb.id) && 'bg-muted'
-                            )}
-                          >
-                            <div className={cn(
-                              'w-4 h-4 border rounded flex items-center justify-center',
-                              selectedKbIds.includes(kb.id) && 'bg-emerald-500 border-emerald-500'
-                            )}>
-                              {selectedKbIds.includes(kb.id) && <CheckCircle className="h-3 w-3 text-white" />}
-                            </div>
-                            <div className="flex-1 truncate">
-                              <div className="font-medium truncate">{kb.name}</div>
-                              <div className="text-muted-foreground">{kb.document_count} 文档</div>
-                            </div>
+                          <button key={kb.id} type="button" onClick={() => setSelectedKbIds(prev => prev.includes(kb.id) ? prev.filter(id => id !== kb.id) : [...prev, kb.id])} className={cn('w-full text-left px-3 py-1.5 text-xs rounded hover:bg-muted', selectedKbIds.includes(kb.id) && 'bg-muted')}>
+                            {kb.name} · {kb.document_count} {t(locale, 'docs')}
                           </button>
                         ))}
                       </div>
@@ -1121,34 +817,31 @@ export function ChatInterface() {
                   )}
                 </div>
               )}
-              {enableSearch && (
+              {useVoting && (
                 <span className="text-xs text-muted-foreground">
-                  {useVoting ? '将使用支持搜索的模型进行投票' : '将使用模型内置联网搜索获取实时信息'}
-                </span>
-              )}
-              {useVoting && !enableSearch && (
-                <span className="text-xs text-muted-foreground">
-                  将使用多个模型对比分析
+                  {locale === 'zh-CN'
+                    ? `${t(locale, 'votingModelsLabel')}：${[
+                        primaryVotingCandidates.length > 0
+                          ? `${t(locale, 'primaryDecision')} ${primaryVotingCandidates.map(item => item.model.name).join('、')}`
+                          : '',
+                        supportVotingCandidates.length > 0
+                          ? `${t(locale, 'supportEvidence')} ${supportVotingCandidates.map(item => item.model.name).join('、')}`
+                          : '',
+                      ].filter(Boolean).join(' ｜ ') || t(locale, 'noAvailableModels')}`
+                    : `${t(locale, 'votingModelsLabel')}: ${[
+                        primaryVotingCandidates.length > 0
+                          ? `${t(locale, 'primaryDecision')} ${primaryVotingCandidates.map(item => item.model.name).join(', ')}`
+                          : '',
+                        supportVotingCandidates.length > 0
+                          ? `${t(locale, 'supportEvidence')} ${supportVotingCandidates.map(item => item.model.name).join(', ')}`
+                          : '',
+                      ].filter(Boolean).join(' | ') || t(locale, 'noAvailableModels')}`}
                 </span>
               )}
             </div>
-            
             <div className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="输入您的问题..."
-                className="flex-1 px-4 py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                disabled={isLoading}
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || isLoading}
-                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
-              >
-                <Send className="h-5 w-5" />
-              </button>
+              <input type="text" value={input} onChange={(e) => setInput(e.target.value)} placeholder={t(locale, 'inputPlaceholder')} className="flex-1 px-4 py-3 rounded-2xl border bg-background focus:outline-none focus:ring-2 focus:ring-primary" disabled={isLoading} />
+              <button type="submit" disabled={!input.trim() || isLoading} className="px-4 py-3 rounded-2xl bg-primary text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"><Send className="h-5 w-5" /></button>
             </div>
           </form>
         </div>

@@ -327,40 +327,71 @@ class APITestSuite:
         """测试多模型投票功能"""
         session = await self._get_session()
 
-        payload = {
-            "message": "1+1等于几",
-            "use_voting": True,
-            "voting_models": ["qwen-plus", "glm-4"]
-        }
-
         try:
+            async with session.get(f"{self.BASE_URL}/api/llm/providers") as provider_resp:
+                providers = await provider_resp.json()
+
+            qwen_enabled = any(
+                item.get("provider") == "qwen" and item.get("enabled")
+                for item in providers
+            )
+            if not qwen_enabled:
+                return {
+                    "passed": False,
+                    "message": "Voting unavailable: qwen provider is disabled or not configured",
+                    "metadata": {"provider_status": providers},
+                }
+
+            payload = {
+                "message": "1+1等于几？请只回答结果。",
+                "use_voting": True,
+                "use_rag": False,
+                "enable_search": False,
+                "voting_models": ["qwen3.5-plus", "MiniMax-M2.5", "deepseek-v3.2"],
+            }
+
             async with session.post(
                 f"{self.BASE_URL}/api/chat",
                 json=payload,
                 timeout=aiohttp.ClientTimeout(total=120)
             ) as resp:
                 content = await resp.text()
+                events = []
+                for raw_line in content.splitlines():
+                    if not raw_line.startswith("data: "):
+                        continue
+                    payload_text = raw_line[6:]
+                    if payload_text == "[DONE]":
+                        continue
+                    try:
+                        events.append(json.loads(payload_text))
+                    except json.JSONDecodeError:
+                        continue
 
-                # 检查是否有投票结果
-                if "voting" in content.lower() or "vote" in content.lower():
+                voting_result = next((event for event in events if event.get("type") == "voting_result"), None)
+                if not voting_result:
                     return {
-                        "passed": True,
-                        "message": "Voting mode works",
-                        "metadata": {"status": resp.status}
+                        "passed": False,
+                        "message": "Voting mode failed: missing voting_result event",
+                        "metadata": {"status": resp.status, "content": content[:500]},
                     }
 
-                # 即使没有明确的投票关键字，只要返回了就算通过（简化）
-                if resp.status == 200:
-                    return {
-                        "passed": True,
-                        "message": "Voting API responded",
-                        "metadata": {"status": resp.status}
-                    }
+                successful = [
+                    item for item in voting_result.get("individual_results", [])
+                    if item.get("success")
+                ]
+                consensus = (voting_result.get("consensus") or "").strip()
+                passed = resp.status == 200 and len(successful) > 0 and bool(consensus)
 
                 return {
-                    "passed": False,
-                    "message": "Voting mode not working",
-                    "metadata": {"status": resp.status}
+                    "passed": passed,
+                    "message": "Voting mode works" if passed else "Voting mode returned no successful model result",
+                    "metadata": {
+                        "status": resp.status,
+                        "successful_models": len(successful),
+                        "consensus_preview": consensus[:120],
+                        "voting_result": voting_result,
+                    }
                 }
 
         except Exception as e:

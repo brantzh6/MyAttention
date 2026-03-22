@@ -33,6 +33,16 @@ SYSTEM_HEALTH_STATUS_ORDER = {
 }
 
 
+def make_ascii_safe(value: Any) -> Any:
+    if isinstance(value, str):
+        return value.encode("ascii", "replace").decode("ascii")
+    if isinstance(value, dict):
+        return {make_ascii_safe(key): make_ascii_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [make_ascii_safe(item) for item in value]
+    return value
+
+
 def build_system_health_recovery_plan(source_data: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     payload = dict(source_data or {})
     issue_type = str(payload.get("type") or payload.get("task_type") or "").strip()
@@ -713,7 +723,7 @@ class TaskProcessor:
             task_id=task.id,
             action=action,
             result=result,
-            details=details,
+            details=make_ascii_safe(details),
             performed_by=performed_by
         )
         self.db.add(history)

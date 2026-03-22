@@ -20,7 +20,7 @@ import httpx
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import text
 
-from config import create_qdrant_client, get_settings, is_local_qdrant_mode
+from config import create_qdrant_client, get_effective_qwen_base_url, get_settings, is_local_qdrant_mode
 from db.session import async_session_maker
 
 router = APIRouter(prefix="/system", tags=["系统状态"])
@@ -198,26 +198,38 @@ async def check_api_service() -> Dict[str, Any]:
 async def check_llm_service() -> Dict[str, Any]:
     """检查 LLM 服务 (通义千问)"""
     settings = get_settings()
-    if not settings.qwen_api_key:
+    api_key = (settings.qwen_api_key or "").strip()
+    base_url = get_effective_qwen_base_url(settings)
+    if not api_key:
         return {
             "name": "通义千问 (LLM)",
             "type": "external",
             "status": "not_configured",
-            "running": False
+            "running": False,
+            "detail": "QWEN_API_KEY is not configured",
         }
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(
-                "https://dashscope.aliyuncs.com/api/v1/services",
-                headers={"Authorization": f"Bearer {settings.qwen_api_key}"}
+                f"{base_url}/models",
+                headers={"Authorization": f"Bearer {api_key}"}
             )
-            running = response.status_code in [200, 401]  # 401 means valid key but wrong endpoint
+            running = response.status_code == 200
+            if response.status_code == 401:
+                return {
+                    "name": "通义千问 (LLM)",
+                    "type": "external",
+                    "status": "unhealthy",
+                    "running": False,
+                    "detail": f"QWEN_API_KEY authentication failed at {base_url}",
+                }
             return {
                 "name": "通义千问 (LLM)",
                 "type": "external",
                 "status": "healthy" if running else "unhealthy",
-                "running": running
+                "running": running,
+                "detail": f"{base_url} -> HTTP {response.status_code}",
             }
     except Exception as e:
         return {

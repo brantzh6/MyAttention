@@ -864,18 +864,54 @@ async def get_system_settings():
 
     # Check LLM services
     llm_configs = [
-        {"name": "通义千问 (Qwen)", "api_key": settings.qwen_api_key, "model": "qwen-turbo"},
-        {"name": "智谱 (GLM)", "api_key": settings.glm_api_key, "model": "glm-4-flash"},
-        {"name": "Kimi", "api_key": settings.kimi_api_key, "model": "moonshot-v1-8k"},
+        {
+            "name": "通义千问 (Qwen)",
+            "configured": bool((settings.qwen_api_key or "").strip()),
+            "model": "qwen-max",
+            "routed_models": ["qwen3.5-plus", "MiniMax-M2.5", "deepseek-v3.2", "glm-5", "kimi-k2.5"],
+            "missing_key": "QWEN_API_KEY",
+        },
+        {
+            "name": "Claude",
+            "configured": bool((settings.anthropic_api_key or "").strip()),
+            "model": "claude-3-5-sonnet",
+            "routed_models": ["claude-3-5-sonnet"],
+            "missing_key": "ANTHROPIC_API_KEY",
+        },
+        {
+            "name": "OpenAI",
+            "configured": bool((settings.openai_api_key or "").strip()),
+            "model": "gpt-4o",
+            "routed_models": ["gpt-4o"],
+            "missing_key": "OPENAI_API_KEY",
+        },
+        {
+            "name": "Ollama 本地",
+            "configured": bool((settings.ollama_base_url or "").strip()),
+            "model": "qwen2:7b",
+            "routed_models": ["qwen2:7b"],
+            "missing_key": None,
+        },
     ]
 
-    test_message = [{"role": "user", "content": "Hi"}]
-
     for llm in llm_configs:
-        if not llm["api_key"]:
-            results["external"].append({"name": llm["name"], "status": "not_configured", "running": False})
+        if not llm["configured"]:
+            detail = {"routed_models": llm["routed_models"]}
+            if llm["missing_key"]:
+                detail["reason"] = f"{llm['missing_key']} is not configured"
+            results["external"].append(
+                {"name": llm["name"], "status": "not_configured", "running": False, "details": detail}
+            )
             continue
-        results["external"].append({"name": llm["name"], "status": "healthy", "running": True, "model": llm["model"]})
+        results["external"].append(
+            {
+                "name": llm["name"],
+                "status": "healthy",
+                "running": True,
+                "model": llm["model"],
+                "details": {"routed_models": llm["routed_models"]},
+            }
+        )
 
     all_services = results["databases"] + results["services"] + results["external"]
     results["summary"]["total"] = len(all_services)

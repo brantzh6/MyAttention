@@ -24,7 +24,9 @@ $webScript = Join-Path $webWorkdir ".next\standalone\server.js"
 & $NssmPath set MyAttentionApi AppStdout (Join-Path $runtimeRoot "api-service.log")
 & $NssmPath set MyAttentionApi AppStderr (Join-Path $runtimeRoot "api-service.log")
 & $NssmPath set MyAttentionApi AppRotateFiles 1
-& $NssmPath set MyAttentionApi Start SERVICE_DEMAND_START
+& $NssmPath set MyAttentionApi Start SERVICE_AUTO_START
+& sc.exe failure MyAttentionApi reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
+& sc.exe failureflag MyAttentionApi 1 | Out-Null
 
 & $NssmPath install MyAttentionWeb $node $webScript
 & $NssmPath set MyAttentionWeb AppDirectory $webWorkdir
@@ -32,13 +34,17 @@ $webScript = Join-Path $webWorkdir ".next\standalone\server.js"
 & $NssmPath set MyAttentionWeb AppStdout (Join-Path $runtimeRoot "web-service.log")
 & $NssmPath set MyAttentionWeb AppStderr (Join-Path $runtimeRoot "web-service.log")
 & $NssmPath set MyAttentionWeb AppRotateFiles 1
-& $NssmPath set MyAttentionWeb Start SERVICE_DEMAND_START
+& $NssmPath set MyAttentionWeb Start SERVICE_AUTO_START
+& sc.exe failure MyAttentionWeb reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
+& sc.exe failureflag MyAttentionWeb 1 | Out-Null
 
 & $NssmPath install MyAttentionWatchdog $python "$watchdogScript --mode local-process"
 & $NssmPath set MyAttentionWatchdog AppDirectory $RepoRoot
 & $NssmPath set MyAttentionWatchdog AppStdout (Join-Path $runtimeRoot "watchdog-service.log")
 & $NssmPath set MyAttentionWatchdog AppStderr (Join-Path $runtimeRoot "watchdog-service.log")
 & $NssmPath set MyAttentionWatchdog AppRotateFiles 1
-& $NssmPath set MyAttentionWatchdog Start SERVICE_DEMAND_START
+& $NssmPath set MyAttentionWatchdog Start SERVICE_AUTO_START
+& sc.exe failure MyAttentionWatchdog reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
+& sc.exe failureflag MyAttentionWatchdog 1 | Out-Null
 
 Write-Host "Installed MyAttentionApi / MyAttentionWeb / MyAttentionWatchdog"

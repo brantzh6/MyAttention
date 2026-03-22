@@ -690,6 +690,13 @@ def build_web_command(config: dict[str, Any]) -> tuple[str, Path, dict[str, str]
     else:
         command = package_manager_command(config, "dev")
 
+    standalone_server = workdir / ".next" / "standalone" / "server.js"
+    if ".next/standalone/server.js" in command and not standalone_server.exists():
+        command = (
+            f"node {quote_arg(str(workdir / 'node_modules' / 'next' / 'dist' / 'bin' / 'next'))} "
+            f"dev --hostname {web_host} --port {web_port}"
+        )
+
     env = {
         "PORT": str(web_port),
         "HOSTNAME": str(web_host),
@@ -697,6 +704,27 @@ def build_web_command(config: dict[str, Any]) -> tuple[str, Path, dict[str, str]
         "NEXT_PUBLIC_API_URL": f"http://127.0.0.1:{api_port}",
     }
     return command, workdir, env
+
+
+def sync_web_standalone_assets(config: dict[str, Any]) -> None:
+    web_cfg = config.get("web", {})
+    workdir = resolve_config_path(web_cfg.get("workdir", "services/web"))
+    standalone_root = workdir / ".next" / "standalone"
+    standalone_server = standalone_root / "server.js"
+
+    if not standalone_server.exists():
+        return
+
+    static_source = workdir / ".next" / "static"
+    static_target = standalone_root / ".next" / "static"
+    if static_source.exists():
+        static_target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(static_source, static_target, dirs_exist_ok=True)
+
+    public_source = workdir / "public"
+    public_target = standalone_root / "public"
+    if public_source.exists():
+        shutil.copytree(public_source, public_target, dirs_exist_ok=True)
 
 
 def build_watchdog_command(config: dict[str, Any], mode: str) -> tuple[str, Path, dict[str, str]]:
@@ -1238,6 +1266,7 @@ def start_web(config: dict[str, Any]) -> int:
         if not service_exists(config, "web"):
             print(f"web service is configured but not registered: {service_name(config, 'web')}")
             return 1
+        sync_web_standalone_assets(config)
         start_windows_service(config, "web")
         if wait_for_http(web_url, timeout):
             print(f"Web healthy on {web_url}")
@@ -1246,6 +1275,7 @@ def start_web(config: dict[str, Any]) -> int:
         return 1
 
     command, workdir, env = build_web_command(config)
+    sync_web_standalone_assets(config)
     start_component("web", command, workdir, env)
     if wait_for_http(web_url, timeout):
         print(f"Web healthy on {web_url}")

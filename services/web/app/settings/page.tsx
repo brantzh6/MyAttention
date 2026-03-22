@@ -1,34 +1,34 @@
 import Link from 'next/link'
-import { Rss, Brain, Bell, Database, Sparkles } from 'lucide-react'
+import { Bell, Brain, Database, Rss, Sparkles } from 'lucide-react'
 
 const settingsItems = [
   {
     title: '信息源管理',
-    description: '管理 RSS 订阅、网页监控和 API 数据源',
+    description: '管理 RSS 订阅、网页监控和 API 数据源。',
     href: '/settings/sources',
     icon: Rss,
   },
   {
-    title: 'LLM 配置',
-    description: '配置大模型、路由策略和多模型投票',
+    title: '模型配置',
+    description: '配置大模型、路由策略和多模型投票能力。',
     href: '/settings/models',
     icon: Brain,
   },
   {
     title: '知识库管理',
-    description: '管理 RAG 知识库文档，上传和索引内容',
+    description: '管理 RAG 知识库文档、上传内容和索引状态。',
     href: '/settings/knowledge',
     icon: Database,
   },
   {
     title: '记忆管理',
-    description: '管理长期记忆，查看和编辑 AI 提取的用户信息',
+    description: '查看和编辑长期记忆与用户事实。',
     href: '/settings/memory',
     icon: Sparkles,
   },
   {
     title: '通知设置',
-    description: '配置飞书、钉钉推送',
+    description: '配置飞书、钉钉等通知通道。',
     href: '/settings/notifications',
     icon: Bell,
   },
@@ -39,19 +39,19 @@ export default function SettingsPage() {
     <div className="p-6">
       <header className="mb-6">
         <h1 className="text-2xl font-semibold text-foreground">设置</h1>
-        <p className="text-muted-foreground mt-1">系统配置和管理</p>
+        <p className="mt-1 text-muted-foreground">系统配置、模型管理和知识能力维护。</p>
       </header>
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {settingsItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="block p-6 bg-card rounded-lg border hover:border-primary transition-colors"
+            className="block rounded-lg border bg-card p-6 transition-colors hover:border-primary"
           >
-            <item.icon className="h-8 w-8 text-primary mb-3" />
+            <item.icon className="mb-3 h-8 w-8 text-primary" />
             <h2 className="font-medium text-card-foreground">{item.title}</h2>
-            <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
           </Link>
         ))}
       </div>

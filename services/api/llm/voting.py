@@ -77,61 +77,172 @@ class MultiModelVoting:
     - glm-5
     - kimi-k2.5
     
-    When enable_search is True, only uses the 3 search-capable models.
-    When enable_search is False, uses all 5 models.
+    When only one capability is requested, only models supporting that capability participate.
+    When both search and thinking are requested, models supporting either capability participate.
+    Models supporting both capabilities act as primary decision models.
     """
     
     # Available voting models on Bailian platform
     BAILIAN_MODELS = {
-        "qwen3.5-plus": {"provider": "qwen", "model": "qwen3.5-plus", "supports_search": True},
-        "MiniMax-M2.5": {"provider": "qwen", "model": "MiniMax-M2.5", "supports_search": True},
-        "deepseek-v3.2": {"provider": "qwen", "model": "deepseek-v3.2", "supports_search": True},
-        "glm-5": {"provider": "qwen", "model": "glm-5", "supports_search": False},
-        "kimi-k2.5": {"provider": "qwen", "model": "kimi-k2.5", "supports_search": False},
+        "qwen3.5-plus": {"provider": "qwen", "model": "qwen3.5-plus", "supports_search": True, "supports_thinking": True},
+        "MiniMax-M2.5": {"provider": "qwen", "model": "MiniMax-M2.5", "supports_search": True, "supports_thinking": False},
+        "deepseek-v3.2": {"provider": "qwen", "model": "deepseek-v3.2", "supports_search": True, "supports_thinking": True},
+        "glm-5": {"provider": "qwen", "model": "glm-5", "supports_search": False, "supports_thinking": True},
+        "kimi-k2.5": {"provider": "qwen", "model": "kimi-k2.5", "supports_search": False, "supports_thinking": False},
     }
-    
-    SEARCH_CAPABLE_MODELS = [
-        {"provider": "qwen", "model": "qwen3.5-plus", "name": "qwen3.5-plus"},
-        {"provider": "qwen", "model": "MiniMax-M2.5", "name": "MiniMax-M2.5"},
-        {"provider": "qwen", "model": "deepseek-v3.2", "name": "deepseek-v3.2"},
-    ]
-    
-    DEFAULT_MODELS = [
-        {"provider": "qwen", "model": "qwen3.5-plus", "name": "qwen3.5-plus"},
-        {"provider": "qwen", "model": "MiniMax-M2.5", "name": "MiniMax-M2.5"},
-        {"provider": "qwen", "model": "deepseek-v3.2", "name": "deepseek-v3.2"},
-        {"provider": "qwen", "model": "glm-5", "name": "glm-5"},
-        {"provider": "qwen", "model": "kimi-k2.5", "name": "kimi-k2.5"},
-    ]
     
     def __init__(
         self,
-        models: List[Dict[str, str]] = None,
+        models: List[Union[str, Dict[str, str]]] = None,
         consensus_threshold: float = 0.67,
         enable_search: bool = False,
+        enable_thinking: bool = False,
     ):
         self.adapter = LLMAdapter()
         self.enable_search = enable_search
+        self.enable_thinking = enable_thinking
         
         # Determine which models to use
         if models:
-            self.models = models
-        elif enable_search:
-            # Use search-capable models when search is enabled
-            self.models = self.SEARCH_CAPABLE_MODELS
+            requested_models = self._normalize_models(models)
+            self.models = self._filter_models_by_capability(requested_models)
         else:
-            # Default models
-            self.models = self.DEFAULT_MODELS
+            self.models = self._filter_models_by_capability(self._default_models())
         
         self.consensus_threshold = consensus_threshold
         
-        self.system_prompt = """你是一个专业的分析师，请对以下问题给出详细、客观的分析。
-        
-要求：
-1. 分析要全面，考虑多个角度
-2. 给出明确的结论和建议
-3. 标注关键观点的置信度
-4. 列出主要的风险和机会"""
+        self.system_prompt = """你是 MyAttention 的决策分析模型，不要写空话，不要重复用户问题，不要写泛泛而谈的正确废话。
+
+你的任务是为决策提供可执行材料。回答必须：
+1. 先给出明确判断，不要先铺垫。
+2. 只保留最关键的 3-5 个理由，理由要具体。
+3. 明确区分：事实、推断、假设。
+4. 指出最重要的不确定性和可能误判点。
+5. 给出可执行建议，而不是原则性口号。
+6. 如果证据不足，直接说明缺口，不要假装确定。
+
+输出结构固定为：
+【结论】
+【关键依据】
+【关键假设】
+【主要风险/反例】
+【建议动作】
+【置信度】"""
+
+    def _normalize_models(
+        self,
+        models: List[Union[str, Dict[str, str]]],
+    ) -> List[Dict[str, str]]:
+        normalized: List[Dict[str, str]] = []
+
+        for item in models:
+            if isinstance(item, str):
+                model_info = self.BAILIAN_MODELS.get(item)
+                if not model_info:
+                    raise ValueError(f"Unsupported voting model: {item}")
+                normalized.append(
+                    {
+                        "provider": model_info["provider"],
+                        "model": model_info["model"],
+                        "name": item,
+                    }
+                )
+                continue
+
+            if not isinstance(item, dict):
+                raise ValueError("Voting models must be strings or model config objects")
+
+            provider = item.get("provider")
+            model = item.get("model")
+            name = item.get("name") or model
+            if not provider or not model:
+                raise ValueError("Voting model config must include provider and model")
+
+            normalized.append(
+                {
+                    "provider": provider,
+                    "model": model,
+                    "name": name,
+                }
+            )
+
+        if not normalized:
+            raise ValueError("Voting models cannot be empty")
+
+        return normalized
+
+    def _default_models(self) -> List[Dict[str, str]]:
+        return [
+            {"provider": info["provider"], "model": info["model"], "name": name}
+            for name, info in self.BAILIAN_MODELS.items()
+        ]
+
+    def _filter_models_by_capability(
+        self,
+        models: List[Dict[str, str]],
+    ) -> List[Dict[str, str]]:
+        filtered: List[Dict[str, str]] = []
+
+        for model in models:
+            model_key = model.get("name") or model.get("model")
+            model_info = self.BAILIAN_MODELS.get(model_key) or self.BAILIAN_MODELS.get(model.get("model", ""))
+            if not model_info:
+                filtered.append(model)
+                continue
+
+            supports_search = model_info.get("supports_search", False)
+            supports_thinking = model_info.get("supports_thinking", False)
+
+            if self.enable_search and self.enable_thinking:
+                if not (supports_search or supports_thinking):
+                    continue
+            elif self.enable_search and not supports_search:
+                continue
+            elif self.enable_thinking and not supports_thinking:
+                continue
+
+            filtered.append(model)
+
+        if filtered:
+            return filtered
+
+        raise ValueError(
+            f"No voting models satisfy search={self.enable_search}, thinking={self.enable_thinking}"
+        )
+
+    def _model_capability_summary(self, model_name: str) -> Dict[str, Any]:
+        model_info = self.BAILIAN_MODELS.get(model_name, {})
+        supports_search = model_info.get("supports_search", False)
+        supports_thinking = model_info.get("supports_thinking", False)
+        if self.enable_search and self.enable_thinking:
+            if supports_search and supports_thinking:
+                role = "primary"
+                contribution = "search+thinking"
+            elif supports_search:
+                role = "support"
+                contribution = "search"
+            elif supports_thinking:
+                role = "support"
+                contribution = "thinking"
+            else:
+                role = "support"
+                contribution = "general"
+        elif self.enable_search:
+            role = "primary"
+            contribution = "search"
+        elif self.enable_thinking:
+            role = "primary"
+            contribution = "thinking"
+        else:
+            role = "primary"
+            contribution = "general"
+
+        return {
+            "supports_search": supports_search,
+            "supports_thinking": supports_thinking,
+            "role": role,
+            "contribution": contribution,
+        }
     
     async def _query_model(
         self,
@@ -139,20 +250,23 @@ class MultiModelVoting:
         provider: str,
         model: str,
         name: str,
+        system_prompt: Optional[str] = None,
     ) -> VotingResult:
         """Query a single model (non-streaming, for backward compatibility)"""
         try:
             # Check if this model supports search and search is enabled
             model_info = self.BAILIAN_MODELS.get(model, {})
             use_search = self.enable_search and model_info.get("supports_search", False)
+            use_thinking = self.enable_thinking and model_info.get("supports_thinking", False)
             
-            _vlog(f"投票查询开始: model={name}, provider={provider}, search={use_search}, raw_model={repr(model)}")
+            _vlog(f"投票查询开始: model={name}, provider={provider}, search={use_search}, thinking={use_thinking}, raw_model={repr(model)}")
             response = await self.adapter.chat(
                 message=message,
                 provider=provider,
                 model=model,
-                system_prompt=self.system_prompt,
+                system_prompt=system_prompt or self.system_prompt,
                 enable_search=use_search,
+                enable_thinking=use_thinking,
             )
             _vlog(f"投票查询成功: model={name}, 响应长度={len(response)}")
             return VotingResult(
@@ -178,21 +292,24 @@ class MultiModelVoting:
         model: str,
         name: str,
         queue: asyncio.Queue,
+        system_prompt: Optional[str] = None,
     ) -> VotingResult:
         """Query a single model with streaming, pushing content to queue"""
         content_buffer = ""
         try:
             model_info = self.BAILIAN_MODELS.get(model, {})
             use_search = self.enable_search and model_info.get("supports_search", False)
+            use_thinking = self.enable_thinking and model_info.get("supports_thinking", False)
             
-            _vlog(f"流式投票查询开始: model={name}, provider={provider}, search={use_search}")
+            _vlog(f"流式投票查询开始: model={name}, provider={provider}, search={use_search}, thinking={use_thinking}")
             
             async for chunk in self.adapter.stream_chat(
                 message=message,
                 provider=provider,
                 model=model,
-                system_prompt=self.system_prompt,
+                system_prompt=system_prompt or self.system_prompt,
                 enable_search=use_search,
+                enable_thinking=use_thinking,
             ):
                 # Skip thinking markers in voting mode
                 if chunk.startswith("__THINKING__"):
@@ -256,7 +373,11 @@ class MultiModelVoting:
                 error=str(e),
             )
     
-    async def vote_stream(self, message: str) -> AsyncGenerator[Dict[str, Any], None]:
+    async def vote_stream(
+        self,
+        message: str,
+        system_prompt: Optional[str] = None,
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Run multi-model voting with streaming progress updates
         
@@ -275,6 +396,14 @@ class MultiModelVoting:
             "models": model_names,
             "total": len(self.models),
             "enable_search": self.enable_search,
+            "enable_thinking": self.enable_thinking,
+            "participants": [
+                {
+                    "model": model_name,
+                    **self._model_capability_summary(model_name),
+                }
+                for model_name in model_names
+            ],
         }
         
         # Queue for collecting streaming content from all models
@@ -293,6 +422,7 @@ class MultiModelVoting:
                 model=m["model"],
                 name=m["name"],
                 queue=event_queue,
+                system_prompt=system_prompt,
             )
         
         # Start all model tasks
@@ -389,6 +519,7 @@ class MultiModelVoting:
                     "content": r.content if r.success else (r.error or ""),
                     "success": r.success,
                     "error": r.error if not r.success else None,
+                    **self._model_capability_summary(r.model),
                 }
                 for r in results
             ],
@@ -396,10 +527,21 @@ class MultiModelVoting:
                 "total_models": len(self.models),
                 "successful": len(successful_results),
                 "threshold": self.consensus_threshold,
+                "participants": [
+                    {
+                        "model": m["name"],
+                        **self._model_capability_summary(m["name"]),
+                    }
+                    for m in self.models
+                ],
             },
         }
     
-    async def vote(self, message: str) -> Dict[str, Any]:
+    async def vote(
+        self,
+        message: str,
+        system_prompt: Optional[str] = None,
+    ) -> Dict[str, Any]:
         """
         Run multi-model voting on a query (non-streaming version)
         
@@ -416,6 +558,7 @@ class MultiModelVoting:
                 provider=m["provider"],
                 model=m["model"],
                 name=m["name"],
+                system_prompt=system_prompt,
             )
             for m in self.models
         ]
@@ -450,6 +593,7 @@ class MultiModelVoting:
                     "model": r.model,
                     "content": r.content if r.success else r.error,
                     "success": r.success,
+                    **self._model_capability_summary(r.model),
                 }
                 for r in results
             ],
@@ -457,6 +601,13 @@ class MultiModelVoting:
                 "total_models": len(self.models),
                 "successful": len(successful_results),
                 "threshold": self.consensus_threshold,
+                "participants": [
+                    {
+                        "model": m["name"],
+                        **self._model_capability_summary(m["name"]),
+                    }
+                    for m in self.models
+                ],
             },
         }
     
@@ -471,33 +622,14 @@ class MultiModelVoting:
         if len(results) == 1:
             return results[0].content
         
-        # Build synthesis prompt
-        synthesis_prompt = f"""请综合以下多个AI模型对同一问题的回答，生成一份综合分析报告。
-
-原始问题：{original_question}
-
-"""
-        for i, result in enumerate(results, 1):
-            synthesis_prompt += f"""
---- {result.model} 的回答 ---
-{result.content}
-
-"""
-        
-        synthesis_prompt += """
-请生成综合报告，包含：
-1. 【共识观点】所有模型都同意的核心结论
-2. 【分歧观点】各模型存在差异的观点
-3. 【综合建议】基于多方观点的最终建议
-4. 【置信度】对每个结论的置信度评估
-"""
+        synthesis_prompt = self._build_synthesis_prompt(original_question, results)
         
         try:
             # Use the primary model for synthesis
             consensus = await self.adapter.chat(
                 message=synthesis_prompt,
                 provider="qwen",
-                model="qwen-max",
+                model=self.adapter.default_model,
             )
             return consensus
         except Exception:
@@ -519,33 +651,14 @@ class MultiModelVoting:
             yield results[0].content
             return
         
-        # Build synthesis prompt
-        synthesis_prompt = f"""请综合以下多个AI模型对同一问题的回答，生成一份综合分析报告。
-
-原始问题：{original_question}
-
-"""
-        for i, result in enumerate(results, 1):
-            synthesis_prompt += f"""
---- {result.model} 的回答 ---
-{result.content}
-
-"""
-        
-        synthesis_prompt += """
-请生成综合报告，包含：
-1. 【共识观点】所有模型都同意的核心结论
-2. 【分歧观点】各模型存在差异的观点
-3. 【综合建议】基于多方观点的最终建议
-4. 【置信度】对每个结论的置信度评估
-"""
+        synthesis_prompt = self._build_synthesis_prompt(original_question, results)
         
         try:
             # Use the primary model for synthesis with streaming
             async for chunk in self.adapter.stream_chat(
                 message=synthesis_prompt,
                 provider="qwen",
-                model="qwen-max",
+                model=self.adapter.default_model,
             ):
                 # Skip thinking markers
                 if chunk.startswith("__THINKING__"):
@@ -558,3 +671,47 @@ class MultiModelVoting:
             for result in results:
                 combined += f"**{result.model}**:\n{result.content}\n\n---\n\n"
             yield combined
+
+    def _build_synthesis_prompt(
+        self,
+        original_question: str,
+        results: List[VotingResult],
+    ) -> str:
+        synthesis_prompt = f"""你是最终裁决器。你不是要重复各模型的套话，而是要把它们压缩成对决策真正有用的材料。
+
+任务要求：
+1. 先给出一句话决策判断。
+2. 明确列出“共识”与“分歧”，不要混在一起。
+3. 每条共识或分歧都要点名来源模型。
+4. 抽取隐藏假设、证据缺口、潜在误判点。
+5. 最后给出可执行下一步，不要写空泛建议。
+6. 如果多个模型都缺乏依据，要明确说“当前证据不足”。
+7. 严禁使用“综合来看”“总体而言”这类空洞过渡句堆字数。
+
+请严格按以下结构输出：
+【一句话判断】
+【共识】
+- 观点
+  来源:
+【关键分歧】
+- 分歧点
+  支持模型:
+【隐藏假设】
+【证据缺口】
+【风险提示】
+【建议动作】
+【最终置信度】
+
+用户问题：
+{original_question}
+
+以下是各模型原始回答：
+"""
+
+        for result in results:
+            synthesis_prompt += f"""
+--- {result.model} ---
+{result.content}
+"""
+
+        return synthesis_prompt

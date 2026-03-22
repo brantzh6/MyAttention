@@ -312,11 +312,15 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
                 voting_models = None
                 if request.voting_models:
                     voting_models = request.voting_models
-                # Let MultiModelVoting handle model selection based on enable_search
+                # Let MultiModelVoting handle model selection based on search/thinking capability
                 
-                voting = MultiModelVoting(models=voting_models, enable_search=request.enable_search)
+                voting = MultiModelVoting(
+                    models=voting_models,
+                    enable_search=request.enable_search,
+                    enable_thinking=request.enable_thinking,
+                )
                 t_vote = time.time()
-                async for event in voting.vote_stream(request.message):
+                async for event in voting.vote_stream(request.message, system_prompt=system_prompt):
                     event["sources"] = sources
                     event["search_enabled"] = request.enable_search
                     if event.get("type") == "voting_result":
@@ -342,9 +346,12 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
                 model_used = use_model
                 
                 if use_provider == "voting":
-                    voting = MultiModelVoting(enable_search=request.enable_search)
+                    voting = MultiModelVoting(
+                        enable_search=request.enable_search,
+                        enable_thinking=request.enable_thinking,
+                    )
                     t_vote = time.time()
-                    async for event in voting.vote_stream(request.message):
+                    async for event in voting.vote_stream(request.message, system_prompt=system_prompt):
                         event["sources"] = sources
                         event["search_enabled"] = request.enable_search
                         if event.get("type") == "voting_result":

@@ -16,7 +16,7 @@ from abc import ABC, abstractmethod
 import time
 from datetime import datetime
 import httpx
-from config import get_settings
+from config import get_effective_qwen_base_url, get_effective_qwen_default_model, get_settings
 
 
 import os
@@ -47,6 +47,10 @@ class BaseLLMProvider(ABC):
     def __init__(self, api_key: str = "", base_url: str = ""):
         self.api_key = api_key
         self.base_url = base_url
+
+    def require_api_key(self, config_name: str) -> None:
+        if not (self.api_key or "").strip():
+            raise ValueError(f"{config_name} is not configured")
     
     @abstractmethod
     async def chat(self, messages: List[Dict[str, str]], **kwargs) -> str:
@@ -62,10 +66,10 @@ class BaseLLMProvider(ABC):
 class QwenProvider(BaseLLMProvider):
     """Qwen (通义千问) provider"""
     
-    def __init__(self, api_key: str = ""):
+    def __init__(self, api_key: str = "", base_url: str = ""):
         super().__init__(
             api_key=api_key,
-            base_url="https://dashscope.aliyuncs.com/compatible-mode/v1"
+            base_url=base_url or "https://dashscope.aliyuncs.com/compatible-mode/v1"
         )
         # Reuse httpx client for connection pooling (TLS + TCP reuse)
         self._client = None
@@ -78,7 +82,8 @@ class QwenProvider(BaseLLMProvider):
             )
         return self._client
     
-    async def chat(self, messages: List[Dict[str, str]], model: str = "qwen-max", enable_search: bool = False, **kwargs) -> str:
+    async def chat(self, messages: List[Dict[str, str]], model: str = "qwen3.5-plus", enable_search: bool = False, **kwargs) -> str:
+        self.require_api_key("QWEN_API_KEY")
         request_body = {
             "model": model,
             "messages": messages,
@@ -110,7 +115,8 @@ class QwenProvider(BaseLLMProvider):
             raise Exception(f"API returned empty choices for model {model}")
         return choices[0]["message"]["content"]
     
-    async def stream_chat(self, messages: List[Dict[str, str]], model: str = "qwen-max", enable_search: bool = False, enable_thinking: bool = False, **kwargs) -> AsyncGenerator[str, None]:
+    async def stream_chat(self, messages: List[Dict[str, str]], model: str = "qwen3.5-plus", enable_search: bool = False, enable_thinking: bool = False, **kwargs) -> AsyncGenerator[str, None]:
+        self.require_api_key("QWEN_API_KEY")
         request_body = {
             "model": model,
             "messages": messages,
@@ -137,6 +143,10 @@ class QwenProvider(BaseLLMProvider):
             json=request_body,
         ) as response:
             log(f"HTTP 连接建立完成: {time.time()-t0:.3f}s, status={response.status_code}")
+            if response.status_code != 200:
+                error_text = (await response.aread()).decode("utf-8", errors="replace")
+                log(f"QwenProvider.stream_chat 错误响应: {error_text[:500]}")
+                raise Exception(f"API error {response.status_code}: {error_text[:200]}")
             first_line = True
             async for line in response.aiter_lines():
                 if first_line:
@@ -179,6 +189,7 @@ class ClaudeProvider(BaseLLMProvider):
         )
     
     async def chat(self, messages: List[Dict[str, str]], model: str = "claude-3-5-sonnet-20241022", **kwargs) -> str:
+        self.require_api_key("ANTHROPIC_API_KEY")
         async with httpx.AsyncClient() as client:
             # Convert messages format for Claude API
             system = ""
@@ -209,6 +220,7 @@ class ClaudeProvider(BaseLLMProvider):
             return data["content"][0]["text"]
     
     async def stream_chat(self, messages: List[Dict[str, str]], model: str = "claude-3-5-sonnet-20241022", **kwargs) -> AsyncGenerator[str, None]:
+        self.require_api_key("ANTHROPIC_API_KEY")
         async with httpx.AsyncClient() as client:
             system = ""
             claude_messages = []
@@ -254,6 +266,7 @@ class OpenAIProvider(BaseLLMProvider):
         )
     
     async def chat(self, messages: List[Dict[str, str]], model: str = "gpt-4o", **kwargs) -> str:
+        self.require_api_key("OPENAI_API_KEY")
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{self.base_url}/chat/completions",
@@ -272,6 +285,7 @@ class OpenAIProvider(BaseLLMProvider):
             return data["choices"][0]["message"]["content"]
     
     async def stream_chat(self, messages: List[Dict[str, str]], model: str = "gpt-4o", **kwargs) -> AsyncGenerator[str, None]:
+        self.require_api_key("OPENAI_API_KEY")
         async with httpx.AsyncClient() as client:
             async with client.stream(
                 "POST",
@@ -352,17 +366,21 @@ class LLMAdapter:
         if cls._providers is None:
             settings = get_settings()
             cls._providers = {
-                "qwen": QwenProvider(api_key=settings.qwen_api_key),
+                "qwen": QwenProvider(
+                    api_key=settings.qwen_api_key,
+                    base_url=get_effective_qwen_base_url(settings),
+                ),
                 "anthropic": ClaudeProvider(api_key=settings.anthropic_api_key),
                 "openai": OpenAIProvider(api_key=settings.openai_api_key),
                 "ollama": OllamaProvider(base_url=settings.ollama_base_url),
             }
     
     def __init__(self):
+        settings = get_settings()
         LLMAdapter._init_providers()
         self.providers = LLMAdapter._providers
         self.default_provider = "qwen"
-        self.default_model = "qwen-max"
+        self.default_model = get_effective_qwen_default_model(settings)
     
     def get_provider(self, provider_name: str) -> BaseLLMProvider:
         """Get provider by name"""

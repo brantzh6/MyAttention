@@ -294,7 +294,7 @@ class Conversation(Base):
     last_message_at = Column(DateTime(timezone=True))  # Last message timestamp
     message_count = Column(Integer, default=0)  # Total message count
     context_window = Column(Integer, default=10)  # Short-term context window size
-    extra = Column(JSON, default=dict)
+    extra = Column("metadata", JSON, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
@@ -318,7 +318,7 @@ class Message(Base):
     embedding_id = Column(String(255))        # Qdrant vector ID (for important messages)
     is_memory = Column(Boolean, default=False)  # Whether extracted as long-term memory
     memory_score = Column(Float)              # Memory importance score (0-1)
-    extra = Column(JSON, default=dict)
+    extra = Column("metadata", JSON, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships

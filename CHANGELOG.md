@@ -144,4 +144,8 @@
   - `source_plan_versions`
   - `GET /api/sources/plans/{plan_id}/versions`
   - refresh/subscribe now emit versioned diff + evaluation records instead of silently overwriting plan state
+- Strengthened source-plan refresh quality gating:
+  - refresh diff now tracks average authority score, evidence delta, trusted-source delta, and authority-tier regressions
+  - refresh evaluation now emits structured `gate_signals`
+  - the sources UI now shows recent version deltas and makes current-vs-latest version drift visible
 - Added `docs/VERSION_MANAGEMENT.md` to separate Git/file versioning from runtime intelligence-object versioning.

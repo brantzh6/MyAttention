@@ -563,6 +563,11 @@ export function SourcesManager() {
                     <p className="mt-2 text-xs text-muted-foreground">
                       review cadence: {plan.review_cadence_days} days · items: {plan.items.length} · review status: {plan.review_status} · current v{plan.current_version} / latest v{plan.latest_version}
                     </p>
+                    {plan.latest_version > plan.current_version && (
+                      <p className="mt-1 text-xs text-amber-700">
+                        newer candidate version pending review
+                      </p>
+                    )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
@@ -623,6 +628,26 @@ export function SourcesManager() {
                           <div className="mt-1 text-xs text-muted-foreground">
                             {version.evaluation?.reasons?.join?.(' · ') || 'No evaluation notes'}
                           </div>
+                          {version.change_summary?.summary && (
+                            <div className="mt-2 grid gap-1 text-xs text-muted-foreground md:grid-cols-2">
+                              <div>
+                                avg score delta:{' '}
+                                {Number(version.change_summary.summary.average_score_delta ?? 0).toFixed(2)}
+                              </div>
+                              <div>
+                                evidence delta:{' '}
+                                {version.change_summary.summary.evidence_delta ?? 0}
+                              </div>
+                              <div>
+                                trusted delta:{' '}
+                                {version.change_summary.summary.trusted_count_delta ?? 0}
+                              </div>
+                              <div>
+                                stale:{' '}
+                                {version.change_summary.summary.stale_count ?? 0}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

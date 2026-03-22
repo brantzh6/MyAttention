@@ -208,6 +208,11 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - `source_plan_versions`
   - `GET /api/sources/plans/{plan_id}/versions`
   - refresh and subscribe actions now create version records with diff/evaluation metadata
+- Refresh quality gating has been strengthened:
+  - source-plan diff now compares average authority score, evidence delta, trusted-source delta, and authority-tier regressions
+  - refresh evaluation now emits `gate_signals`
+  - source-plan versions now capture a richer change summary instead of only score-drop/stale counts
+  - the sources UI now surfaces recent version deltas and highlights when a newer candidate version is pending review
 - Added a project-level version management specification:
   - `docs/VERSION_MANAGEMENT.md`
   - clarifies Git/file versioning vs. runtime intelligence object versioning

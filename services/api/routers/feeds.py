@@ -527,6 +527,7 @@ def _apply_source_plan_snapshot(plan: SourcePlanModel, snapshot: Dict[str, Any])
 def _diff_source_plan_snapshots(previous: Dict[str, Any], current: Dict[str, Any]) -> Dict[str, Any]:
     previous_items = {item["object_key"]: item for item in previous.get("items", [])}
     current_items = {item["object_key"]: item for item in current.get("items", [])}
+    authority_rank = {"S": 4, "A": 3, "B": 2, "C": 1}
 
     added = sorted(key for key in current_items if key not in previous_items)
     removed = sorted(key for key in previous_items if key not in current_items)
@@ -541,6 +542,7 @@ def _diff_source_plan_snapshots(previous: Dict[str, Any], current: Dict[str, Any
 
     score_deltas: list[Dict[str, Any]] = []
     largest_drop = 0.0
+    authority_regressions: list[Dict[str, Any]] = []
     for key in sorted(set(previous_items) & set(current_items)):
         before_score = float(previous_items[key].get("authority_score", 0.0))
         after_score = float(current_items[key].get("authority_score", 0.0))
@@ -550,12 +552,53 @@ def _diff_source_plan_snapshots(previous: Dict[str, Any], current: Dict[str, Any
         if delta < largest_drop:
             largest_drop = delta
 
+        before_tier = str(previous_items[key].get("authority_tier", "C") or "C")
+        after_tier = str(current_items[key].get("authority_tier", "C") or "C")
+        if authority_rank.get(after_tier, 0) < authority_rank.get(before_tier, 0):
+            authority_regressions.append(
+                {
+                    "object_key": key,
+                    "before_tier": before_tier,
+                    "after_tier": after_tier,
+                }
+            )
+
+    def _average_score(items: Dict[str, Dict[str, Any]]) -> float:
+        if not items:
+            return 0.0
+        return round(
+            sum(float(item.get("authority_score", 0.0)) for item in items.values()) / len(items),
+            4,
+        )
+
+    def _evidence_total(items: Dict[str, Dict[str, Any]]) -> int:
+        total = 0
+        for item in items.values():
+            evidence = item.get("evidence", {}) or {}
+            total += int(evidence.get("evidence_count", 0) or 0)
+        return total
+
+    def _trusted_count(items: Dict[str, Dict[str, Any]]) -> int:
+        return sum(
+            1
+            for item in items.values()
+            if str(item.get("authority_tier", "C") or "C") in {"S", "A"}
+        )
+
+    previous_average_score = _average_score(previous_items)
+    current_average_score = _average_score(current_items)
+    previous_evidence_total = _evidence_total(previous_items)
+    current_evidence_total = _evidence_total(current_items)
+    previous_trusted_count = _trusted_count(previous_items)
+    current_trusted_count = _trusted_count(current_items)
+
     return {
         "added": added,
         "removed": removed,
         "stale": stale,
         "subscribed": subscribed,
         "score_deltas": score_deltas,
+        "authority_regressions": authority_regressions,
         "summary": {
             "previous_item_count": len(previous_items),
             "current_item_count": len(current_items),
@@ -564,6 +607,16 @@ def _diff_source_plan_snapshots(previous: Dict[str, Any], current: Dict[str, Any
             "stale_count": len(stale),
             "subscribed_count": len(subscribed),
             "largest_score_drop": largest_drop,
+            "previous_average_score": previous_average_score,
+            "current_average_score": current_average_score,
+            "average_score_delta": round(current_average_score - previous_average_score, 4),
+            "previous_evidence_total": previous_evidence_total,
+            "current_evidence_total": current_evidence_total,
+            "evidence_delta": current_evidence_total - previous_evidence_total,
+            "previous_trusted_count": previous_trusted_count,
+            "current_trusted_count": current_trusted_count,
+            "trusted_count_delta": current_trusted_count - previous_trusted_count,
+            "authority_regression_count": len(authority_regressions),
         },
     }
 
@@ -573,31 +626,59 @@ def _evaluate_source_plan_refresh(diff: Dict[str, Any]) -> Dict[str, Any]:
     largest_drop = float(summary.get("largest_score_drop", 0.0))
     stale_count = int(summary.get("stale_count", 0))
     removed_count = int(summary.get("removed_count", 0))
+    average_score_delta = float(summary.get("average_score_delta", 0.0))
+    evidence_delta = int(summary.get("evidence_delta", 0))
+    trusted_count_delta = int(summary.get("trusted_count_delta", 0))
+    authority_regression_count = int(summary.get("authority_regression_count", 0))
 
     decision_status = "accepted"
     reasons: list[str] = []
+    risk_signals: list[str] = []
     confidence = 0.8
 
     if largest_drop <= -0.15:
         decision_status = "needs_review"
-        reasons.append("authority_score dropped sharply for one or more tracked candidates")
+        risk_signals.append("largest authority_score drop exceeded threshold")
         confidence -= 0.25
-    if stale_count >= 3:
+    if stale_count >= max(2, int(summary.get("previous_item_count", 0) / 2)):
         decision_status = "needs_review"
-        reasons.append("multiple tracked candidates became stale in a single refresh")
+        risk_signals.append("too many tracked candidates became stale in a single refresh")
         confidence -= 0.15
     if removed_count > 0:
         decision_status = "needs_review"
-        reasons.append("candidate set lost previously tracked objects")
+        risk_signals.append("candidate set lost previously tracked objects")
+        confidence -= 0.1
+    if average_score_delta <= -0.08:
+        decision_status = "needs_review"
+        risk_signals.append("average authority score regressed materially")
+        confidence -= 0.15
+    if authority_regression_count > 0:
+        decision_status = "needs_review"
+        risk_signals.append("one or more tracked candidates regressed in authority tier")
+        confidence -= 0.1
+    if evidence_delta < 0 and trusted_count_delta < 0:
+        decision_status = "needs_review"
+        risk_signals.append("both evidence support and trusted-source count regressed")
         confidence -= 0.1
 
-    if not reasons:
+    if risk_signals:
+        reasons.extend(risk_signals)
+    else:
         reasons.append("refresh produced no high-risk degradations")
 
     return {
         "decision_status": decision_status,
         "confidence": max(0.1, round(confidence, 2)),
         "reasons": reasons,
+        "gate_signals": {
+            "largest_score_drop": largest_drop,
+            "average_score_delta": average_score_delta,
+            "evidence_delta": evidence_delta,
+            "trusted_count_delta": trusted_count_delta,
+            "authority_regression_count": authority_regression_count,
+            "stale_count": stale_count,
+            "removed_count": removed_count,
+        },
     }
 
 

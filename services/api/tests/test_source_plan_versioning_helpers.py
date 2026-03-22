@@ -40,14 +40,14 @@ class SourcePlanVersioningHelperTests(unittest.TestCase):
     def test_diff_and_evaluation_flag_degradation_for_review(self):
         previous = {
             "items": [
-                {"object_key": "github.com", "authority_score": 0.8, "status": "active"},
-                {"object_key": "arxiv.org", "authority_score": 1.0, "status": "active"},
+                {"object_key": "github.com", "authority_score": 0.8, "authority_tier": "A", "status": "active", "evidence": {"evidence_count": 3}},
+                {"object_key": "arxiv.org", "authority_score": 1.0, "authority_tier": "S", "status": "active", "evidence": {"evidence_count": 4}},
             ]
         }
         current = {
             "items": [
-                {"object_key": "github.com", "authority_score": 0.55, "status": "active"},
-                {"object_key": "arxiv.org", "authority_score": 1.0, "status": "stale"},
+                {"object_key": "github.com", "authority_score": 0.55, "authority_tier": "B", "status": "active", "evidence": {"evidence_count": 1}},
+                {"object_key": "arxiv.org", "authority_score": 1.0, "authority_tier": "S", "status": "stale", "evidence": {"evidence_count": 4}},
             ]
         }
 
@@ -56,7 +56,31 @@ class SourcePlanVersioningHelperTests(unittest.TestCase):
 
         self.assertEqual(diff["summary"]["stale_count"], 1)
         self.assertLessEqual(diff["summary"]["largest_score_drop"], -0.15)
+        self.assertEqual(diff["summary"]["authority_regression_count"], 1)
         self.assertEqual(evaluation["decision_status"], "needs_review")
+        self.assertGreater(len(evaluation["gate_signals"]), 0)
+
+    def test_diff_and_evaluation_accept_non_degrading_refresh(self):
+        previous = {
+            "items": [
+                {"object_key": "github.com", "authority_score": 0.72, "authority_tier": "B", "status": "active", "evidence": {"evidence_count": 2}},
+                {"object_key": "arxiv.org", "authority_score": 0.95, "authority_tier": "S", "status": "active", "evidence": {"evidence_count": 5}},
+            ]
+        }
+        current = {
+            "items": [
+                {"object_key": "github.com", "authority_score": 0.76, "authority_tier": "B", "status": "active", "evidence": {"evidence_count": 3}},
+                {"object_key": "arxiv.org", "authority_score": 0.95, "authority_tier": "S", "status": "active", "evidence": {"evidence_count": 5}},
+                {"object_key": "openai.com", "authority_score": 0.88, "authority_tier": "A", "status": "active", "evidence": {"evidence_count": 2}},
+            ]
+        }
+
+        diff = _diff_source_plan_snapshots(previous, current)
+        evaluation = _evaluate_source_plan_refresh(diff)
+
+        self.assertEqual(diff["summary"]["added_count"], 1)
+        self.assertGreaterEqual(diff["summary"]["average_score_delta"], 0)
+        self.assertEqual(evaluation["decision_status"], "accepted")
 
     def test_snapshot_source_plan_from_payload_is_stable_without_orm_relationships(self):
         snapshot = _snapshot_source_plan_from_payload(

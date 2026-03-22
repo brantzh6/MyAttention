@@ -825,6 +825,9 @@ export function SourcesManager() {
                                           <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                                             {item.execution_strategy}
                                           </span>
+                                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                                            {item.item_type}
+                                          </span>
                                           <span
                                             className={cn(
                                               'rounded-full px-2 py-0.5 text-xs',
@@ -835,6 +838,9 @@ export function SourcesManager() {
                                           </span>
                                         </div>
                                         <div className="mt-1 text-xs text-muted-foreground break-all">{item.url}</div>
+                                        <div className="mt-1 text-[11px] text-muted-foreground break-all">
+                                          object {item.object_key}
+                                        </div>
                                         <div className="mt-2 text-sm text-muted-foreground">{item.rationale}</div>
                                         <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
                                           <div className="rounded-lg border bg-muted/40 p-2">

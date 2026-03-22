@@ -120,6 +120,8 @@ class SourceDiscoveryRequest(BaseModel):
 
 
 class SourceDiscoveryCandidate(BaseModel):
+    item_type: str = "domain"
+    object_key: str = ""
     domain: str
     name: str
     url: str
@@ -295,6 +297,45 @@ def _normalize_domain(value: str) -> str:
     return domain.lower().removeprefix("www.")
 
 
+def _candidate_identity(url: str, focus: SourceDiscoveryFocus) -> tuple[str, str, str, str, str]:
+    parsed = urlparse(url if "://" in url else f"https://{url}")
+    domain = _normalize_domain(parsed.netloc or parsed.path)
+    path_segments = [segment for segment in (parsed.path or "").split("/") if segment]
+
+    if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 2:
+        owner, repo = path_segments[0], path_segments[1]
+        object_key = f"{domain}/{owner}/{repo}".lower()
+        canonical_url = f"https://{domain}/{owner}/{repo}"
+        display_name = f"{owner}/{repo}"
+        return "repository", object_key, display_name, canonical_url, domain
+
+    if domain == "huggingface.co" and len(path_segments) >= 2:
+        owner, repo = path_segments[0], path_segments[1]
+        object_key = f"{domain}/{owner}/{repo}".lower()
+        canonical_url = f"https://{domain}/{owner}/{repo}"
+        display_name = f"{owner}/{repo}"
+        return "repository", object_key, display_name, canonical_url, domain
+
+    if domain == "reddit.com" and len(path_segments) >= 2 and path_segments[0].lower() == "r":
+        community = path_segments[1]
+        object_key = f"{domain}/r/{community}".lower()
+        canonical_url = f"https://{domain}/r/{community}"
+        display_name = f"r/{community}"
+        return "community", object_key, display_name, canonical_url, domain
+
+    if domain in {"x.com", "twitter.com"} and path_segments:
+        handle = path_segments[0]
+        if handle.lower() not in {"home", "search", "explore", "i", "settings", "messages"}:
+            object_key = f"{domain}/{handle}".lower()
+            canonical_url = f"https://{domain}/{handle}"
+            display_name = f"@{handle}"
+            return "person", object_key, display_name, canonical_url, domain
+
+    object_key = domain.lower()
+    canonical_url = url if url.startswith("http") else f"https://{domain}"
+    return "domain", object_key, domain, canonical_url, domain
+
+
 def _normalize_plan_topic(value: str) -> str:
     return " ".join(value.strip().lower().split())
 
@@ -320,8 +361,17 @@ def _source_plan_owner_key(topic: str, focus: SourceDiscoveryFocus | str) -> str
     return f"source-plan:{focus_value}:{digest}"
 
 
-def _discovery_queries(topic: str, focus: SourceDiscoveryFocus) -> list[str]:
+def _discovery_queries(topic: str, focus: SourceDiscoveryFocus, execution_policy: Optional[Dict[str, Any]] = None) -> list[str]:
     topic = topic.strip()
+    query_templates = list(dict(execution_policy or {}).get("query_templates", []))
+    if query_templates:
+        rendered = []
+        for template in query_templates:
+            query = str(template).format(topic=topic).strip()
+            if query and query not in rendered:
+                rendered.append(query)
+        if rendered:
+            return rendered
     if focus == SourceDiscoveryFocus.LATEST:
         return [
             f"{topic} 最新 动态 官方",
@@ -375,6 +425,8 @@ def _focus_category(focus: SourceDiscoveryFocus) -> str:
 
 def _candidate_to_attention_payload(candidate: SourceDiscoveryCandidate) -> Dict[str, Any]:
     return {
+        "item_type": candidate.item_type,
+        "object_key": candidate.object_key,
         "domain": candidate.domain,
         "name": candidate.name,
         "url": candidate.url,
@@ -405,8 +457,8 @@ def _attention_policy_name(policy_id: str) -> str:
     return "Authoritative Source Attention V1"
 
 
-def _source_id_from_domain(domain: str) -> str:
-    cleaned = "".join(ch if ch.isalnum() else "_" for ch in domain.lower())
+def _source_id_from_object_key(object_key: str) -> str:
+    cleaned = "".join(ch if ch.isalnum() else "_" for ch in object_key.lower())
     return cleaned.strip("_") or "discovered_source"
 
 
@@ -415,6 +467,8 @@ def _execution_strategy_for_candidate(
     focus: SourceDiscoveryFocus,
 ) -> str:
     domain = candidate.domain.lower()
+    if candidate.item_type in {"repository", "community", "person"}:
+        return "agent_assisted"
     if any(token in domain for token in ("github.com", "reddit.com", "x.com", "twitter.com")):
         return "agent_assisted"
     if any(token in domain for token in ("arxiv.org", "openreview.net", "nature.com", "science.org")):
@@ -511,6 +565,7 @@ def _snapshot_source_plan(plan: SourcePlanModel) -> Dict[str, Any]:
     for item in sorted(list(plan.items or []), key=lambda value: value.object_key):
         items.append(
             {
+                "item_type": item.item_type,
                 "object_key": item.object_key,
                 "name": item.name,
                 "url": item.url or "",
@@ -545,6 +600,7 @@ def _snapshot_source_plan_from_payload(
     for item in sorted(items, key=lambda value: value["object_key"]):
         normalized_items.append(
             {
+                "item_type": item["item_type"],
                 "object_key": item["object_key"],
                 "name": item["name"],
                 "url": item.get("url", ""),
@@ -680,7 +736,7 @@ def _apply_source_plan_snapshot(plan: SourcePlanModel, snapshot: Dict[str, Any])
         if existing is None:
             plan.items.append(
                 SourcePlanItemModel(
-                    item_type="domain",
+                    item_type=payload.get("item_type", "domain"),
                     object_key=object_key,
                     name=payload["name"],
                     url=payload.get("url", ""),
@@ -898,12 +954,13 @@ def _build_source_plan_version_record(
     )
 
 
-def _find_existing_source_for_domain(domain: str):
+def _find_existing_source_for_object(candidate: SourceDiscoveryCandidate):
     fetcher = get_feed_fetcher()
     return next(
         (
             src for src in fetcher.get_sources()
-            if src.id == _source_id_from_domain(domain) or _normalize_domain(src.url) == domain
+            if src.id == _source_id_from_object_key(candidate.object_key)
+            or (src.url or "").rstrip("/").lower() == (candidate.url or "").rstrip("/").lower()
         ),
         None,
     )
@@ -914,12 +971,12 @@ def _subscribe_candidate_to_source(
     focus: SourceDiscoveryFocus,
 ) -> Source:
     fetcher = get_feed_fetcher()
-    source_id = _source_id_from_domain(candidate.domain)
-    existing = _find_existing_source_for_domain(candidate.domain)
+    source_id = _source_id_from_object_key(candidate.object_key)
+    existing = _find_existing_source_for_object(candidate)
     if existing is not None:
         return _source_to_api_model(existing)
 
-    tags = [focus.value, "discovered", candidate.authority_tier]
+    tags = [focus.value, "discovered", candidate.authority_tier, candidate.item_type]
     new_source = _FeedSource(
         id=source_id,
         name=candidate.name,
@@ -950,15 +1007,15 @@ async def _refresh_source_plan_items(
     discovered_keys: set[str] = set()
 
     for candidate in discovery.candidates:
-        discovered_keys.add(candidate.domain)
+        discovered_keys.add(candidate.object_key)
         review_days = _review_cadence_for_candidate(candidate, focus, review_cadence_days)
         strategy = _execution_strategy_for_candidate(candidate, focus)
         rationale = (
             f"{candidate.recommendation_reason}；执行策略={strategy}；"
             f"证据命中 {candidate.evidence_count} 次。"
         )
-        existing = existing_by_key.get(candidate.domain)
-        subscribed = _find_existing_source_for_domain(candidate.domain) is not None
+        existing = existing_by_key.get(candidate.object_key)
+        subscribed = _find_existing_source_for_object(candidate) is not None
 
         payload = {
             "name": candidate.name,
@@ -987,8 +1044,8 @@ async def _refresh_source_plan_items(
         if existing is None:
             plan.items.append(
                 SourcePlanItemModel(
-                    item_type="domain",
-                    object_key=candidate.domain,
+                    item_type=candidate.item_type,
+                    object_key=candidate.object_key,
                     **payload,
                 )
             )
@@ -1087,7 +1144,7 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
     search = AliyunWebSearch()
     classifier = get_authority_classifier()
     policy = await resolve_attention_policy(db, body.focus)
-    queries = _discovery_queries(body.topic, body.focus)
+    queries = _discovery_queries(body.topic, body.focus, dict(policy.execution_policy or {}))
     aggregated: dict[str, dict[str, Any]] = {}
 
     for query in queries:
@@ -1108,15 +1165,21 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
             domain = _normalize_domain(item.link or item.source or "")
             if not domain:
                 continue
+            item_type, object_key, display_name, canonical_url, source_domain = _candidate_identity(
+                item.link or f"https://{domain}",
+                body.focus,
+            )
 
-            authority = classifier.classify(item.link or domain, item.title, _focus_category(body.focus))
-            adjusted_score = max(0.0, min(1.0, authority.score + _domain_quality_adjustment(domain, body.focus)))
+            authority = classifier.classify(item.link or source_domain, item.title, _focus_category(body.focus))
+            adjusted_score = max(0.0, min(1.0, authority.score + _domain_quality_adjustment(source_domain, body.focus)))
             candidate = aggregated.setdefault(
-                domain,
+                object_key,
                 {
-                    "domain": domain,
-                    "name": domain,
-                    "url": item.link or f"https://{domain}",
+                    "item_type": item_type,
+                    "object_key": object_key,
+                    "domain": source_domain,
+                    "name": display_name,
+                    "url": canonical_url,
                     "authority_tier": authority.tier,
                     "authority_score": adjusted_score,
                     "evidence_count": 0,
@@ -1151,6 +1214,8 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
         )
         candidates.append(
             SourceDiscoveryCandidate(
+                item_type=item["item_type"],
+                object_key=item["object_key"],
                 domain=item["domain"],
                 name=item["name"],
                 url=item["url"],
@@ -1557,7 +1622,8 @@ async def create_source_plan(
         )
         created_items_payload.append(
             {
-                "object_key": candidate.domain,
+                "item_type": candidate.item_type,
+                "object_key": candidate.object_key,
                 "name": candidate.name,
                 "url": candidate.url,
                 "authority_tier": candidate.authority_tier,
@@ -1573,8 +1639,8 @@ async def create_source_plan(
         db.add(
             SourcePlanItemModel(
                 plan_id=plan.id,
-                item_type="domain",
-                object_key=candidate.domain,
+                item_type=candidate.item_type,
+                object_key=candidate.object_key,
                 name=candidate.name,
                 url=candidate.url,
                 authority_tier=candidate.authority_tier,
@@ -1706,7 +1772,9 @@ async def subscribe_source_plan_item(
         raise HTTPException(status_code=404, detail="Source plan item not found")
 
     candidate = SourceDiscoveryCandidate(
-        domain=item.object_key,
+        item_type=item.item_type,
+        object_key=item.object_key,
+        domain=_normalize_domain(item.url or item.object_key),
         name=item.name,
         url=item.url or "",
         authority_tier=item.authority_tier or "C",

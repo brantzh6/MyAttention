@@ -13,6 +13,7 @@ class AttentionPolicyFoundationTests(unittest.TestCase):
         self.assertIn(SourceDiscoveryFocus.LATEST.value, by_focus)
         self.assertIn(SourceDiscoveryFocus.FRONTIER.value, by_focus)
         self.assertIn(SourceDiscoveryFocus.METHOD.value, by_focus)
+        self.assertTrue(all(item.version >= 2 for item in specs))
 
     def test_method_policy_preserves_diversity_across_key_buckets(self) -> None:
         policy = SimpleNamespace(

@@ -45,8 +45,16 @@ DEFAULT_ATTENTION_POLICIES: tuple[AttentionPolicySpec, ...] = (
         },
         scoring_policy={"prefer_tiers": ["S", "A"], "penalize_single_bucket_domination": True},
         gate_policy={"require_authority_bucket": True, "max_single_bucket_share": 0.65},
-        execution_policy={"default_action": "promote_authority_then_review"},
-        extra={"surface": "source_intelligence", "version_label": "v1"},
+        execution_policy={
+            "default_action": "promote_authority_then_review",
+            "query_templates": [
+                "{topic} official organization institute standard review",
+                "{topic} site:.gov OR site:.edu OR site:.org",
+                "{topic} society institute authoritative source",
+            ],
+        },
+        version=2,
+        extra={"surface": "source_intelligence", "version_label": "v2"},
     ),
     AttentionPolicySpec(
         policy_id="source-latest-v1",
@@ -60,8 +68,16 @@ DEFAULT_ATTENTION_POLICIES: tuple[AttentionPolicySpec, ...] = (
         },
         scoring_policy={"prefer_tiers": ["S", "A", "B"], "timeliness_bias": True},
         gate_policy={"require_authority_bucket": True, "max_single_bucket_share": 0.6},
-        execution_policy={"default_action": "monitor_with_fast_review"},
-        extra={"surface": "source_intelligence", "version_label": "v1"},
+        execution_policy={
+            "default_action": "monitor_with_fast_review",
+            "query_templates": [
+                "{topic} latest news official",
+                "{topic} release notes blog update",
+                "{topic} Reuters Bloomberg announcement",
+            ],
+        },
+        version=2,
+        extra={"surface": "source_intelligence", "version_label": "v2"},
     ),
     AttentionPolicySpec(
         policy_id="source-frontier-v1",
@@ -75,8 +91,16 @@ DEFAULT_ATTENTION_POLICIES: tuple[AttentionPolicySpec, ...] = (
         },
         scoring_policy={"prefer_tiers": ["S", "A"], "frontier_bias": True},
         gate_policy={"require_research_bucket": True, "max_single_bucket_share": 0.6},
-        execution_policy={"default_action": "review_and_watch"},
-        extra={"surface": "source_intelligence", "version_label": "v1"},
+        execution_policy={
+            "default_action": "review_and_watch",
+            "query_templates": [
+                "{topic} frontier research lab paper",
+                "{topic} arxiv openreview benchmark",
+                "{topic} conference workshop research",
+            ],
+        },
+        version=2,
+        extra={"surface": "source_intelligence", "version_label": "v2"},
     ),
     AttentionPolicySpec(
         policy_id="source-method-v1",
@@ -90,8 +114,18 @@ DEFAULT_ATTENTION_POLICIES: tuple[AttentionPolicySpec, ...] = (
         },
         scoring_policy={"prefer_tiers": ["A", "B", "S"], "diversity_bias": True},
         gate_policy={"require_implementation_bucket": True, "max_single_bucket_share": 0.55},
-        execution_policy={"default_action": "watch_and_subscribe_mix"},
-        extra={"surface": "source_intelligence", "version_label": "v1"},
+        execution_policy={
+            "default_action": "watch_and_subscribe_mix",
+            "query_templates": [
+                "{topic} github open source framework stars",
+                "{topic} site:github.com repository agent workflow",
+                "{topic} OpenAI Anthropic Microsoft research blog {topic}",
+                "{topic} reddit hacker news discussion",
+                "{topic} benchmark evaluation best practices",
+            ],
+        },
+        version=2,
+        extra={"surface": "source_intelligence", "version_label": "v2"},
     ),
 )
 
@@ -106,6 +140,7 @@ async def ensure_attention_policies(db: AsyncSession) -> dict[str, int]:
 
     created = 0
     version_rows = 0
+    updated = 0
     for spec in DEFAULT_ATTENTION_POLICIES:
         policy = by_policy_id.get(spec.policy_id)
         if policy is None:
@@ -145,11 +180,46 @@ async def ensure_attention_policies(db: AsyncSession) -> dict[str, int]:
             )
             created += 1
             version_rows += 1
+            continue
+
+        current_version = int(policy.current_version or 1)
+        if spec.version > current_version:
+            policy.name = spec.name
+            policy.focus = spec.focus
+            policy.description = spec.description
+            policy.problem_type = "source_intelligence"
+            policy.thinking_framework = "attention_model"
+            policy.candidate_mix_policy = spec.candidate_mix_policy
+            policy.scoring_policy = spec.scoring_policy
+            policy.gate_policy = spec.gate_policy
+            policy.execution_policy = spec.execution_policy
+            policy.status = "active"
+            policy.current_version = spec.version
+            policy.latest_version = spec.version
+            policy.extra = spec.extra or {}
+            db.add(
+                AttentionPolicyVersion(
+                    policy_id_ref=policy.id,
+                    version_number=spec.version,
+                    parent_version=current_version,
+                    change_reason="Upgrade default attention policy specification",
+                    candidate_mix_policy=spec.candidate_mix_policy,
+                    scoring_policy=spec.scoring_policy,
+                    gate_policy=spec.gate_policy,
+                    execution_policy=spec.execution_policy,
+                    decision_status="accepted",
+                    created_by="system",
+                    accepted_at=datetime.now(timezone.utc),
+                    extra=spec.extra or {},
+                )
+            )
+            updated += 1
+            version_rows += 1
 
     if created or version_rows:
         await db.commit()
 
-    return {"created_policies": created, "created_versions": version_rows}
+    return {"created_policies": created, "updated_policies": updated, "created_versions": version_rows}
 
 
 async def resolve_attention_policy(db: AsyncSession, focus: Any) -> AttentionPolicy:

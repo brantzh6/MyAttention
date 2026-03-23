@@ -58,6 +58,25 @@ class AutoEvolutionSelfTestIssueTest(unittest.TestCase):
         self.assertEqual(issue["priority"], 0)
         self.assertEqual(issue["source_data"]["health"], "critical")
 
+    def test_single_chat_canary_failure_becomes_critical_issue(self) -> None:
+        issue = build_self_test_issue(
+            {
+                "healthy": False,
+                "checks": [
+                    {
+                        "id": "chat-single-canary",
+                        "name": "Single chat canary",
+                        "ok": False,
+                        "error": "API error 400: model `qwen-max` is not supported",
+                    }
+                ],
+            }
+        )
+
+        self.assertIsNotNone(issue)
+        self.assertEqual(issue["priority"], 0)
+        self.assertEqual(issue["source_data"]["health"], "critical")
+
     def test_voting_canary_succeeds_after_two_models_and_synthesis_start(self) -> None:
         state = {
             "saw_start": False,

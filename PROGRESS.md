@@ -309,3 +309,17 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - Current known gap:
   - source-plan quality drift is now detected, but not yet auto-remediated
   - log-health still overcounts SQL statement noise as critical errors and should be filtered separately
+- Fixed a real chat regression that the previous self-test missed:
+  - normal single-chat requests were broken because persisted `brain_profiles` still contained stale default models such as `qwen-max`
+  - `services/api/brains/control_plane.py` now upgrades existing persisted brain-profile defaults when the shipped control-plane spec changes, instead of only creating missing profiles
+  - `services/api/feeds/auto_evolution.py` now includes a dedicated `chat-single-canary` in periodic self-test coverage
+  - the single-chat canary now checks the real default `/api/chat` path instead of only relying on the voting path
+  - self-test session timeout was widened so the single-chat canary is not falsely killed by the outer `aiohttp` session timeout before its own request-level timeout
+- Verified live after restart:
+  - `POST /api/chat` now returns real assistant content again on the default non-voting path
+  - `GET /api/evolution/status` now reports:
+    - `chat-single-canary -> ok=true`
+    - `chat-voting-canary -> ok=true`
+    - `self_test.healthy = true`
+- Current known gap:
+  - evolution still reports `critical_log_errors`, but this is now log-noise degradation rather than chat-path failure

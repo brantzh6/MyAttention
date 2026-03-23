@@ -194,3 +194,10 @@
   - `api/evolution/status` now reports `source_plan_quality` alongside source-plan review
   - `api/testing/issues` now records structured `source_plan_quality` issues when legacy or low-quality plans silently drift away from current attention-policy expectations
 - Added regression tests for source-plan quality issue generation in `services/api/tests/test_auto_evolution_self_test.py`.
+- Fixed a missed critical chat regression on the default non-voting path:
+  - persisted brain-profile defaults are now upgraded in place when shipped control-plane defaults change, preventing stale models like `qwen-max` from lingering in runtime routing
+  - auto-evolution self-test now includes a dedicated `chat-single-canary` for the normal `/api/chat` path instead of only covering voting
+  - widened the outer self-test HTTP session timeout so the single-chat canary is no longer falsely reported as `TimeoutError` before its own request timeout budget expires
+- Verified live:
+  - normal `/api/chat` streaming returns assistant content again
+  - both `chat-single-canary` and `chat-voting-canary` now pass in `api/evolution/status`

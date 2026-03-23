@@ -41,7 +41,7 @@ def build_self_test_issue(snapshot: dict | None) -> dict | None:
     if not failed_checks:
         return None
 
-    critical_ids = {"/health", "chat-voting-canary", "frontend:/chat", "ui-browser:/chat"}
+    critical_ids = {"/health", "chat-voting-canary", "chat-single-canary", "frontend:/chat", "ui-browser:/chat"}
     is_critical = any(check.get("id") in critical_ids for check in failed_checks)
     priority = 0 if is_critical else 1
     health = "critical" if is_critical else "warning"
@@ -556,7 +556,7 @@ class AutoEvolutionSystem:
 
     async def _run_self_test_once(self):
         checks = []
-        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=8)) as session:
+        async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=120)) as session:
             for path in ("/health", "/api/sources", "/api/evolution/status"):
                 try:
                     async with session.get(f"http://localhost:8000{path}") as resp:
@@ -595,6 +595,7 @@ class AutoEvolutionSystem:
                         "qwen_enabled": qwen_enabled,
                     })
                     if qwen_enabled:
+                        checks.append(await self._run_single_chat_canary(session))
                         checks.append(await self._run_voting_canary(session))
             except Exception as exc:
                 checks.append({
@@ -815,6 +816,71 @@ class AutoEvolutionSystem:
             "error": payload.get("error") or (stderr_text or None),
             "details": payload,
         }
+
+    async def _run_single_chat_canary(self, session):
+        payload = {
+            "message": "[self-test] Summarize the project objective in one short sentence.",
+            "use_voting": False,
+            "use_rag": False,
+            "enable_search": False,
+            "enable_thinking": False,
+            "kb_ids": [],
+        }
+        conversation_id = None
+        selected_model = ""
+
+        try:
+            async with session.post(
+                "http://localhost:8000/api/chat",
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=45),
+            ) as resp:
+                error = ""
+                saw_content = False
+                async for data in iter_sse_events(resp):
+                    try:
+                        event = json.loads(data)
+                    except json.JSONDecodeError:
+                        continue
+                    if event.get("conversation_id"):
+                        conversation_id = event.get("conversation_id")
+                    brain_plan = event.get("brain_plan") or {}
+                    if not selected_model:
+                        if event.get("model"):
+                            selected_model = str(event.get("model"))
+                        elif isinstance(brain_plan, dict):
+                            models = list(brain_plan.get("selected_models") or [])
+                            if models:
+                                selected_model = str(models[0])
+                    if event.get("error"):
+                        error = str(event.get("error"))
+                        break
+                    if (event.get("content") or "").strip():
+                        saw_content = True
+                        break
+
+                return {
+                    "id": "chat-single-canary",
+                    "name": "Single chat canary",
+                    "path": "/api/chat",
+                    "status": resp.status,
+                    "ok": resp.status == 200 and saw_content and not error,
+                    "error": None if resp.status == 200 and saw_content and not error else error or "no assistant content returned",
+                    "model": selected_model,
+                }
+        except Exception as exc:
+            return {
+                "id": "chat-single-canary",
+                "name": "Single chat canary",
+                "path": "/api/chat",
+                "status": 0,
+                "ok": False,
+                "error": str(exc) or exc.__class__.__name__,
+                "model": selected_model,
+            }
+        finally:
+            if conversation_id:
+                await self._cleanup_test_conversation(conversation_id)
 
     async def _run_voting_canary(self, session):
         payload = {

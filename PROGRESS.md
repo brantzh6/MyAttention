@@ -121,6 +121,11 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - `docs/CONTROLLED_DELEGATION_STRATEGY.md`
   - 明确主控不外包、结构化交接、结果回收、验收门禁和版本记录要求
   - 将“高 token 编码/评审任务外包”正式纳入多脑协作第一阶段实施范围
+- 已新增程序性知识架构文档：
+  - `docs/SOP_AND_PROCEDURAL_KNOWLEDGE_ARCHITECTURE.md`
+  - 明确 Method / SOP / Playbook / Skill / Policy 都属于正式知识对象
+  - 明确自然语言主体 + 结构化元数据 + 版本管理 + 效果评估的统一方向
+  - 明确进化大脑后续不只优化代码，也要优化方法、SOP、技能和策略本身
 
 ## Latest Implementation Update
 

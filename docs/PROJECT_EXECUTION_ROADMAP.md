@@ -26,6 +26,11 @@
 7. `Phase 6` 多大脑协作与进化大脑升级
 8. `Phase 7` 版本化智能架构与分布式演进
 
+补充主线：
+
+- 方法/SOP/Skill/Policy 不再被视为附属文档，而被纳入正式程序性知识层
+- 这条线应与记忆架构、进化大脑、任务系统和大脑控制层并行收口
+
 其中：
 
 - `Phase 0-2` 是基础层
@@ -287,6 +292,7 @@
 - Phase 2 信息事实层继续收口
 - Phase 3 认知控制框架 V1
 - Phase 4 source intelligence / memory 设计
+- 程序性知识层（Method / SOP / Playbook / Skill / Policy）设计
 - 进化大脑质量基线继续加固
 
 ### P1：紧随其后

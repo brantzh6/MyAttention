@@ -10,6 +10,7 @@
 
 - 新增受控任务外包策略文档，明确主控不外包、结构化交接、结果回收与版本记录要求
 - 新增第一批受控外包任务候选清单，用于把高 token 的 coding/review/research 子任务纳入多脑协作试点
+- 新增程序性知识架构文档，明确自然语言 SOP、Method、Playbook、Skill、Policy 属于正式知识层并应进入版本与评估体系
 - 新增项目总计划，统一主线目标、核心模块、研发流程和测试要求
 - 新增信息流数据架构设计，明确 `raw_ingest / feed_items / feed_enrichments / feed_aggregates`
 - 新增存储层架构设计，明确 `PostgreSQL + Redis + Qdrant + Object Storage`

@@ -170,13 +170,34 @@ class AIDecisionBrain:
                 {"role": "user", "content": prompt}
             ])
 
-            decision = self._parse_decision(response.content, context)
+            decision = self._parse_decision(self._extract_response_text(response), context)
             self._record_decision(context, decision)
             return decision
 
         except Exception as e:
             logger.error(f"Local LLM decision failed: {e}")
             return self._fallback_decision(context)
+
+    def _extract_response_text(self, response: Any) -> str:
+        """兼容不同 LLM 客户端返回格式，统一提取文本。"""
+        if isinstance(response, str):
+            return response
+
+        content = getattr(response, "content", None)
+        if isinstance(content, str):
+            return content
+
+        text = getattr(response, "text", None)
+        if isinstance(text, str):
+            return text
+
+        if isinstance(response, dict):
+            for key in ("content", "text", "response", "output"):
+                value = response.get(key)
+                if isinstance(value, str):
+                    return value
+
+        raise TypeError(f"Unsupported LLM response type: {type(response).__name__}")
 
     def _parse_external_response(self, result: Any, context: DecisionContext) -> Decision:
         """解析外部 Agent 响应"""
@@ -598,7 +619,7 @@ class AIKnowledgeExtractor:
                 {"role": "user", "content": prompt}
             ])
 
-            text = response.content.strip()
+            text = self._extract_response_text(response).strip()
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0]
             elif "```" in text:

@@ -209,3 +209,11 @@
 - Reduced false-red evolution health noise:
   - `services/api/feeds/log_monitor.py` now filters SQLAlchemy statement noise from quick health checks and error-pattern analysis
   - quick health now surfaces real runtime errors instead of hundreds of cached SQL fragments
+- Closed the next evolution-loop runtime gap:
+  - `services/api/feeds/ai_brain.py` now normalizes local LLM responses so providers that return plain strings no longer crash local decision routing with `'str' object has no attribute 'content'`
+  - `services/api/feeds/auto_evolution.py` now uses a shorter single-chat canary prompt plus a wider timeout budget so default-chat health checks stop flapping under normal latency
+  - `services/api/feeds/log_monitor.py` now filters benign asyncpg connection-termination noise produced during cancelled request cleanup, preventing quick health from staying red after successful self-tests
+- Verified live:
+  - `POST /api/evolution/self-test/run` returns `healthy=true`
+  - `chat-single-canary` and `chat-voting-canary` both pass in the same snapshot
+  - `GET /api/evolution/health/quick` now returns `status=healthy` and `critical_count=0`

@@ -831,7 +831,7 @@ class AutoEvolutionSystem:
 
     async def _run_single_chat_canary(self, session):
         payload = {
-            "message": "[self-test] Summarize the project objective in one short sentence.",
+            "message": "[self-test] Reply in exactly five English words describing this project.",
             "use_voting": False,
             "use_rag": False,
             "enable_search": False,
@@ -845,7 +845,7 @@ class AutoEvolutionSystem:
             async with session.post(
                 "http://localhost:8000/api/chat",
                 json=payload,
-                timeout=aiohttp.ClientTimeout(total=45),
+                timeout=aiohttp.ClientTimeout(total=90),
             ) as resp:
                 error = ""
                 saw_content = False

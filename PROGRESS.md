@@ -337,3 +337,12 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - Current known gap:
   - `api/evolution/status` can still temporarily show stale `critical_log_errors` snapshots until the next loop writes a fresh filtered snapshot
   - one real runtime error remains in current quick health: `Local LLM decision failed: 'str' object has no attribute 'content'`
+- Closed the next real evolution-loop blocker:
+  - `services/api/feeds/ai_brain.py` now normalizes local LLM responses instead of assuming every provider returns an object with `.content`
+  - this fixes the runtime error `Local LLM decision failed: 'str' object has no attribute 'content'`
+  - `services/api/feeds/auto_evolution.py` now uses a shorter single-chat canary prompt with a wider request timeout budget so the canary no longer times out under normal runtime load
+  - `services/api/feeds/log_monitor.py` now filters asyncpg connection-termination noise emitted during cancelled request cleanup, so quick health no longer stays red because of benign pool cleanup
+- Verified live:
+  - `POST /api/evolution/self-test/run` now returns `healthy = true`
+  - both `chat-single-canary` and `chat-voting-canary` now pass in the same self-test snapshot
+  - `GET /api/evolution/health/quick` now returns `status = healthy` with `critical_count = 0`

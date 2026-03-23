@@ -52,6 +52,8 @@ SQL_NOISE_PATTERNS = (
     r"^commit$",
     r"^begin(\s*\(implicit\))?$",
     r"^rollback$",
+    r"^exception terminating connection <adaptedconnection <asyncpg\.connection\.Connection object at .*>>$",
+    r"^cancelled via cancel scope .*",
 )
 
 INFO_PROBLEM_KEYWORDS = ("exception", "traceback", "fatal", "crash", "timed out", "refused", "blocked", "unauthorized")

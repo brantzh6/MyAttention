@@ -8,7 +8,7 @@ import logging
 import os
 from typing import Dict, Any, Optional, List
 from datetime import datetime
-from uuid import uuid4
+from uuid import UUID, uuid4
 from dataclasses import dataclass
 
 from sqlalchemy import select
@@ -56,6 +56,13 @@ def build_system_health_recovery_plan(source_data: Optional[Dict[str, Any]]) -> 
             "strategy": "trigger_pipeline",
             "verify_endpoint": "/api/evolution/collection-health",
             "verify_delay_seconds": 4,
+        }
+    if issue_type in {"source_plan_quality", "source_plan_review"}:
+        return {
+            "issue_type": issue_type,
+            "state": state,
+            "strategy": "refresh_source_plan",
+            "verify_delay_seconds": 2,
         }
 
     return {
@@ -141,6 +148,10 @@ class TaskProcessor:
         description: Optional[str] = None,
         priority: Optional[int] = None,
         auto_processible: Optional[bool] = None,
+        context_id: Optional[str] = None,
+        task_type: Optional[str] = None,
+        goal: Optional[str] = None,
+        assigned_brain: Optional[str] = None,
     ) -> Task:
         """Refresh an existing task when the same issue is detected again."""
         task.source_data = self.build_task_source_data(source_data, task.source_data)
@@ -152,6 +163,14 @@ class TaskProcessor:
             task.priority = min(task.priority or priority, priority)
         if auto_processible is not None:
             task.auto_processible = task.auto_processible or auto_processible
+        if context_id and not task.context_id:
+            task.context_id = UUID(context_id)
+        if task_type:
+            task.task_type = task_type
+        if goal and not task.goal:
+            task.goal = goal
+        if assigned_brain and not task.assigned_brain:
+            task.assigned_brain = assigned_brain
 
         await self.db.commit()
         await self.db.refresh(task)
@@ -195,6 +214,10 @@ class TaskProcessor:
                 description=classification_result.description,
                 priority=classification_result.priority,
                 auto_processible=classification_result.auto_processible,
+                context_id=classification_result.context_id,
+                task_type=classification_result.task_type,
+                goal=classification_result.goal,
+                assigned_brain=classification_result.assigned_brain,
             )
 
         task = Task(
@@ -206,8 +229,12 @@ class TaskProcessor:
             description=classification_result.description,
             priority=classification_result.priority,
             category=classification_result.category,
+            context_id=UUID(classification_result.context_id) if classification_result.context_id else None,
+            task_type=classification_result.task_type,
+            goal=classification_result.goal,
             status=TaskStatus.PENDING.value,
             auto_processible=classification_result.auto_processible,
+            assigned_brain=classification_result.assigned_brain,
             created_by="system"
         )
 
@@ -587,6 +614,9 @@ class TaskProcessor:
             "before_state": before_state,
         }
 
+        if plan["strategy"] == "refresh_source_plan":
+            return await self._handle_source_plan_recovery(task, source_data, details)
+
         if plan["strategy"] != "trigger_pipeline":
             return TaskResult(
                 success=False,
@@ -672,6 +702,78 @@ class TaskProcessor:
             success=False,
             action="auto_fix",
             message=f"Recovery action executed but system health remains {after_status}/{after_state}",
+            details=details,
+        )
+
+    async def _handle_source_plan_recovery(self, task: Task, source_data: Dict, details: Dict[str, Any]) -> TaskResult:
+        import aiohttp
+
+        plan_id = str(task.source_id or source_data.get("plan_id") or (source_data.get("summary") or {}).get("plan_id") or "").strip()
+        if not plan_id:
+            return TaskResult(
+                success=False,
+                action="auto_fix",
+                message="Source-plan recovery requires a plan id",
+                details=details,
+            )
+
+        base_url = os.environ.get("MYATTENTION_INTERNAL_API_BASE", "http://127.0.0.1:8000").rstrip("/")
+        timeout = aiohttp.ClientTimeout(total=45)
+
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(
+                    f"{base_url}/api/sources/plans/{plan_id}/refresh",
+                    params={"limit": 12, "trigger_type": "auto_quality_repair"},
+                ) as resp:
+                    body_text = await resp.text()
+                    details["refresh_status"] = resp.status
+                    if resp.status != 200:
+                        details["refresh_response"] = body_text[:1000]
+                        return TaskResult(
+                            success=False,
+                            action="auto_fix",
+                            message=f"Source-plan refresh failed with HTTP {resp.status}",
+                            details=details,
+                        )
+                    try:
+                        refreshed = await resp.json()
+                    except Exception:
+                        details["refresh_response"] = body_text[:1000]
+                        return TaskResult(
+                            success=False,
+                            action="auto_fix",
+                            message="Source-plan refresh returned non-JSON response",
+                            details=details,
+                        )
+        except Exception as exc:
+            details["error"] = str(exc)
+            return TaskResult(
+                success=False,
+                action="auto_fix",
+                message=f"Automated source-plan recovery failed: {exc}",
+                details=details,
+            )
+
+        details["refreshed_plan"] = refreshed
+        review_status = str(refreshed.get("review_status") or "unknown")
+        current_version = int(refreshed.get("current_version") or 0)
+        latest_version = int(refreshed.get("latest_version") or 0)
+        details["after_status"] = "healthy" if review_status == "accepted" else "degraded"
+        details["after_state"] = review_status
+
+        if review_status == "accepted" and latest_version >= current_version:
+            return TaskResult(
+                success=True,
+                action="auto_fix",
+                message=f"Source plan {plan_id[:8]} refreshed successfully and is now {review_status}",
+                details=details,
+            )
+
+        return TaskResult(
+            success=False,
+            action="auto_fix",
+            message=f"Source plan {plan_id[:8]} refreshed but still requires review ({review_status})",
             details=details,
         )
 

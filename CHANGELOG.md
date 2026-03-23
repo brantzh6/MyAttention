@@ -201,3 +201,11 @@
 - Verified live:
   - normal `/api/chat` streaming returns assistant content again
   - both `chat-single-canary` and `chat-voting-canary` now pass in `api/evolution/status`
+- Added the next step of the evolution/source-intelligence closed loop:
+  - repairable `source_plan_quality` issues are now created as `auto_processible=true`
+  - auto-evolution now processes those source-plan quality tasks immediately instead of only recording them
+  - repeated detections can retrigger processing rather than only increment dedupe counters
+  - system-health task recovery now supports `refresh_source_plan` for source-plan quality/review issues
+- Reduced false-red evolution health noise:
+  - `services/api/feeds/log_monitor.py` now filters SQLAlchemy statement noise from quick health checks and error-pattern analysis
+  - quick health now surfaces real runtime errors instead of hundreds of cached SQL fragments

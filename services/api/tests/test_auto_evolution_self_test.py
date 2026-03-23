@@ -172,6 +172,7 @@ class AutoEvolutionSelfTestIssueTest(unittest.TestCase):
         self.assertEqual(len(issues), 1)
         self.assertEqual(issues[0]["priority"], 0)
         self.assertEqual(issues[0]["source_data"]["type"], "source_plan_quality")
+        self.assertTrue(issues[0]["auto_processible"])
 
 
 if __name__ == "__main__":

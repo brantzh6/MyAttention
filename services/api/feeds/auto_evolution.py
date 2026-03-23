@@ -225,11 +225,23 @@ def build_source_plan_quality_issues(snapshot: dict | None) -> list[dict[str, An
         severity = "critical" if finding.get("status") == "degraded" else "warning"
         priority = 0 if severity == "critical" else 1
         reasons = list(finding.get("reasons") or [])
+        auto_processible = any(
+            token in reason
+            for reason in reasons
+            for token in (
+                "outdated attention policy version",
+                "dominated by generic domains",
+                "lacks enough bucket diversity",
+                "missing an implementation bucket",
+                "missing an authority bucket",
+                "missing a research bucket",
+            )
+        )
         issues.append(
             {
                 "priority": priority,
                 "category": "quality",
-                "auto_processible": False,
+                "auto_processible": auto_processible,
                 "title": f"[source-plan] quality drift: {plan_id[:8]}",
                 "description": "; ".join(reasons[:3]) or f"Source-plan quality drift detected for plan {plan_id}.",
                 "source_type": "system_health",
@@ -1342,7 +1354,11 @@ class AutoEvolutionSystem:
                         assigned_brain="source-intelligence-brain",
                     ),
                 )
-                await processor.create_task(classification)
+                task = await processor.create_task(classification)
+                if task.auto_processible and (
+                    getattr(task, "_was_created", True) or getattr(task, "_was_deduplicated", False)
+                ):
+                    await processor.process(task)
             for issue in build_source_plan_quality_issues(quality_snapshot):
                 classification = ClassificationResult(
                     priority=issue["priority"],
@@ -1358,7 +1374,11 @@ class AutoEvolutionSystem:
                         assigned_brain="source-intelligence-brain",
                     ),
                 )
-                await processor.create_task(classification)
+                task = await processor.create_task(classification)
+                if task.auto_processible and (
+                    getattr(task, "_was_created", True) or getattr(task, "_was_deduplicated", False)
+                ):
+                    await processor.process(task)
 
     async def _run_evolution_cycle(self):
         """运行一次进化周期"""

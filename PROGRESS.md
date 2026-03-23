@@ -323,3 +323,17 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
     - `self_test.healthy = true`
 - Current known gap:
   - evolution still reports `critical_log_errors`, but this is now log-noise degradation rather than chat-path failure
+- Closed the next evolution-loop gap for source intelligence:
+  - `source_plan_quality` issues are now marked `auto_processible` when the drift is repairable by a refresh cycle
+  - auto-evolution now immediately processes auto-fixable source-plan quality tasks instead of only creating pending issues
+  - repeated detections now also retrigger processing instead of only incrementing occurrence counts
+  - `services/api/feeds/task_processor.py` now supports a `refresh_source_plan` recovery strategy for system-health issues tied to a source plan
+- Reduced health-check noise so evolution status is closer to reality:
+  - `services/api/feeds/log_monitor.py` now filters SQLAlchemy engine statement noise from quick health checks and error pattern aggregation
+  - quick health is no longer dominated by cached SQL statements and task update SQL
+- Verified:
+  - source-plan quality issues now appear as `auto_processible=true` in `api/testing/issues`
+  - quick health check now drops from hundreds of fake critical issues to a single real runtime error
+- Current known gap:
+  - `api/evolution/status` can still temporarily show stale `critical_log_errors` snapshots until the next loop writes a fresh filtered snapshot
+  - one real runtime error remains in current quick health: `Local LLM decision failed: 'str' object has no attribute 'content'`

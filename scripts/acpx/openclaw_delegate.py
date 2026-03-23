@@ -84,20 +84,26 @@ def find_latest_assistant(entries: list[dict[str, Any]]) -> dict[str, Any] | Non
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Submit a delegated task through acpx/openclaw and recover the result.")
-    parser.add_argument("prompt", help="Task prompt to delegate.")
+    parser.add_argument("prompt", nargs="?", help="Task prompt to delegate.")
+    parser.add_argument("--file", help="Read prompt text from a UTF-8 file.")
     parser.add_argument("--session", default="myattention-coder", help="Named acpx session to use.")
     parser.add_argument("--cwd", default=".", help="Workspace directory.")
     parser.add_argument("--timeout", type=int, default=120, help="Seconds to wait for a result.")
     parser.add_argument("--poll-interval", type=float, default=2.0, help="Polling interval in seconds.")
     parser.add_argument("--history-limit", type=int, default=20, help="How many history entries to fetch.")
     args = parser.parse_args()
+    if bool(args.prompt) == bool(args.file):
+        parser.error("Provide exactly one of: prompt or --file")
 
     cwd = Path(args.cwd).resolve()
+    prompt_text = args.prompt
+    if args.file:
+        prompt_text = Path(args.file).read_text(encoding="utf-8")
     ensure_session(args.session, cwd)
     before = fetch_session(args.session, cwd)
     before_ts = before.get("updated_at") or before.get("lastUsedAt") or ""
 
-    send_prompt(args.session, args.prompt, cwd)
+    send_prompt(args.session, prompt_text, cwd)
 
     deadline = time.time() + args.timeout
     while time.time() < deadline:

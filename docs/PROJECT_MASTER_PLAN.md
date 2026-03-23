@@ -28,6 +28,7 @@
 - 统一版本管理规范：`docs/VERSION_MANAGEMENT.md`
 - 版本化智能架构：`docs/VERSIONED_INTELLIGENCE_ARCHITECTURE.md`
 - 时间化与版本化数据研究：`docs/TEMPORAL_AND_VERSIONED_DATA_RESEARCH.md`
+- 受控任务外包与多脑协作策略：`docs/CONTROLLED_DELEGATION_STRATEGY.md`
 - 实施准备检查点：`docs/IMPLEMENTATION_READINESS_CHECKPOINT.md`
 - gstack skill 试用与评估：`docs/GSTACK_TRIAL_PLAN.md`
 - 项目推进路线图：`docs/PROJECT_EXECUTION_ROADMAP.md`

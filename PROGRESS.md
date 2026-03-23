@@ -355,3 +355,4 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - `POST /api/evolution/self-test/run` now returns `healthy = true`
   - both `chat-single-canary` and `chat-voting-canary` now pass in the same self-test snapshot
   - `GET /api/evolution/health/quick` now returns `status = healthy` with `critical_count = 0`
+- 2026-03-24: `acpx -> openclaw` 委派链路进入可用状态。当前前台 shell 回显仍有缺陷，但专用 OpenClaw coding agent 已可通过 `acpx` 创建 session、提交 prompt，并通过 `sessions history/show` 结构化回收结果。新增 helper: `/D:/code/MyAttention/scripts/acpx/openclaw_delegate.py`。

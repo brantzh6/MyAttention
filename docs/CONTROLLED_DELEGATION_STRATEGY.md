@@ -237,3 +237,28 @@ version_refs:
 - `docs/TASK_AND_WORKFLOW_MODEL.md`
 - `docs/BRAIN_CONTROL_ARCHITECTURE.md`
 - `docs/VERSIONED_INTELLIGENCE_ARCHITECTURE.md`
+
+## 12. Current acpx/OpenClaw Working Mode
+
+The current transport is usable, but with a known shell-output limitation.
+
+- `acpx -> openclaw` session creation works.
+- Dedicated OpenClaw coding agent routing works.
+- Prompt execution completes and is persisted in `acpx` session history.
+- Limitation: foreground shell output from `acpx openclaw prompt/exec` is not reliably rendered on this machine.
+
+Current workaround:
+
+- Submit via `acpx`
+- Recover results via:
+  - `acpx --format json openclaw sessions history <name> --limit N`
+  - `acpx --format json openclaw sessions show <name>`
+- Helper script:
+  - `/D:/code/MyAttention/scripts/acpx/openclaw_delegate.py`
+
+This keeps delegation inside the `acpx` control plane while preserving:
+
+- session ownership
+- bounded task routing
+- structured result recovery
+- controller-side acceptance and rollback

@@ -220,3 +220,4 @@
   - `POST /api/evolution/self-test/run` returns `healthy=true`
   - `chat-single-canary` and `chat-voting-canary` both pass in the same snapshot
   - `GET /api/evolution/health/quick` now returns `status=healthy` and `critical_count=0`
+- Added controlled `acpx/openclaw` delegation workaround using session-history recovery, plus a reusable helper script at `/D:/code/MyAttention/scripts/acpx/openclaw_delegate.py`.

@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import json
 
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel, Field
@@ -130,6 +131,10 @@ class SourceDiscoveryCandidate(BaseModel):
     recommendation: str
     recommendation_reason: str
     evidence_count: int
+    activity_freshness: float = 0.0
+    follow_score: float = 0.0
+    inferred_roles: List[str] = []
+    related_entities: List[Dict[str, str]] = []
     matched_queries: List[str]
     sample_titles: List[str]
     sample_snippets: List[str]
@@ -294,13 +299,38 @@ def _source_to_api_model(source: _FeedSource) -> Source:
 def _normalize_domain(value: str) -> str:
     parsed = urlparse(value if "://" in value else f"https://{value}")
     domain = parsed.netloc or parsed.path
-    return domain.lower().removeprefix("www.")
+    normalized = domain.lower().removeprefix("www.")
+    parts = normalized.split(".")
+    if len(parts) >= 3 and parts[0] in {"m", "mobile", "eu"}:
+        normalized = ".".join(parts[1:])
+    return normalized
 
 
 def _candidate_identity(url: str, focus: SourceDiscoveryFocus) -> tuple[str, str, str, str, str]:
     parsed = urlparse(url if "://" in url else f"https://{url}")
     domain = _normalize_domain(parsed.netloc or parsed.path)
     path_segments = [segment for segment in (parsed.path or "").split("/") if segment]
+
+    if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 4 and path_segments[2].lower() == "releases":
+        owner, repo = path_segments[0], path_segments[1]
+        release_id = path_segments[4] if len(path_segments) >= 5 and path_segments[3].lower() == "tag" else path_segments[3]
+        object_key = f"{domain}/{owner}/{repo}/release/{release_id}".lower()
+        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/releases/{release_id}"
+        display_name = f"{owner}/{repo} release {release_id}"
+        return "release", object_key, display_name, canonical_url, domain
+
+    if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 3 and path_segments[2].lower() == "releases":
+        owner, repo = path_segments[0], path_segments[1]
+        object_key = f"{domain}/{owner}/{repo}/release/latest".lower()
+        canonical_url = f"https://{domain}/{owner}/{repo}/releases"
+        display_name = f"{owner}/{repo} releases"
+        return "release", object_key, display_name, canonical_url, domain
+
+    if domain in {"github.com", "gitlab.com"} and path_segments and path_segments[0].lower() == "orgs" and len(path_segments) >= 2:
+        org = path_segments[1]
+        object_key = f"{domain}/org/{org}".lower()
+        canonical_url = f"https://{domain}/orgs/{org}"
+        return "organization", object_key, org, canonical_url, domain
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 2:
         owner, repo = path_segments[0], path_segments[1]
@@ -317,19 +347,88 @@ def _candidate_identity(url: str, focus: SourceDiscoveryFocus) -> tuple[str, str
         return "repository", object_key, display_name, canonical_url, domain
 
     if domain == "reddit.com" and len(path_segments) >= 2 and path_segments[0].lower() == "r":
+        if len(path_segments) >= 4 and path_segments[2].lower() in {"comments", "s"}:
+            thread_id = path_segments[3]
+            object_key = f"{domain}/thread/{thread_id}".lower()
+            canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments[:4])}"
+            display_name = f"r/{path_segments[1]} thread {thread_id}"
+            return "signal", object_key, display_name, canonical_url, domain
         community = path_segments[1]
         object_key = f"{domain}/r/{community}".lower()
         canonical_url = f"https://{domain}/r/{community}"
         display_name = f"r/{community}"
         return "community", object_key, display_name, canonical_url, domain
 
+    if domain == "linkedin.com" and len(path_segments) >= 2 and path_segments[0].lower() == "company":
+        company = path_segments[1]
+        object_key = f"{domain}/company/{company}".lower()
+        canonical_url = f"https://{domain}/company/{company}"
+        return "organization", object_key, company, canonical_url, domain
+
+    if domain == "linkedin.com" and len(path_segments) >= 2 and path_segments[0].lower() == "in":
+        handle = path_segments[1]
+        object_key = f"{domain}/in/{handle}".lower()
+        canonical_url = f"https://{domain}/in/{handle}"
+        return "person", object_key, handle, canonical_url, domain
+
     if domain in {"x.com", "twitter.com"} and path_segments:
+        if len(path_segments) >= 3 and path_segments[1].lower() == "status":
+            handle = path_segments[0]
+            status_id = path_segments[2]
+            object_key = f"{domain}/{handle}/status/{status_id}".lower()
+            canonical_url = url if url.startswith("http") else f"https://{domain}/{handle}/status/{status_id}"
+            display_name = f"@{handle} status {status_id}"
+            return "signal", object_key, display_name, canonical_url, domain
         handle = path_segments[0]
         if handle.lower() not in {"home", "search", "explore", "i", "settings", "messages"}:
             object_key = f"{domain}/{handle}".lower()
             canonical_url = f"https://{domain}/{handle}"
             display_name = f"@{handle}"
             return "person", object_key, display_name, canonical_url, domain
+
+    if domain == "news.ycombinator.com" and parsed.query:
+        query = parsed.query.lower()
+        if "id=" in query:
+            item_id = query.split("id=", 1)[1].split("&", 1)[0]
+            object_key = f"{domain}/item/{item_id}".lower()
+            canonical_url = url if url.startswith("http") else f"https://{domain}{parsed.path}?id={item_id}"
+            display_name = f"hn item {item_id}"
+            return "signal", object_key, display_name, canonical_url, domain
+
+    if domain == "github.com" and len(path_segments) == 1:
+        handle = path_segments[0]
+        if handle.lower() not in {
+            "orgs",
+            "topics",
+            "collections",
+            "features",
+            "enterprise",
+            "pricing",
+            "marketplace",
+            "sponsors",
+            "settings",
+            "search",
+            "notifications",
+            "explore",
+            "login",
+            "join",
+        }:
+            object_key = f"{domain}/user/{handle}".lower()
+            canonical_url = f"https://{domain}/{handle}"
+            return "person", object_key, handle, canonical_url, domain
+
+    lowered_url = (parsed.path or "").lower()
+    if any(token in lowered_url for token in ("/release", "/releases", "release-notes", "changelog", "whats-new", "announcements")):
+        object_key = f"{domain}:release".lower()
+        canonical_url = url if url.startswith("http") else f"https://{domain}{parsed.path}"
+        display_name = f"{domain} release stream"
+        return "release", object_key, display_name, canonical_url, domain
+
+    if any(token in lowered_url for token in ("conference", "summit", "meetup", "workshop", "webinar", "talks", "events")):
+        object_key = f"{domain}:event".lower()
+        canonical_url = url if url.startswith("http") else f"https://{domain}{parsed.path}"
+        display_name = f"{domain} events"
+        return "event", object_key, display_name, canonical_url, domain
 
     object_key = domain.lower()
     canonical_url = url if url.startswith("http") else f"https://{domain}"
@@ -386,9 +485,11 @@ def _discovery_queries(topic: str, focus: SourceDiscoveryFocus, execution_policy
         ]
     if focus == SourceDiscoveryFocus.METHOD:
         return [
-            f"{topic} open source framework github docs",
-            f"{topic} skill workflow agent community",
-            f"{topic} best practices benchmark",
+            f"{topic} github repository open source framework",
+            f"{topic} arxiv paper openreview benchmark",
+            f"{topic} maintainer researcher speaker blog",
+            f"{topic} subreddit hacker news community discussion",
+            f"{topic} skill workflow best practices docs",
         ]
     return [
         f"{topic} 官方 权威 机构",
@@ -435,6 +536,10 @@ def _candidate_to_attention_payload(candidate: SourceDiscoveryCandidate) -> Dict
         "recommendation": candidate.recommendation,
         "recommendation_reason": candidate.recommendation_reason,
         "evidence_count": candidate.evidence_count,
+        "activity_freshness": candidate.activity_freshness,
+        "follow_score": candidate.follow_score,
+        "inferred_roles": list(candidate.inferred_roles),
+        "related_entities": list(candidate.related_entities),
         "matched_queries": list(candidate.matched_queries),
         "sample_titles": list(candidate.sample_titles),
         "sample_snippets": list(candidate.sample_snippets),
@@ -1129,15 +1234,266 @@ def _domain_quality_adjustment(domain: str, focus: SourceDiscoveryFocus) -> floa
         "blog.csdn.net",
         "m.blog.csdn.net",
     )
+    contextual_tech_media = (
+        "36kr.com",
+        "huxiu.com",
+        "ithome.com",
+        "jiqizhixin.com",
+        "techcrunch.com",
+        "theverge.com",
+        "wired.com",
+        "substack.com",
+        "medium.com",
+    )
 
     score = 0.0
     if any(token in domain for token in positive.get(focus, ())):
         score += 0.25
     if any(token in domain for token in negative):
         score -= 0.3
+    if any(token in domain for token in contextual_tech_media):
+        if focus == SourceDiscoveryFocus.LATEST:
+            score += 0.08
+        elif focus == SourceDiscoveryFocus.FRONTIER:
+            score -= 0.04
+        elif focus == SourceDiscoveryFocus.METHOD:
+            score -= 0.08
     if domain.startswith("m."):
         score -= 0.1
     return score
+
+
+def _object_type_quality_adjustment(
+    item_type: str,
+    domain: str,
+    focus: SourceDiscoveryFocus,
+) -> float:
+    item_type = item_type.lower()
+    domain = domain.lower()
+
+    if focus != SourceDiscoveryFocus.METHOD:
+        if item_type == "release" and focus in {SourceDiscoveryFocus.LATEST, SourceDiscoveryFocus.FRONTIER}:
+            return 0.16
+        if item_type == "event" and focus == SourceDiscoveryFocus.FRONTIER:
+            return 0.1
+        return 0.0
+
+    if item_type == "repository":
+        return 0.2
+    if item_type == "release":
+        return 0.16
+    if item_type == "organization":
+        return 0.1
+    if item_type == "person":
+        return 0.12
+    if item_type == "community":
+        return 0.08
+    if item_type == "signal":
+        return 0.14
+    if item_type == "event":
+        return 0.06
+
+    score = 0.0
+    if domain in {"github.com", "gitlab.com", "huggingface.co"}:
+        score += 0.12
+    if domain in {"arxiv.org", "openreview.net"}:
+        score += 0.1
+    if domain in {"reddit.com", "news.ycombinator.com"}:
+        score += 0.05
+    return score
+
+
+def _person_activity_freshness(
+    item_type: str,
+    title: str,
+    snippet: str,
+    focus: SourceDiscoveryFocus,
+) -> float:
+    if item_type != "person":
+        return 0.0
+
+    text = f"{title} {snippet}".lower()
+    score = 0.0
+    if any(token in text for token in ("2026", "2025", "2024")):
+        score += 0.06
+    if any(token in text for token in ("speaker", "talk", "summit", "conference", "workshop", "maintainer", "release", "author")):
+        score += 0.05
+    if focus in {SourceDiscoveryFocus.METHOD, SourceDiscoveryFocus.FRONTIER}:
+        score += 0.02
+    return min(score, 0.12)
+
+
+def _infer_candidate_roles(item_type: str, title: str, snippet: str) -> list[str]:
+    if item_type not in {"person", "organization"}:
+        return []
+
+    text = f"{title} {snippet}".lower()
+    roles: list[str] = []
+    checks = [
+        ("maintainer", ("maintainer", "core contributor", "owner")),
+        ("researcher", ("researcher", "scientist", "research lead", "lab")),
+        ("speaker", ("speaker", "talk", "keynote", "summit", "conference", "workshop")),
+        ("author", ("author", "paper", "wrote", "co-author")),
+        ("builder", ("engineer", "developer", "builder", "creator")),
+    ]
+    for role, tokens in checks:
+        if any(token in text for token in tokens) and role not in roles:
+            roles.append(role)
+    return roles[:3]
+
+
+def _candidate_relation_hints(item_type: str, object_key: str, url: str) -> list[dict[str, str]]:
+    related: list[dict[str, str]] = []
+    key = object_key.lower()
+    if item_type in {"repository", "release"} and key.startswith("github.com/"):
+        parts = key.split("/")
+        if len(parts) >= 3:
+            owner = parts[1]
+            owner_key = f"github.com/user/{owner}"
+            related.append({"relation": "owner", "item_type": "person", "object_key": owner_key, "label": owner})
+    elif item_type == "organization" and key.startswith("github.com/org/"):
+        org = key.split("/org/", 1)[1]
+        related.append({"relation": "activity_stream", "item_type": "domain", "object_key": "github.com", "label": f"{org} org"})
+    elif item_type == "person":
+        if key.startswith("github.com/user/"):
+            handle = key.split("github.com/user/", 1)[1]
+            related.append({"relation": "activity_stream", "item_type": "domain", "object_key": "github.com", "label": f"@{handle} on GitHub"})
+        elif key.startswith("x.com/") or key.startswith("twitter.com/"):
+            handle = key.split("/", 1)[1] if "/" in key else key
+            related.append({"relation": "activity_stream", "item_type": "signal", "object_key": f"{key}/status/latest", "label": f"{handle} activity"})
+        elif "linkedin.com/in/" in key:
+            handle = key.split("linkedin.com/in/", 1)[1]
+            related.append({"relation": "profile", "item_type": "domain", "object_key": "linkedin.com", "label": f"{handle} profile"})
+    elif item_type == "signal":
+        related.append({"relation": "source_stream", "item_type": "domain", "object_key": url.lower(), "label": "discussion"})
+    return related[:3]
+
+
+def _related_entity_domain(object_key: str) -> str:
+    key = object_key.lower()
+    if "/" in key:
+        return key.split("/", 1)[0]
+    if ":" in key:
+        return key.split(":", 1)[0]
+    return key
+
+
+def _related_entity_url(item_type: str, object_key: str) -> str:
+    key = object_key.lower()
+    if item_type == "person" and key.startswith("github.com/user/"):
+        handle = key.split("github.com/user/", 1)[1]
+        return f"https://github.com/{handle}"
+    if item_type == "organization" and key.startswith("github.com/org/"):
+        handle = key.split("github.com/org/", 1)[1]
+        return f"https://github.com/{handle}"
+    if item_type == "person" and key.startswith("x.com/"):
+        handle = key.split("x.com/", 1)[1]
+        return f"https://x.com/{handle}"
+    if item_type == "person" and key.startswith("twitter.com/"):
+        handle = key.split("twitter.com/", 1)[1]
+        return f"https://twitter.com/{handle}"
+    if item_type == "person" and "linkedin.com/in/" in key:
+        handle = key.split("linkedin.com/in/", 1)[1]
+        return f"https://linkedin.com/in/{handle}"
+    return f"https://{key}"
+
+
+def _build_related_candidate_seed(
+    related: dict[str, str],
+    *,
+    parent_object_key: str,
+    parent_name: str,
+    parent_score: float,
+    parent_tier: str,
+    focus: SourceDiscoveryFocus,
+) -> Optional[dict[str, Any]]:
+    item_type = str(related.get("item_type", "")).lower()
+    object_key = str(related.get("object_key", "")).strip().lower()
+    label = str(related.get("label", "")).strip()
+    relation = str(related.get("relation", "")).strip().lower()
+    if item_type not in {"person", "organization"} or not object_key:
+        return None
+
+    inferred_roles: list[str] = []
+    if item_type == "person" and relation == "owner" and focus in {SourceDiscoveryFocus.METHOD, SourceDiscoveryFocus.FRONTIER}:
+        inferred_roles.append("maintainer")
+
+    if item_type == "organization" and focus == SourceDiscoveryFocus.FRONTIER:
+        inferred_roles.append("researcher")
+
+    return {
+        "item_type": item_type,
+        "object_key": object_key,
+        "domain": _related_entity_domain(object_key),
+        "name": label or object_key,
+        "url": _related_entity_url(item_type, object_key),
+        "authority_tier": parent_tier,
+        "authority_score": max(0.45, min(0.92, parent_score - 0.08)),
+        "evidence_count": 1,
+        "activity_freshness": 0.02 if item_type == "person" else 0.0,
+        "follow_score": 0.1 if "maintainer" in inferred_roles else 0.04,
+        "inferred_roles": inferred_roles,
+        "related_entities": [
+            {
+                "relation": "associated_with",
+                "item_type": "repository" if "github.com/" in parent_object_key else "domain",
+                "object_key": parent_object_key,
+                "label": parent_name,
+            }
+        ],
+        "matched_queries": [],
+        "sample_titles": [label or object_key],
+        "sample_snippets": [f"Related to {parent_name} via {relation or 'association'}"],
+    }
+
+
+def _person_follow_score(
+    item_type: str,
+    roles: list[str],
+    activity_freshness: float,
+    related_entities: list[dict[str, str]],
+    focus: SourceDiscoveryFocus,
+) -> float:
+    if item_type != "person" or focus not in {SourceDiscoveryFocus.METHOD, SourceDiscoveryFocus.FRONTIER}:
+        return 0.0
+
+    role_weight = 0.0
+    role_map = {
+        "maintainer": 0.12,
+        "speaker": 0.08,
+        "researcher": 0.07,
+        "author": 0.06,
+        "builder": 0.05,
+    }
+    for role in roles:
+        role_weight = max(role_weight, role_map.get(role, 0.0))
+
+    relation_weight = 0.0
+    for related in related_entities:
+        item_type_value = str(related.get("item_type", "")).lower()
+        if item_type_value == "signal":
+            relation_weight = max(relation_weight, 0.05)
+        elif item_type_value in {"repository", "release"}:
+            relation_weight = max(relation_weight, 0.04)
+        elif item_type_value == "domain":
+            relation_weight = max(relation_weight, 0.02)
+
+    return min(activity_freshness + role_weight + relation_weight, 0.24)
+
+
+def _focus_type_priority(item_type: str, focus: SourceDiscoveryFocus) -> int:
+    if focus == SourceDiscoveryFocus.FRONTIER:
+        order = ["research", "person", "organization", "release", "signal", "repository", "community", "event", "domain"]
+    elif focus == SourceDiscoveryFocus.METHOD:
+        order = ["person", "organization", "repository", "release", "community", "signal", "research", "event", "domain"]
+    elif focus == SourceDiscoveryFocus.LATEST:
+        order = ["signal", "release", "person", "organization", "community", "domain", "repository", "research", "event"]
+    else:
+        order = ["authority", "organization", "person", "research", "domain", "community", "repository", "release", "event", "signal"]
+    try:
+        return len(order) - order.index(item_type)
+    except ValueError:
+        return 0
 
 
 async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) -> SourceDiscoveryResponse:
@@ -1171,7 +1527,22 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
             )
 
             authority = classifier.classify(item.link or source_domain, item.title, _focus_category(body.focus))
-            adjusted_score = max(0.0, min(1.0, authority.score + _domain_quality_adjustment(source_domain, body.focus)))
+            snippet = (item.snippet or item.main_text or "").strip()
+            activity_freshness = _person_activity_freshness(item_type, item.title or "", snippet, body.focus)
+            inferred_roles = _infer_candidate_roles(item_type, item.title or "", snippet)
+            related_entities = _candidate_relation_hints(item_type, object_key, canonical_url)
+            follow_score = _person_follow_score(item_type, inferred_roles, activity_freshness, related_entities, body.focus)
+            adjusted_score = max(
+                0.0,
+                min(
+                    1.0,
+                    authority.score
+                    + _domain_quality_adjustment(source_domain, body.focus)
+                    + _object_type_quality_adjustment(item_type, source_domain, body.focus)
+                    + activity_freshness
+                    + follow_score,
+                ),
+            )
             candidate = aggregated.setdefault(
                 object_key,
                 {
@@ -1183,6 +1554,10 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
                     "authority_tier": authority.tier,
                     "authority_score": adjusted_score,
                     "evidence_count": 0,
+                    "activity_freshness": activity_freshness,
+                    "follow_score": follow_score,
+                    "inferred_roles": inferred_roles,
+                    "related_entities": related_entities,
                     "matched_queries": [],
                     "sample_titles": [],
                     "sample_snippets": [],
@@ -1190,20 +1565,96 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
             )
             candidate["authority_tier"] = authority.tier if adjusted_score >= candidate["authority_score"] else candidate["authority_tier"]
             candidate["authority_score"] = max(candidate["authority_score"], adjusted_score)
+            candidate["activity_freshness"] = max(float(candidate.get("activity_freshness", 0.0) or 0.0), activity_freshness)
+            candidate["follow_score"] = max(float(candidate.get("follow_score", 0.0) or 0.0), follow_score)
+            candidate["inferred_roles"] = list(
+                dict.fromkeys(
+                    [
+                        *list(candidate.get("inferred_roles", [])),
+                        *inferred_roles,
+                    ]
+                )
+            )[:3]
             candidate["evidence_count"] += 1
             if query not in candidate["matched_queries"]:
                 candidate["matched_queries"].append(query)
             if item.title and len(candidate["sample_titles"]) < 3:
                 candidate["sample_titles"].append(item.title)
-            snippet = (item.snippet or item.main_text or "").strip()
             if snippet and len(candidate["sample_snippets"]) < 2:
                 candidate["sample_snippets"].append(snippet[:220])
 
+            for related in related_entities:
+                related_seed = _build_related_candidate_seed(
+                    related,
+                    parent_object_key=object_key,
+                    parent_name=display_name,
+                    parent_score=adjusted_score,
+                    parent_tier=authority.tier,
+                    focus=body.focus,
+                )
+                if related_seed is None:
+                    continue
+                related_candidate = aggregated.setdefault(related_seed["object_key"], related_seed)
+                related_candidate["authority_score"] = max(
+                    float(related_candidate.get("authority_score", 0.0) or 0.0),
+                    float(related_seed["authority_score"]),
+                )
+                related_candidate["authority_tier"] = (
+                    related_seed["authority_tier"]
+                    if float(related_seed["authority_score"]) >= float(related_candidate.get("authority_score", 0.0) or 0.0)
+                    else related_candidate.get("authority_tier", related_seed["authority_tier"])
+                )
+                related_candidate["evidence_count"] = int(related_candidate.get("evidence_count", 0) or 0) + 1
+                related_candidate["activity_freshness"] = max(
+                    float(related_candidate.get("activity_freshness", 0.0) or 0.0),
+                    float(related_seed.get("activity_freshness", 0.0) or 0.0),
+                )
+                related_candidate["follow_score"] = max(
+                    float(related_candidate.get("follow_score", 0.0) or 0.0),
+                    float(related_seed.get("follow_score", 0.0) or 0.0),
+                )
+                related_candidate["inferred_roles"] = list(
+                    dict.fromkeys(
+                        [
+                            *list(related_candidate.get("inferred_roles", [])),
+                            *list(related_seed.get("inferred_roles", [])),
+                        ]
+                    )
+                )[:3]
+                related_candidate["related_entities"] = list(
+                    dict.fromkeys(
+                        [
+                            json.dumps(item, ensure_ascii=False, sort_keys=True)
+                            for item in [
+                                *list(related_candidate.get("related_entities", [])),
+                                *list(related_seed.get("related_entities", [])),
+                            ]
+                        ]
+                    )
+                )[:4]
+                related_candidate["related_entities"] = [
+                    json.loads(item)
+                    for item in related_candidate["related_entities"]
+                ]
+                if query not in related_candidate["matched_queries"]:
+                    related_candidate["matched_queries"].append(query)
+
     ranked = sorted(
         [item for item in aggregated.values() if item["authority_score"] >= 0.45],
-        key=lambda item: (item["authority_score"], item["evidence_count"]),
+        key=lambda item: (
+            item["authority_score"],
+            item["evidence_count"],
+            float(item.get("follow_score", 0.0) or 0.0),
+            _focus_type_priority(item["item_type"], body.focus),
+            1 if item["item_type"] == "release" and body.focus in {SourceDiscoveryFocus.LATEST, SourceDiscoveryFocus.FRONTIER, SourceDiscoveryFocus.METHOD} else 0,
+            1 if item["item_type"] == "event" and body.focus == SourceDiscoveryFocus.FRONTIER else 0,
+            1 if item["item_type"] == "repository" and body.focus == SourceDiscoveryFocus.METHOD else 0,
+            1 if item["item_type"] == "organization" and body.focus == SourceDiscoveryFocus.METHOD else 0,
+            1 if item["item_type"] == "person" and body.focus == SourceDiscoveryFocus.METHOD else 0,
+            1 if item["item_type"] == "community" and body.focus == SourceDiscoveryFocus.METHOD else 0,
+        ),
         reverse=True,
-    )[: body.limit]
+    )[: max(body.limit * 4, 24)]
 
     candidates: list[SourceDiscoveryCandidate] = []
     for item in ranked:
@@ -1224,6 +1675,10 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
                 recommendation=recommendation,
                 recommendation_reason=reason,
                 evidence_count=item["evidence_count"],
+                activity_freshness=float(item.get("activity_freshness", 0.0) or 0.0),
+                follow_score=float(item.get("follow_score", 0.0) or 0.0),
+                inferred_roles=list(item.get("inferred_roles", [])),
+                related_entities=list(item.get("related_entities", [])),
                 matched_queries=item["matched_queries"],
                 sample_titles=item["sample_titles"],
                 sample_snippets=item["sample_snippets"],
@@ -1235,6 +1690,7 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
         body.focus,
         [_candidate_to_attention_payload(candidate) for candidate in candidates],
         body.limit,
+        topic=body.topic,
     )
     return SourceDiscoveryResponse(
         topic=body.topic,
@@ -1413,7 +1869,7 @@ async def get_feed_collection_health(db: AsyncSession = Depends(get_db)):
 async def refresh_feeds():
     """强制刷新所有信息源（清除缓存）"""
     fetcher = get_feed_fetcher()
-    fetcher._cache.clear()
+    await fetcher.clear_all_cache()
     entries = await fetcher.fetch_all()
     return {"status": "ok", "count": len(entries)}
 
@@ -1863,6 +2319,7 @@ async def refresh_source(source_id: str):
     fetcher = get_feed_fetcher()
     # 清除该源缓存
     fetcher._cache.pop(source_id, None)
+    await fetcher._delete_redis_cache(source_id)
     entries = await fetcher.fetch_by_source(source_id)
     return {"status": "ok", "source_id": source_id, "count": len(entries)}
 
@@ -2082,9 +2539,11 @@ async def import_feeds(body: FeedsImportRequest, db: AsyncSession = Depends(get_
             # Sort by published time and dedup
             existing_entries.sort(key=lambda e: e.published_at, reverse=True)
             fetcher._cache[source_key] = (_time.time(), existing_entries)
+            await fetcher._store_redis_cache(source_key, existing_entries)
         else:
             entries.sort(key=lambda e: e.published_at, reverse=True)
             fetcher._cache[source_key] = (_time.time(), entries)
+            await fetcher._store_redis_cache(source_key, entries)
     
     return FeedsImportResponse(
         status="ok" if imported_ids else "empty",

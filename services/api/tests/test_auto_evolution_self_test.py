@@ -9,6 +9,7 @@ if str(API_ROOT) not in sys.path:
 
 from feeds.auto_evolution import build_self_test_issue
 from feeds.auto_evolution import build_source_plan_quality_issues
+from feeds.auto_evolution import build_source_plan_review_issues
 from feeds.auto_evolution import evaluate_source_plan_quality_snapshot
 from feeds.auto_evolution import is_voting_canary_successful
 from feeds.auto_evolution import update_voting_canary_state
@@ -173,6 +174,24 @@ class AutoEvolutionSelfTestIssueTest(unittest.TestCase):
         self.assertEqual(issues[0]["priority"], 0)
         self.assertEqual(issues[0]["source_data"]["type"], "source_plan_quality")
         self.assertTrue(issues[0]["auto_processible"])
+
+    def test_source_plan_review_issue_only_emitted_for_real_refresh_failure(self) -> None:
+        issues = build_source_plan_review_issues(
+            {
+                "failures": [
+                    {
+                        "plan_id": "12345678-1234-1234-1234-1234567890ab",
+                        "topic": "multi agent research",
+                        "status": 500,
+                    }
+                ],
+                "refreshed": [],
+            }
+        )
+
+        self.assertEqual(len(issues), 1)
+        self.assertEqual(issues[0]["source_data"]["type"], "source_plan_review")
+        self.assertEqual(issues[0]["source_data"]["state"], "failed")
 
 
 if __name__ == "__main__":

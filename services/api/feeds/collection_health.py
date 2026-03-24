@@ -275,6 +275,7 @@ async def collect_collection_health_snapshot(
         "storage": {
             "object_store_backend": get_settings().object_store_backend,
             "feeds_read_backend": getattr(get_settings(), "feeds_read_backend", "hybrid"),
+            "cache_layers": ["memory"],
         },
         "counts": {
             "raw_ingest_total": int(raw_total),
@@ -304,5 +305,14 @@ async def collect_collection_health_snapshot(
         "pending_sources_1h": pending_sources_1h,
         "error_sources_24h": error_sources_24h,
     }
+
+    try:
+        from feeds.fetcher import get_feed_fetcher
+
+        fetcher = get_feed_fetcher()
+        if getattr(fetcher, "_redis_available", False):
+            snapshot["storage"]["cache_layers"].append("redis")
+    except Exception:
+        pass
     snapshot["summary"] = summarize_collection_health(snapshot)
     return snapshot

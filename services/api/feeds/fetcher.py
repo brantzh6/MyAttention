@@ -18,6 +18,13 @@ from typing import Optional
 
 import aiohttp
 
+from config import get_settings
+
+try:
+    import redis.asyncio as redis_async
+except ImportError:  # pragma: no cover - optional outside the project venv
+    redis_async = None
+
 from feeds.proxy_config import load_proxy_settings, normalize_proxy_mode, should_use_proxy
 
 # 尝试导入 SOCKS 代理支持
@@ -1171,6 +1178,92 @@ class FeedFetcher:
         self.sources = self._load_sources(default_sources)
         self.cache_ttl = cache_ttl          # 缓存有效期（秒）
         self._cache: dict[str, tuple[float, list[FeedEntry]]] = {}
+        self._redis = None
+        self._redis_available = False
+        if redis_async is not None:
+            try:
+                settings = get_settings()
+                self._redis = redis_async.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
+                self._redis_available = True
+            except Exception as exc:
+                print(f"[FeedFetcher] redis init failed: {exc}")
+
+    def _redis_cache_key(self, source_id: str) -> str:
+        return f"feed_cache:{source_id}"
+
+    def _serialize_entries(self, entries: list[FeedEntry]) -> str:
+        payload = []
+        for entry in entries:
+            item = asdict(entry)
+            item["published_at"] = entry.published_at.isoformat()
+            payload.append(item)
+        return json.dumps(payload, ensure_ascii=False)
+
+    def _deserialize_entries(self, payload: str) -> list[FeedEntry]:
+        raw_items = json.loads(payload)
+        entries: list[FeedEntry] = []
+        for item in raw_items:
+            entries.append(
+                FeedEntry(
+                    id=item["id"],
+                    title=item["title"],
+                    summary=item.get("summary", ""),
+                    source_name=item.get("source_name", ""),
+                    source_id=item.get("source_id", ""),
+                    url=item.get("url", ""),
+                    published_at=datetime.fromisoformat(item["published_at"]),
+                    category=item.get("category", ""),
+                    importance=float(item.get("importance", 0.5)),
+                    is_read=bool(item.get("is_read", False)),
+                    is_favorite=bool(item.get("is_favorite", False)),
+                )
+            )
+        return entries
+
+    async def _load_redis_cache(self, source_id: str) -> Optional[list[FeedEntry]]:
+        if not self._redis_available or self._redis is None:
+            return None
+        try:
+            payload = await self._redis.get(self._redis_cache_key(source_id))
+            if not payload:
+                return None
+            entries = self._deserialize_entries(payload)
+            self._cache[source_id] = (time.time(), entries)
+            return entries
+        except Exception as exc:
+            print(f"[FeedFetcher] redis read failed for {source_id}: {exc}")
+            return None
+
+    async def _store_redis_cache(self, source_id: str, entries: list[FeedEntry]) -> None:
+        if not self._redis_available or self._redis is None:
+            return
+        try:
+            await self._redis.setex(
+                self._redis_cache_key(source_id),
+                self.cache_ttl,
+                self._serialize_entries(entries),
+            )
+        except Exception as exc:
+            print(f"[FeedFetcher] redis write failed for {source_id}: {exc}")
+
+    async def _delete_redis_cache(self, source_id: str) -> None:
+        if not self._redis_available or self._redis is None:
+            return
+        try:
+            await self._redis.delete(self._redis_cache_key(source_id))
+        except Exception as exc:
+            print(f"[FeedFetcher] redis delete failed for {source_id}: {exc}")
+
+    async def clear_all_cache(self) -> None:
+        self._cache.clear()
+        if not self._redis_available or self._redis is None:
+            return
+        try:
+            keys = await self._redis.keys("feed_cache:*")
+            if keys:
+                await self._redis.delete(*keys)
+        except Exception as exc:
+            print(f"[FeedFetcher] redis clear failed: {exc}")
 
     def _load_sources(self, default_sources: list[FeedSource]) -> list[FeedSource]:
         if not _SOURCES_CONFIG_PATH.exists():
@@ -1290,6 +1383,9 @@ class FeedFetcher:
         cached = self._cache.get(source.id)
         if cached and (time.time() - cached[0]) < self.cache_ttl:
             return cached[1]
+        redis_cached = await self._load_redis_cache(source.id)
+        if redis_cached:
+            return redis_cached
 
         proxy_settings = load_proxy_settings()
         source.proxy_mode = normalize_proxy_mode(source.proxy_mode, source.use_proxy)
@@ -1369,6 +1465,7 @@ class FeedFetcher:
 
         entries = _parse_rss_xml(xml_text, source)
         self._cache[source.id] = (time.time(), entries)
+        await self._store_redis_cache(source.id, entries)
         print(f"[FeedFetcher] {source.name}: fetched {len(entries)} entries")
         return entries
 
@@ -1416,6 +1513,9 @@ class FeedFetcher:
         cached = self._cache.get(source_id)
         if cached:
             return cached[1]
+        redis_cached = await self._load_redis_cache(source_id)
+        if redis_cached:
+            return redis_cached
         return []
 
     def get_sources(self) -> list[FeedSource]:

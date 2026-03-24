@@ -75,6 +75,10 @@ class ClassificationResult:
     source_type: str
     source_id: Optional[str] = None
     source_data: Optional[Dict[str, Any]] = None
+    context_id: Optional[str] = None
+    task_type: str = "workflow"
+    goal: Optional[str] = None
+    assigned_brain: Optional[str] = None
 
 
 class TaskClassifier:

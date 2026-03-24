@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import case, func, select
+from uuid import UUID
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from db import get_db, AsyncSession
-from db.models import Task, TaskHistory, TaskStatus
+from db.models import ProceduralMemory, Task, TaskArtifact, TaskContext, TaskHistory, TaskMemory, TaskStatus
 
 router = APIRouter(tags=["自我进化系统"])
 
@@ -86,6 +88,217 @@ class KnowledgeSearchResponse(BaseModel):
     query: str
     entities: List[Dict]
     relations: List[Dict]
+
+
+class EvolutionContextSummary(BaseModel):
+    id: str
+    context_type: str
+    title: str
+    goal: Optional[str] = None
+    owner_type: Optional[str] = None
+    owner_id: Optional[str] = None
+    status: str
+    priority: int
+    task_count: int
+    open_task_count: int
+    artifact_count: int
+    event_count: int
+    latest_event_at: Optional[str] = None
+    latest_artifact_at: Optional[str] = None
+    latest_event: Optional[Dict[str, Any]] = None
+    latest_artifact: Optional[Dict[str, Any]] = None
+    updated_at: Optional[str] = None
+
+
+class EvolutionContextDetail(EvolutionContextSummary):
+    tasks: List[Dict[str, Any]]
+    recent_events: List[Dict[str, Any]]
+    recent_artifacts: List[Dict[str, Any]]
+
+
+class TaskMemoryResponse(BaseModel):
+    id: str
+    context_id: str
+    task_id: Optional[str] = None
+    memory_kind: str
+    title: str
+    summary: Optional[str] = None
+    content: Optional[str] = None
+    created_by: str
+    metadata: Dict[str, Any]
+    created_at: Optional[str] = None
+
+
+class ProceduralMemoryResponse(BaseModel):
+    id: str
+    memory_key: str
+    name: str
+    problem_type: Optional[str] = None
+    thinking_framework: Optional[str] = None
+    method_name: Optional[str] = None
+    applicability: Optional[str] = None
+    procedure: Optional[str] = None
+    effectiveness_score: float
+    validation_status: str
+    source_kind: Optional[str] = None
+    source_ref: Optional[str] = None
+    version: int
+    last_validated_at: Optional[str] = None
+    metadata: Dict[str, Any]
+
+
+def _dt(value: datetime | None) -> Optional[str]:
+    return value.isoformat() if value else None
+
+
+def _serialize_history(history: TaskHistory) -> Dict[str, Any]:
+    return {
+        "id": str(history.id),
+        "task_id": str(history.task_id) if history.task_id else None,
+        "context_id": str(history.context_id) if history.context_id else None,
+        "event_type": history.event_type,
+        "action": history.action,
+        "result": history.result,
+        "from_status": history.from_status,
+        "to_status": history.to_status,
+        "reason": history.reason,
+        "details": history.details or {},
+        "payload": history.payload or {},
+        "performed_by": history.performed_by,
+        "created_at": _dt(history.created_at),
+    }
+
+
+def _serialize_artifact(artifact: TaskArtifact) -> Dict[str, Any]:
+    return {
+        "id": str(artifact.id),
+        "task_id": str(artifact.task_id) if artifact.task_id else None,
+        "context_id": str(artifact.context_id),
+        "artifact_type": artifact.artifact_type,
+        "version": artifact.version,
+        "title": artifact.title,
+        "summary": artifact.summary,
+        "storage_ref": artifact.storage_ref,
+        "content_ref": artifact.content_ref,
+        "created_by": artifact.created_by,
+        "metadata": artifact.extra or {},
+        "created_at": _dt(artifact.created_at),
+    }
+
+
+def _serialize_task(task: Task) -> Dict[str, Any]:
+    return {
+        "id": str(task.id),
+        "title": task.title,
+        "description": task.description,
+        "status": task.status,
+        "priority": task.priority,
+        "source_type": task.source_type,
+        "source_id": task.source_id,
+        "task_type": task.task_type,
+        "goal": task.goal,
+        "assigned_brain": task.assigned_brain,
+        "assigned_agent": task.assigned_agent,
+        "created_at": _dt(task.created_at),
+        "updated_at": _dt(task.updated_at),
+    }
+
+
+def _task_sort_key(task: Task) -> datetime:
+    return task.updated_at or task.created_at or datetime.min
+
+
+def _task_signature(task: Task) -> tuple[str, str, str]:
+    return (
+        str(task.source_type or ""),
+        str(task.source_id or ""),
+        str(task.title or ""),
+    )
+
+
+def _dedupe_tasks(tasks: List[Task], *, limit: Optional[int] = None) -> List[Task]:
+    ordered = sorted(tasks, key=_task_sort_key, reverse=True)
+    seen: set[tuple[str, str, str]] = set()
+    unique: List[Task] = []
+    for task in ordered:
+        signature = _task_signature(task)
+        if signature in seen:
+            continue
+        seen.add(signature)
+        unique.append(task)
+        if limit is not None and len(unique) >= limit:
+            break
+    return unique
+
+
+def _build_context_summary(context: TaskContext) -> EvolutionContextSummary:
+    tasks = list(context.tasks or [])
+    events = sorted(list(context.events or []), key=lambda item: item.created_at or datetime.min, reverse=True)
+    artifacts = sorted(list(context.artifacts or []), key=lambda item: item.created_at or datetime.min, reverse=True)
+    open_statuses = {
+        TaskStatus.PENDING.value,
+        TaskStatus.CONFIRMED.value,
+        TaskStatus.EXECUTING.value,
+        TaskStatus.FAILED.value,
+    }
+
+    latest_event = events[0] if events else None
+    latest_artifact = artifacts[0] if artifacts else None
+
+    return EvolutionContextSummary(
+        id=str(context.id),
+        context_type=context.context_type,
+        title=context.title,
+        goal=context.goal,
+        owner_type=context.owner_type,
+        owner_id=context.owner_id,
+        status=context.status,
+        priority=context.priority,
+        task_count=len(tasks),
+        open_task_count=sum(1 for task in tasks if task.status in open_statuses),
+        artifact_count=len(artifacts),
+        event_count=len(events),
+        latest_event_at=_dt(latest_event.created_at if latest_event else None),
+        latest_artifact_at=_dt(latest_artifact.created_at if latest_artifact else None),
+        latest_event=_serialize_history(latest_event) if latest_event else None,
+        latest_artifact=_serialize_artifact(latest_artifact) if latest_artifact else None,
+        updated_at=_dt(context.updated_at),
+    )
+
+
+def _serialize_task_memory(memory: TaskMemory) -> TaskMemoryResponse:
+    return TaskMemoryResponse(
+        id=str(memory.id),
+        context_id=str(memory.context_id),
+        task_id=str(memory.task_id) if memory.task_id else None,
+        memory_kind=memory.memory_kind,
+        title=memory.title,
+        summary=memory.summary,
+        content=memory.content,
+        created_by=memory.created_by,
+        metadata=memory.extra or {},
+        created_at=_dt(memory.created_at),
+    )
+
+
+def _serialize_procedural_memory(memory: ProceduralMemory) -> ProceduralMemoryResponse:
+    return ProceduralMemoryResponse(
+        id=str(memory.id),
+        memory_key=memory.memory_key,
+        name=memory.name,
+        problem_type=memory.problem_type,
+        thinking_framework=memory.thinking_framework,
+        method_name=memory.method_name,
+        applicability=memory.applicability,
+        procedure=memory.procedure,
+        effectiveness_score=memory.effectiveness_score or 0.0,
+        validation_status=memory.validation_status,
+        source_kind=memory.source_kind,
+        source_ref=memory.source_ref,
+        version=memory.version,
+        last_validated_at=_dt(memory.last_validated_at),
+        metadata=memory.extra or {},
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -202,6 +415,105 @@ async def get_collection_health(
         return cached
 
     return await collect_collection_health_snapshot(db)
+
+
+@router.get("/contexts")
+async def list_evolution_contexts(
+    limit: int = 12,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return active evolution-related contexts with recent activity."""
+    limit = max(1, min(limit, 50))
+    stmt = (
+        select(TaskContext)
+        .where(TaskContext.context_type.in_(("evolution", "source_intelligence", "system")))
+        .options(
+            selectinload(TaskContext.tasks),
+            selectinload(TaskContext.events),
+            selectinload(TaskContext.artifacts),
+        )
+        .order_by(TaskContext.updated_at.desc().nullslast(), TaskContext.created_at.desc())
+        .limit(limit)
+    )
+    contexts = (await db.execute(stmt)).scalars().all()
+    return {
+        "contexts": [_build_context_summary(context).model_dump() for context in contexts],
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@router.get("/contexts/{context_id}")
+async def get_evolution_context_detail(
+    context_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return one context with tasks, recent events, and recent artifacts."""
+    try:
+        context_uuid = UUID(context_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid context id") from exc
+
+    stmt = (
+        select(TaskContext)
+        .where(TaskContext.id == context_uuid)
+        .options(
+            selectinload(TaskContext.tasks),
+            selectinload(TaskContext.events),
+            selectinload(TaskContext.artifacts),
+        )
+    )
+    context = (await db.execute(stmt)).scalars().first()
+    if not context:
+        raise HTTPException(status_code=404, detail="Context not found")
+
+    summary = _build_context_summary(context)
+    events = sorted(list(context.events or []), key=lambda item: item.created_at or datetime.min, reverse=True)
+    artifacts = sorted(list(context.artifacts or []), key=lambda item: item.created_at or datetime.min, reverse=True)
+    tasks = _dedupe_tasks(list(context.tasks or []), limit=20)
+
+    detail = EvolutionContextDetail(
+        **summary.model_dump(),
+        tasks=[_serialize_task(task) for task in tasks],
+        recent_events=[_serialize_history(event) for event in events[:20]],
+        recent_artifacts=[_serialize_artifact(artifact) for artifact in artifacts[:20]],
+    )
+    return detail.model_dump()
+
+
+@router.get("/memories/task")
+async def list_task_memories(
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return recent task/context memories for evolution and source intelligence."""
+    limit = max(1, min(limit, 100))
+    stmt = (
+        select(TaskMemory)
+        .join(TaskContext, TaskMemory.context_id == TaskContext.id)
+        .where(TaskContext.context_type.in_(("evolution", "source_intelligence", "system")))
+        .order_by(TaskMemory.created_at.desc())
+        .limit(limit)
+    )
+    memories = (await db.execute(stmt)).scalars().all()
+    return {
+        "memories": [_serialize_task_memory(memory).model_dump() for memory in memories],
+        "timestamp": datetime.now().isoformat(),
+    }
+
+
+@router.get("/memories/procedural")
+async def list_procedural_memories(
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return recent validated procedures and operating methods."""
+    limit = max(1, min(limit, 100))
+    stmt = select(ProceduralMemory).order_by(ProceduralMemory.updated_at.desc()).limit(limit)
+    memories = (await db.execute(stmt)).scalars().all()
+    return {
+        "memories": [_serialize_procedural_memory(memory).model_dump() for memory in memories],
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 @router.get("/mvp-status")
@@ -673,6 +985,8 @@ async def get_tasks(
     priority: Optional[int] = None,
     status: Optional[str] = None,
     source_type: Optional[str] = None,
+    include_completed: bool = False,
+    dedupe: bool = True,
     limit: int = 50,
     offset: int = 0,
     db: AsyncSession = Depends(get_db)
@@ -698,9 +1012,14 @@ async def get_tasks(
         query = query.where(Task.source_type == source_type)
         count_query = count_query.where(Task.source_type == source_type)
 
-    # 排序和分页
+    if not include_completed and not status:
+        query = query.where(Task.status != "completed")
+        count_query = count_query.where(Task.status != "completed")
+
+    # 排序
     query = query.order_by(Task.priority.asc(), Task.created_at.desc())
-    query = query.offset(offset).limit(limit)
+    if not dedupe:
+        query = query.offset(offset).limit(limit)
 
     # 执行查询
     result = await db.execute(query)
@@ -709,6 +1028,14 @@ async def get_tasks(
     # 获取总数
     count_result = await db.execute(count_query)
     total = count_result.scalar()
+    deduped_total = total or 0
+
+    if dedupe:
+        deduped_tasks = _dedupe_tasks(list(tasks))
+        deduped_total = len(deduped_tasks)
+        if offset:
+            deduped_tasks = deduped_tasks[offset:]
+        tasks = deduped_tasks[:limit]
 
     # 统计
     pending_result = await db.execute(
@@ -744,7 +1071,7 @@ async def get_tasks(
             )
             for t in tasks
         ],
-        total=total or 0,
+        total=deduped_total if dedupe else (total or 0),
         pending_count=pending_count or 0,
         p0_count=p0_count or 0,
         p1_count=p1_count or 0

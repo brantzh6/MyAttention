@@ -99,6 +99,7 @@ class MessageResponse(BaseModel):
     tokens_used: Optional[int]
     sources: List[dict]
     voting_results: Optional[dict] = None
+    metadata: dict = {}
     created_at: datetime
 
     class Config:
@@ -336,6 +337,7 @@ async def get_conversation_messages(
             tokens_used=m.tokens_used,
             sources=m.sources or [],
             voting_results=m.voting_results,
+            metadata=m.extra or {},
             created_at=m.created_at,
         )
         for m in messages

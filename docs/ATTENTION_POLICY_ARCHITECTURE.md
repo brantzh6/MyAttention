@@ -238,6 +238,46 @@ attention policy 必须显式版本化。
 定义：
 
 - 本策略看哪些维度
+
+---
+
+## 6. Contextual Role Principle
+
+Attention policy 必须避免把某个对象判成“全局高价值”或“全局低价值”。
+
+同一个对象在不同任务意图、不同问题类型、不同关注场景下，可以扮演完全不同的角色。
+
+例如：
+
+- `36kr`
+  - 在 `latest intelligence / 科技产业动态 / 中文市场信号` 下，可以是高价值 `signal + context` 对象
+  - 在 `frontier research / authoritative understanding` 下，更适合作为补充上下文，而不应压过论文、维护者、研究机构或原始发布
+- `repository`
+  - 在 `implementation tracking` 下可能是主对象
+  - 在 `market watch` 下可能只是弱信号
+- `person`
+  - 在 `method learning` 或 `frontier tracking` 下可能是关键关注对象
+  - 在 `stable knowledge` 下可能只是辅助来源线索
+
+因此，V1 attention system 必须遵守：
+
+1. 不做绝对价值判断，只做 `role in context` 判断。
+2. `topic -> source` 不是唯一主轴。
+3. 更合理的抽象是：
+   - `attention object`
+   - `task intent`
+   - `role in context`
+   - `object relations`
+4. 同一对象可以同时服务多个主题与多个 attention plan。
+
+这意味着后续演化方向不应继续堆单一 `topic/source` 层级，而应逐步演化到：
+
+- `object network`
+- `attention plan`
+- `contextual role scoring`
+- `versioned decisions`
+
+这是 attention policy 后续质量优化和数据飞轮设计的关键约束。
 - 各维度怎么计算
 - 权重如何分配
 

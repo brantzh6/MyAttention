@@ -221,3 +221,46 @@
   - `chat-single-canary` and `chat-voting-canary` both pass in the same snapshot
   - `GET /api/evolution/health/quick` now returns `status=healthy` and `critical_count=0`
 - Added controlled `acpx/openclaw` delegation workaround using session-history recovery, plus a reusable helper script at `/D:/code/MyAttention/scripts/acpx/openclaw_delegate.py`.
+- Added bounded delegation packet support for `acpx`/OpenClaw:
+  - `scripts/acpx/openclaw_delegate.py` now supports `prompt` and `exec` modes
+  - `scripts/acpx/build_context_packet.py` builds UTF-8 context packets from selected file excerpts
+  - delegation guidance updated so the main controller sends constrained context instead of repo-wide free-form prompts
+- Added file-based delegation runner:
+  - `scripts/acpx/run_file_delegation.py`
+  - delegation can now target a bounded brief/context pair and require the delegated agent to write a structured UTF-8 JSON result file
+- Improved homepage feed freshness perception:
+  - feed homepage now starts in time-order mode
+  - added a freshness summary card showing snapshot state, latest content time, and current sort mode
+  - reduced the stale-looking mismatch caused by cache-first rendering without clear user-facing status
+- Verified Redis-backed feed cache is now live for source refresh:
+  - `POST /api/feeds/refresh` populates `feed_cache:*` keys in local Redis
+  - live cache keys now include sources such as `36kr`, `bloomberg`, and `ithome`
+  - feed caching is no longer only in-process memory plus frontend local storage
+- Surfaced backend feed freshness state on the homepage:
+  - feed list now shows backend read mode, cache layers, last ingested item time, and 1-hour ingest counts
+  - `GET /api/feeds/health` now exposes `storage.cache_layers`, including Redis when active
+  - homepage freshness messaging now reflects both frontend snapshot state and backend collection state
+- Tightened chat responsiveness defaults and monitoring:
+  - chat UI no longer defaults to the stale `qwen-max` entry; default model is now `qwen3.5-plus`
+  - evolution self-test now treats severe chat slowness as a degraded runtime condition instead of only checking for HTTP success/content presence
+- Added concurrent controlled delegation routing:
+  - project-level `acpx` aliases now distinguish `openclaw-qwen`, `openclaw-glm`, and `openclaw-reviewer`
+  - delegation helpers now accept explicit `agent_alias` and safely emit UTF-8 JSON on Windows
+  - OpenClaw `myattention-coder` agent now uses `modelstudio/qwen3.5-plus` instead of the older `qwen3-coder-plus`
+- Improved source-intelligence object selection:
+  - attention policy selection now dedupes by `object_key/url` instead of `domain`
+  - `source-method-v1` advanced to policy version `4`
+  - source discovery now recognizes `organization` objects in addition to `repository / person / community / domain`
+- Added first-class frontier/change object recognition in source discovery: `release`, `event`, and `signal`.
+- Upgraded attention policies: `source-frontier-v1 -> v3`, `source-method-v1 -> v6`.
+- Added frontier query templates for release notes, maintainers, and community reaction signals.
+- Fixed a source-discovery scoring regression that was suppressing nearly all candidates after adding person/activity signals.
+- Improved method/frontier candidate quality:
+  - generic media domains are now penalized in `method`/`frontier`
+  - related GitHub owners can be promoted into real `person` candidates instead of staying only as relation metadata
+  - `person.follow_score` now contributes to attention-policy scoring
+- Upgraded `source-frontier-v1` to `v5` with explicit `signal` quota so frontier discovery can reserve room for change/reaction objects.
+- Recorded a source-intelligence strategy correction:
+  - sources such as `36kr` should not be treated as globally good/bad
+  - source value must be evaluated by task intent and role in context
+  - long-term attention design should evolve from `topic -> source` toward `object + task intent + role in context`

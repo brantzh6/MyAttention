@@ -57,6 +57,44 @@ export interface RAGDocument {
   created_at?: string
 }
 
+export interface FeedHealthSnapshot {
+  timestamp: string
+  storage: {
+    object_store_backend: string
+    feeds_read_backend: string
+    cache_layers?: string[]
+  }
+  counts: {
+    raw_ingest_total: number
+    feed_items_total: number
+    raw_ingest_1h: number
+    raw_ingest_24h: number
+    feed_items_1h: number
+    feed_items_24h: number
+    raw_errors_24h: number
+    raw_durable_24h: number
+    raw_duplicate_24h: number
+    raw_pending_1h: number
+    raw_pending_24h: number
+    active_sources_24h: number
+  }
+  freshness: {
+    last_raw_ingest_at: string | null
+    last_feed_item_at: string | null
+    last_raw_ingest_age_hours: number | null
+    last_feed_item_age_hours: number | null
+  }
+  ratios: {
+    durable_ratio_24h: number
+    persist_ratio_24h: number
+  }
+  summary: {
+    status: string
+    state: string
+    message: string
+  }
+}
+
 export interface RAGSource {
   name: string
   count: number
@@ -102,6 +140,7 @@ export interface ConversationMessage {
   model: string | null
   tokens_used: number | null
   sources: { title: string; url: string; source?: string; score?: number }[]
+  metadata?: Record<string, any>
   created_at: string
 }
 
@@ -119,6 +158,12 @@ export const apiClient = {
   async refreshFeeds(): Promise<{ status: string; count: number }> {
     const res = await fetch(`${API_URL}/api/feeds/refresh`, { method: 'POST' })
     if (!res.ok) throw new Error('Failed to refresh feeds')
+    return res.json()
+  },
+
+  async getFeedsHealth(): Promise<FeedHealthSnapshot> {
+    const res = await fetch(`${API_URL}/api/feeds/health`)
+    if (!res.ok) throw new Error('Failed to fetch feed health')
     return res.json()
   },
 

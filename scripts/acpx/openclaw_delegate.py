@@ -11,6 +11,16 @@ from pathlib import Path
 from typing import Any
 
 
+def emit_json(payload: dict[str, Any], stream: str = "stdout") -> None:
+    data = json.dumps(payload, ensure_ascii=False)
+    target = sys.stdout if stream == "stdout" else sys.stderr
+    try:
+        print(data, file=target)
+    except UnicodeEncodeError:
+        buffer = sys.stdout.buffer if stream == "stdout" else sys.stderr.buffer
+        buffer.write((data + "\n").encode("utf-8"))
+
+
 def resolve_acpx_command() -> list[str]:
     direct = shutil.which("acpx")
     if direct:
@@ -33,6 +43,18 @@ def run_acpx(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
+def run_acpx_stream(args: list[str], cwd: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [*resolve_acpx_command(), *args],
+        cwd=str(cwd),
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        check=False,
+    )
+
+
 def require_ok(result: subprocess.CompletedProcess[str], step: str) -> str:
     if result.returncode != 0:
         message = result.stderr.strip() or result.stdout.strip() or f"{step} failed"
@@ -40,39 +62,81 @@ def require_ok(result: subprocess.CompletedProcess[str], step: str) -> str:
     return result.stdout.strip()
 
 
-def ensure_session(session: str, cwd: Path) -> dict[str, Any]:
+def ensure_session(agent_alias: str, session: str, cwd: Path) -> dict[str, Any]:
     result = run_acpx(
-        ["--format", "json", "openclaw", "sessions", "ensure", "--name", session],
+        ["--format", "json", agent_alias, "sessions", "ensure", "--name", session],
         cwd,
     )
     stdout = require_ok(result, "sessions ensure")
     return json.loads(stdout)
 
 
-def send_prompt(session: str, prompt: str, cwd: Path) -> None:
+def send_prompt(agent_alias: str, session: str, prompt: str, cwd: Path) -> None:
     result = run_acpx(
-        ["openclaw", "prompt", "-s", session, prompt],
+        [agent_alias, "prompt", "-s", session, prompt],
         cwd,
     )
     require_ok(result, "prompt submit")
 
 
-def fetch_history(session: str, limit: int, cwd: Path) -> dict[str, Any]:
+def send_prompt_file(agent_alias: str, session: str, prompt_file: str, cwd: Path) -> None:
     result = run_acpx(
-        ["--format", "json", "openclaw", "sessions", "history", session, "--limit", str(limit)],
+        [agent_alias, "prompt", "-s", session, "-f", prompt_file],
+        cwd,
+    )
+    require_ok(result, "prompt submit")
+
+
+def run_exec(agent_alias: str, prompt_file: str, cwd: Path) -> dict[str, Any]:
+    result = run_acpx_stream(
+        ["--format", "json", "--cwd", str(cwd), agent_alias, "exec", "-f", prompt_file],
+        cwd,
+    )
+    if result.returncode != 0:
+        message = result.stderr.strip() or result.stdout.strip() or "exec failed"
+        raise RuntimeError(f"exec submit: {message}")
+    stdout = result.stdout.strip()
+    if not stdout:
+        return {"raw_stdout": "", "raw_stderr": result.stderr.strip(), "mode": "exec"}
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError:
+        payload = {"raw_stdout": stdout, "raw_stderr": result.stderr.strip(), "mode": "exec"}
+    return payload
+
+
+def fetch_history(agent_alias: str, session: str, limit: int, cwd: Path) -> dict[str, Any]:
+    result = run_acpx(
+        ["--format", "json", agent_alias, "sessions", "history", session, "--limit", str(limit)],
         cwd,
     )
     stdout = require_ok(result, "sessions history")
     return json.loads(stdout)
 
 
-def fetch_session(session: str, cwd: Path) -> dict[str, Any]:
+def fetch_session(agent_alias: str, session: str, cwd: Path) -> dict[str, Any]:
     result = run_acpx(
-        ["--format", "json", "openclaw", "sessions", "show", session],
+        ["--format", "json", agent_alias, "sessions", "show", session],
         cwd,
     )
     stdout = require_ok(result, "sessions show")
     return json.loads(stdout)
+
+
+def try_fetch_session(agent_alias: str, session: str, cwd: Path) -> dict[str, Any] | None:
+    result = run_acpx(
+        ["--format", "json", agent_alias, "sessions", "show", session],
+        cwd,
+    )
+    if result.returncode != 0:
+        return None
+    stdout = result.stdout.strip()
+    if not stdout:
+        return None
+    try:
+        return json.loads(stdout)
+    except json.JSONDecodeError:
+        return None
 
 
 def find_latest_assistant(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
@@ -86,6 +150,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Submit a delegated task through acpx/openclaw and recover the result.")
     parser.add_argument("prompt", nargs="?", help="Task prompt to delegate.")
     parser.add_argument("--file", help="Read prompt text from a UTF-8 file.")
+    parser.add_argument("--mode", choices=["prompt", "exec"], default="prompt", help="Delegation mode.")
+    parser.add_argument(
+        "--agent-alias",
+        default="openclaw-qwen",
+        help="acpx agent alias from .acpxrc.json (for example: openclaw-qwen, openclaw-glm, openclaw-reviewer).",
+    )
     parser.add_argument("--session", default="myattention-coder", help="Named acpx session to use.")
     parser.add_argument("--cwd", default=".", help="Workspace directory.")
     parser.add_argument("--timeout", type=int, default=120, help="Seconds to wait for a result.")
@@ -96,43 +166,51 @@ def main() -> int:
         parser.error("Provide exactly one of: prompt or --file")
 
     cwd = Path(args.cwd).resolve()
+    agent_alias = args.agent_alias
     prompt_text = args.prompt
     if args.file:
         prompt_text = Path(args.file).read_text(encoding="utf-8")
-    ensure_session(args.session, cwd)
-    before = fetch_session(args.session, cwd)
+
+    if args.mode == "exec":
+        payload = run_exec(agent_alias, str(Path(args.file).resolve()) if args.file else "-", cwd)
+        emit_json(payload)
+        return 0
+
+    ensure_session(agent_alias, args.session, cwd)
+    before = try_fetch_session(agent_alias, args.session, cwd) or {}
     before_ts = before.get("updated_at") or before.get("lastUsedAt") or ""
 
-    send_prompt(args.session, prompt_text, cwd)
+    if args.file:
+        send_prompt_file(agent_alias, args.session, str(Path(args.file).resolve()), cwd)
+    else:
+        send_prompt(agent_alias, args.session, prompt_text, cwd)
 
     deadline = time.time() + args.timeout
     while time.time() < deadline:
-        session_info = fetch_session(args.session, cwd)
+        session_info = fetch_session(agent_alias, args.session, cwd)
         updated_at = session_info.get("updated_at") or session_info.get("lastUsedAt") or ""
-        history = fetch_history(args.session, args.history_limit, cwd)
+        history = fetch_history(agent_alias, args.session, args.history_limit, cwd)
         latest = find_latest_assistant(history.get("entries", []))
         if latest and latest.get("timestamp", "") >= before_ts and updated_at >= before_ts:
-            print(
-                json.dumps(
-                    {
-                        "session": args.session,
-                        "cwd": str(cwd),
-                        "assistant": latest,
-                        "history": history,
-                        "session_info": session_info,
-                    },
-                    ensure_ascii=False,
-                )
+            emit_json(
+                {
+                    "agent_alias": agent_alias,
+                    "session": args.session,
+                    "cwd": str(cwd),
+                    "assistant": latest,
+                    "history": history,
+                    "session_info": session_info,
+                }
             )
             return 0
         time.sleep(args.poll_interval)
 
-    raise TimeoutError(f"Timed out waiting for delegated result in session {args.session}")
+    raise TimeoutError(f"Timed out waiting for delegated result in session {args.session} via {agent_alias}")
 
 
 if __name__ == "__main__":
     try:
         raise SystemExit(main())
     except Exception as exc:
-        print(json.dumps({"error": str(exc)}, ensure_ascii=False), file=sys.stderr)
+        emit_json({"error": str(exc)}, stream="stderr")
         raise

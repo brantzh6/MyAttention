@@ -14,6 +14,7 @@ import asyncio
 import logging
 import os
 import json
+import time
 from typing import Any, Optional
 from datetime import datetime, timezone
 from pathlib import Path
@@ -38,17 +39,30 @@ def build_self_test_issue(snapshot: dict | None) -> dict | None:
 
     checks = snapshot.get("checks", [])
     failed_checks = [check for check in checks if not check.get("ok")]
-    if not failed_checks:
+    degraded_checks = [
+        check for check in checks
+        if check.get("ok") and (check.get("performance_warning") or check.get("stability_warning") or check.get("security_warning"))
+    ]
+    if not failed_checks and not degraded_checks:
         return None
 
     critical_ids = {"/health", "chat-voting-canary", "chat-single-canary", "frontend:/chat", "ui-browser:/chat"}
     is_critical = any(check.get("id") in critical_ids for check in failed_checks)
-    priority = 0 if is_critical else 1
-    health = "critical" if is_critical else "warning"
+    has_performance_regression = any(check.get("performance_warning") for check in degraded_checks)
+    priority = 0 if is_critical else (1 if failed_checks else 2)
+    health = "critical" if is_critical else ("warning" if failed_checks else "degraded")
 
     failed_names = [check.get("name") or check.get("id") or "unknown" for check in failed_checks]
-    title = "[self-test] critical path failed" if is_critical else "[self-test] checks failed"
-    description = "Failed checks: " + ", ".join(failed_names[:5])
+    degraded_names = [check.get("name") or check.get("id") or "unknown" for check in degraded_checks]
+    if failed_checks:
+        title = "[self-test] critical path failed" if is_critical else "[self-test] checks failed"
+        description = "Failed checks: " + ", ".join(failed_names[:5])
+    elif has_performance_regression:
+        title = "[self-test] performance degraded"
+        description = "Slow checks: " + ", ".join(degraded_names[:5])
+    else:
+        title = "[self-test] runtime degraded"
+        description = "Degraded checks: " + ", ".join(degraded_names[:5])
 
     return {
         "priority": priority,
@@ -64,9 +78,10 @@ def build_self_test_issue(snapshot: dict | None) -> dict | None:
             "state": "failed",
             "summary": {
                 "failed_count": len(failed_checks),
+                "degraded_count": len(degraded_checks),
                 "total_count": len(checks),
             },
-            "checks": failed_checks,
+            "checks": failed_checks or degraded_checks,
         },
     }
 
@@ -840,6 +855,7 @@ class AutoEvolutionSystem:
         }
         conversation_id = None
         selected_model = ""
+        start_time = time.time()
 
         try:
             async with session.post(
@@ -849,6 +865,7 @@ class AutoEvolutionSystem:
             ) as resp:
                 error = ""
                 saw_content = False
+                first_content_seconds = None
                 async for data in iter_sse_events(resp):
                     try:
                         event = json.loads(data)
@@ -869,16 +886,30 @@ class AutoEvolutionSystem:
                         break
                     if (event.get("content") or "").strip():
                         saw_content = True
+                        first_content_seconds = round(time.time() - start_time, 2)
                         break
+
+                total_seconds = round(time.time() - start_time, 2)
+                performance_warning = bool(
+                    (first_content_seconds is not None and first_content_seconds > 8.0)
+                    or total_seconds > 30.0
+                )
 
                 return {
                     "id": "chat-single-canary",
                     "name": "Single chat canary",
                     "path": "/api/chat",
                     "status": resp.status,
-                    "ok": resp.status == 200 and saw_content and not error,
-                    "error": None if resp.status == 200 and saw_content and not error else error or "no assistant content returned",
+                    "ok": resp.status == 200 and saw_content and not error and not performance_warning,
+                    "error": None if resp.status == 200 and saw_content and not error and not performance_warning else (
+                        f"slow response: first_content={first_content_seconds}s total={total_seconds}s"
+                        if performance_warning and not error
+                        else error or "no assistant content returned"
+                    ),
                     "model": selected_model,
+                    "first_content_seconds": first_content_seconds,
+                    "total_seconds": total_seconds,
+                    "performance_warning": performance_warning,
                 }
         except Exception as exc:
             return {
@@ -889,6 +920,7 @@ class AutoEvolutionSystem:
                 "ok": False,
                 "error": str(exc) or exc.__class__.__name__,
                 "model": selected_model,
+                "performance_warning": False,
             }
         finally:
             if conversation_id:
@@ -921,6 +953,7 @@ class AutoEvolutionSystem:
             "stream_error": "",
         }
         conversation_id = None
+        start_time = time.time()
 
         try:
             async with session.post(
@@ -938,18 +971,24 @@ class AutoEvolutionSystem:
                         conversation_id = event.get("conversation_id")
                     state = update_voting_canary_state(state, event)
                     if is_voting_canary_successful(state):
+                        total_seconds = round(time.time() - start_time, 2)
+                        performance_warning = total_seconds > 45.0
                         return {
                             "id": "chat-voting-canary",
                             "name": "Voting canary",
                             "path": "/api/chat",
                             "status": resp.status,
-                            "ok": True,
+                            "ok": not performance_warning,
+                            "error": f"slow response: total={total_seconds}s" if performance_warning else None,
                             "participants": state["participants"],
                             "successful_models": sorted(state["successful_models"]),
+                            "total_seconds": total_seconds,
+                            "performance_warning": performance_warning,
                         }
                     if event.get("error"):
                         error = str(event.get("error"))
 
+                total_seconds = round(time.time() - start_time, 2)
                 return {
                     "id": "chat-voting-canary",
                     "name": "Voting canary",
@@ -959,6 +998,8 @@ class AutoEvolutionSystem:
                     "error": error or self._build_voting_canary_failure(state),
                     "participants": state["participants"],
                     "successful_models": sorted(state["successful_models"]),
+                    "total_seconds": total_seconds,
+                    "performance_warning": False,
                 }
         except Exception as exc:
             return {
@@ -968,6 +1009,7 @@ class AutoEvolutionSystem:
                 "status": 0,
                 "ok": False,
                 "error": str(exc) or exc.__class__.__name__,
+                "performance_warning": False,
             }
         finally:
             if conversation_id:
@@ -1260,6 +1302,12 @@ class AutoEvolutionSystem:
 
         snapshot["quality_findings"] = quality_issues
         snapshot["healthy"] = not failures and not quality_issues
+        if failures:
+            snapshot["review_state"] = "failed"
+        elif quality_issues:
+            snapshot["review_state"] = "degraded"
+        else:
+            snapshot["review_state"] = "healthy"
         self._last_source_plan_review = snapshot
 
         async with get_db_context() as db:
@@ -1277,7 +1325,7 @@ class AutoEvolutionSystem:
                 task=None,
                 artifact_type="report",
                 title="Source plan review snapshot",
-                summary="healthy" if snapshot["healthy"] else "degraded",
+                summary=snapshot["review_state"],
                 payload=snapshot,
             )
             await record_context_event(
@@ -1286,7 +1334,7 @@ class AutoEvolutionSystem:
                 task=None,
                 event_type="source_plan_review",
                 action="observe",
-                result="success" if snapshot["healthy"] else "failed",
+                result="failed" if failures else ("warning" if quality_issues else "success"),
                 reason="periodic source-plan review cycle",
                 payload={
                     "due_count": snapshot["due_count"],
@@ -1301,7 +1349,7 @@ class AutoEvolutionSystem:
                 task=None,
                 memory_kind="checkpoint",
                 title="Source plan review checkpoint",
-                summary="healthy" if snapshot["healthy"] else "degraded",
+                summary=snapshot["review_state"],
                 content=json.dumps(snapshot, ensure_ascii=False),
                 payload={
                     "problem_type": "source_intelligence",
@@ -1335,6 +1383,7 @@ class AutoEvolutionSystem:
                     "refreshed_count": len(refreshed),
                     "failure_count": len(failures),
                     "quality_issue_count": len(quality_issues),
+                    "review_state": snapshot["review_state"],
                 },
             )
 
@@ -1447,7 +1496,7 @@ class AutoEvolutionSystem:
             if review_failures:
                 health = "degraded"
                 issues.append("source_plan_review_failed")
-            quality_count = int(source_plan_quality.get("summary", {}).get("issue_count", 0) or 0)
+            quality_count = int(source_plan_quality.get("issue_count", 0) or 0)
             if quality_count > 0:
                 health = "degraded"
                 issues.append("source_plan_quality_degraded")

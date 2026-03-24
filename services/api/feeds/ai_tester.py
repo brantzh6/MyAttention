@@ -21,6 +21,7 @@ AI 测试代理 (AI Testing Agent)
 import asyncio
 import json
 import logging
+import re
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -37,6 +38,125 @@ from db.session import get_db
 from db.models import User
 
 logger = logging.getLogger(__name__)
+
+REQUIRED_VOTING_SECTIONS = [
+    "一句话判断",
+    "关键分歧",
+    "建议动作",
+]
+
+WEAK_PATTERNS = [
+    "综合来看",
+    "总体而言",
+    "建议结合实际情况",
+    "需要进一步分析",
+    "需要更多信息",
+    "无法一概而论",
+    "it depends",
+]
+
+ACTION_PATTERNS = [
+    "优先",
+    "立即",
+    "先做",
+    "先验证",
+    "停止",
+    "补充",
+    "澄清",
+    "分阶段",
+    "收缩",
+    "执行",
+    "验证",
+]
+
+
+def extract_voting_sections(consensus: str) -> Dict[str, str]:
+    sections: Dict[str, str] = {}
+    current = None
+    lines: list[str] = []
+
+    for raw_line in (consensus or "").splitlines():
+        line = raw_line.strip()
+        match = re.match(r"^【(.+?)】$", line)
+        if match:
+            if current:
+                sections[current] = "\n".join(lines).strip()
+            current = match.group(1)
+            lines = []
+            continue
+        if current:
+            lines.append(raw_line)
+
+    if current:
+        sections[current] = "\n".join(lines).strip()
+
+    return sections
+
+
+def evaluate_voting_quality(consensus: str, successful_models: int) -> Dict[str, Any]:
+    consensus = (consensus or "").strip()
+    sections = extract_voting_sections(consensus)
+    score = 0
+    reasons: list[str] = []
+
+    present_required = [name for name in REQUIRED_VOTING_SECTIONS if sections.get(name)]
+    score += len(present_required) * 15
+    if len(present_required) == len(REQUIRED_VOTING_SECTIONS):
+        reasons.append("核心分区完整")
+    else:
+        reasons.append(f"缺少关键分区: {','.join(name for name in REQUIRED_VOTING_SECTIONS if name not in present_required)}")
+
+    if successful_models >= 3:
+        score += 15
+        reasons.append("参与模型数量充分")
+    elif successful_models >= 2:
+        score += 10
+        reasons.append("至少两个模型参与成功")
+    else:
+        reasons.append("成功模型过少")
+
+    disagreement = sections.get("关键分歧", "")
+    if disagreement and len(disagreement) >= 20:
+        score += 15
+        reasons.append("有明确分歧分析")
+    else:
+        reasons.append("分歧分析不足")
+
+    action = sections.get("建议动作", "")
+    if action and any(token in action for token in ACTION_PATTERNS):
+        score += 15
+        reasons.append("建议动作具有可执行性")
+    else:
+        reasons.append("建议动作偏空泛")
+
+    if "来源" in consensus or "支持模型" in consensus:
+        score += 10
+        reasons.append("保留了模型来源信息")
+    else:
+        reasons.append("缺少来源指向")
+
+    weak_hits = [pattern for pattern in WEAK_PATTERNS if pattern.lower() in consensus.lower()]
+    if weak_hits:
+        penalty = min(20, 5 * len(weak_hits))
+        score -= penalty
+        reasons.append(f"存在套话/弱判断: {','.join(weak_hits[:4])}")
+
+    score = max(0, min(100, score))
+    if score >= 80:
+        level = "high"
+    elif score >= 60:
+        level = "medium"
+    else:
+        level = "low"
+
+    return {
+        "score": score,
+        "level": level,
+        "sections": list(sections.keys()),
+        "required_sections_present": present_required,
+        "weak_hits": weak_hits,
+        "reasons": reasons,
+    }
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -343,17 +463,23 @@ class APITestSuite:
                 }
 
             payload = {
-                "message": "1+1等于几？请只回答结果。",
+                "message": (
+                    "[self-test] 你正在为一款家庭场景的本地 AI 中枢做方向取舍。"
+                    "约束条件是预算有限、必须保护用户隐私、还要尽快落地。"
+                    "请在“优先极致本地隐私”“优先最低硬件成本”“优先多模态交互体验”三者中做取舍，"
+                    "并明确给出：一句话判断、关键分歧、建议动作。"
+                ),
                 "use_voting": True,
                 "use_rag": False,
                 "enable_search": False,
+                "enable_thinking": False,
                 "voting_models": ["qwen3.5-plus", "MiniMax-M2.5", "deepseek-v3.2"],
             }
 
             async with session.post(
                 f"{self.BASE_URL}/api/chat",
                 json=payload,
-                timeout=aiohttp.ClientTimeout(total=120)
+                timeout=aiohttp.ClientTimeout(total=180)
             ) as resp:
                 content = await resp.text()
                 events = []
@@ -381,24 +507,35 @@ class APITestSuite:
                     if item.get("success")
                 ]
                 consensus = (voting_result.get("consensus") or "").strip()
-                passed = resp.status == 200 and len(successful) > 0 and bool(consensus)
+                quality = evaluate_voting_quality(consensus, len(successful))
+                has_required_sections = len(quality["required_sections_present"]) == len(REQUIRED_VOTING_SECTIONS)
+                passed = (
+                    resp.status == 200
+                    and len(successful) >= 2
+                    and bool(consensus)
+                    and has_required_sections
+                    and quality["score"] >= 65
+                )
 
                 return {
                     "passed": passed,
-                    "message": "Voting mode works" if passed else "Voting mode returned no successful model result",
+                    "message": "Voting mode works" if passed else "Voting mode returned weak, incomplete, or low-signal synthesis",
                     "metadata": {
                         "status": resp.status,
                         "successful_models": len(successful),
+                        "has_required_sections": has_required_sections,
+                        "quality": quality,
                         "consensus_preview": consensus[:120],
                         "voting_result": voting_result,
                     }
                 }
 
         except Exception as e:
+            error_message = str(e) or e.__class__.__name__
             return {
                 "passed": False,
-                "message": f"Voting test error: {str(e)}",
-                "error": str(e)
+                "message": f"Voting test error: {error_message}",
+                "error": error_message
             }
 
     # ═══════════════════════════════════════════════════════════════════

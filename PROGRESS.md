@@ -258,6 +258,22 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - Added `docs/ATTENTION_POLICY_ARCHITECTURE.md`:
   - defined `attention candidate / policy / evaluation / decision / review` objects
   - clarified that attention should be policy-driven, versioned, and gate-controlled rather than hardcoded scoring
+- Delegation path via `acpx -> openclaw` is now operational with a bounded recovery workflow:
+  - dedicated OpenClaw coding agent routing works
+  - `scripts/acpx/openclaw_delegate.py` can recover results from session history when shell output is unreliable
+  - current behavioral limitation is prompt drift when the delegated agent scans the repo freely
+  - mitigation now added: `scripts/acpx/build_context_packet.py` builds UTF-8 bounded context packets so the main controller can send only the necessary excerpts
+- Delegation has now been upgraded to a file-based protocol:
+  - `scripts/acpx/run_file_delegation.py` sends only brief/context/output paths
+  - delegated agents are expected to write structured UTF-8 JSON artifacts back to disk
+  - this is now the preferred mode for bounded coding/review/analysis tasks, with free-form prompt delegation treated as fallback only
+- Homepage feed freshness perception has been tightened:
+  - default feed sort now starts with time order instead of importance order
+  - the feed page now shows a freshness summary card with:
+    - current snapshot state
+    - latest content timestamp
+    - current sort mode
+  - this closes the most misleading gap where backend collection was current but the UI looked stale because cached data was shown first without clear explanation
   - fixed the implementation direction as `search + LLM dynamic discovery` under `policy + versioning + quality gate` constraints
 - Attention policy foundation is now live in source intelligence:
   - migration `012_attention_policy_foundation.sql`
@@ -356,3 +372,43 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - both `chat-single-canary` and `chat-voting-canary` now pass in the same self-test snapshot
   - `GET /api/evolution/health/quick` now returns `status = healthy` with `critical_count = 0`
 - 2026-03-24: `acpx -> openclaw` 委派链路进入可用状态。当前前台 shell 回显仍有缺陷，但专用 OpenClaw coding agent 已可通过 `acpx` 创建 session、提交 prompt，并通过 `sessions history/show` 结构化回收结果。新增 helper: `/D:/code/MyAttention/scripts/acpx/openclaw_delegate.py`。
+- 2026-03-24: 信息流 Redis 主缓存链路已核实生效。
+  - `POST /api/feeds/refresh` 会触发 `FeedFetcher` 写入 Redis `feed_cache:*`
+  - 实测已生成 19 个键，例如 `feed_cache:36kr`、`feed_cache:bloomberg`、`feed_cache:ithome`
+  - 当前信息流缓存不再只是进程内 `_cache` 和前端本地缓存，后端已具备 Redis 热缓存层
+- 2026-03-24: 首页信息流 freshness 可视化继续收口。
+  - `services/web/components/feed/feed-list.tsx` 现在会显示后端同步状态、读取模式、缓存层、最近入库时间和近 1 小时新增条数
+  - `GET /api/feeds/health` 现已返回 `storage.cache_layers=["memory","redis"]`
+  - 用户现在可以区分“前端本地快照”和“后端采集是否真的在持续更新”
+- 2026-03-24: 智能对话慢路径诊断与进化监控增强。
+  - 确认 `/api/chat` 并非“无响应”，SSE 首事件在 ~0.02-0.16s 内即可返回，问题主要是模型生成总耗时波动较大
+  - 前端聊天默认模型不再使用旧默认 `qwen-max`，已切换为 `qwen3.5-plus`
+  - `auto_evolution` 的聊天 canary 现在会把“响应过慢”作为异常条件之一，而不只是检查 HTTP 200 和是否有内容
+- 2026-03-24: `acpx` 受控外包进入并发阶段。
+  - 项目级 `acpx` 路由已落地在 [D:\code\MyAttention\.acpxrc.json](/D:/code/MyAttention/.acpxrc.json)
+  - 当前并发角色：
+    - `openclaw-qwen` -> `myattention-coder` -> `modelstudio/qwen3.5-plus`
+    - `openclaw-glm` -> `myattention-glm-coder` -> `modelstudio/glm-5`
+    - `openclaw-reviewer` -> `myattention-reviewer` -> `modelstudio/glm-5`
+  - `openclaw_delegate.py` / `run_file_delegation.py` 已支持显式 `agent_alias`
+  - 并发外包已完成一轮真实任务与复核：`glm` 的 source-quality 提案被接受，`qwen` 的 freshness 提案因缺少可执行 patch 被拒绝
+- 2026-03-24: Source intelligence 修复了一个核心结构问题。
+  - attention policy 之前按 `domain` 去重，导致同一平台只能保留一个对象，例如最多一个 `github.com`
+  - 现已改为按 `object_key/url` 去重，`method` 主题下可以同时保留多个 GitHub repo
+  - `source-method-v1` attention policy 已升级到 `v4`
+  - `organization` 已进入候选对象层级，不再只能作为普通 domain 处理
+- 2026-03-24: Source intelligence frontier/watch lane advanced to object-aware v3/v6 policies.
+  - Added first-class `release`, `event`, and `signal` object recognition to discovery.
+  - Added frontier/latest/method query templates for release notes, maintainer signals, and HN/Reddit reactions.
+  - Fixed policy versioning gap: `source-frontier-v1` upgraded to `v3`; `source-method-v1` upgraded to `v6`.
+  - Live `/api/sources/discover` now returns frontier policy `v3` with implementation objects alongside authority results, but still `needs_review`; upstream frontier/research discovery remains the next blocker.
+- 2026-03-24: Source discovery quality loop advanced again on the mainline.
+  - Fixed a live regression in `services/api/routers/feeds.py` where candidate score composition accidentally passed `activity_freshness` and `follow_score` as separate `min(...)` arguments, collapsing most candidates below the selection threshold.
+  - Added generic media penalties for `method/frontier` discovery and promoted repo/release relation hints into real `person/organization` candidate seeds instead of leaving them as passive metadata only.
+  - Added `follow_score`-aware frontier/method quality signals and upgraded `source-frontier-v1` to `v5` with an explicit `signal` quota.
+  - Live discovery now surfaces maintainer people objects in method/frontier results; `multi agent research + method` remains `accepted`, while `openclaw + frontier` is still `needs_review` because the current frontier gate still expects a research bucket for what is behaving like a tool/project frontier topic.
+- 2026-03-24: Recorded a mainline source-intelligence strategy correction.
+  - Source value is contextual, not absolute.
+  - The same object/source can legitimately serve multiple topics and multiple task intents.
+  - Future attention design should evolve from simple `topic -> source` thinking toward `object + task intent + role in context`.
+  - This correction is now part of the attention-policy architecture to prevent future quality work from regressing into global source suppression.

@@ -125,6 +125,12 @@ interface SourcePlanVersion {
   created_at: string | null
 }
 
+interface PlanObjectGroup {
+  key: string
+  title: string
+  items: SourcePlanItem[]
+}
+
 const emptyForm: NewSourceForm = {
   name: '',
   type: 'rss',
@@ -216,6 +222,61 @@ function buildPlanSummary(plan: SourcePlan) {
         ? plan.items.reduce((total, item) => total + item.authority_score, 0) / plan.items.length
         : 0,
   }
+}
+
+const itemTypeLabels: Record<string, string> = {
+  person: '人物',
+  organization: '组织',
+  repository: '项目',
+  community: '社区',
+  release: '发布',
+  signal: '动态信号',
+  event: '事件',
+  domain: '站点',
+}
+
+function groupItemsByObjectType(items: SourcePlanItem[]): PlanObjectGroup[] {
+  const order = ['person', 'organization', 'repository', 'community', 'release', 'signal', 'event', 'domain']
+  const grouped = new Map<string, SourcePlanItem[]>()
+
+  for (const item of items) {
+    const key = item.item_type || 'domain'
+    const bucket = grouped.get(key)
+    if (bucket) {
+      bucket.push(item)
+    } else {
+      grouped.set(key, [item])
+    }
+  }
+
+  return Array.from(grouped.entries())
+    .sort((a, b) => {
+      const aIndex = order.indexOf(a[0])
+      const bIndex = order.indexOf(b[0])
+      return (aIndex === -1 ? order.length : aIndex) - (bIndex === -1 ? order.length : bIndex)
+    })
+    .map(([key, groupItems]) => ({
+      key,
+      title: itemTypeLabels[key] || key,
+      items: groupItems,
+    }))
+}
+
+function getEvidenceArray(value: any): string[] {
+  return Array.isArray(value) ? value.filter((item) => typeof item === 'string') : []
+}
+
+function getRelatedEntities(value: any): Array<{ relation: string; item_type: string; object_key: string; label: string }> {
+  return Array.isArray(value)
+    ? value.filter(
+        (item) =>
+          item &&
+          typeof item === 'object' &&
+          typeof item.relation === 'string' &&
+          typeof item.item_type === 'string' &&
+          typeof item.object_key === 'string'
+      )
+    : []
 }
 
 export function SourcesManager() {
@@ -813,60 +874,116 @@ export function SourcesManager() {
                               </div>
                             ) : (
                               <div className="grid gap-3">
-                                {group.items.map((item) => (
-                                  <div key={item.id} className="rounded-lg border bg-card p-3">
-                                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                                      <div className="min-w-0">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                          <span className="font-medium">{item.name}</span>
-                                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
-                                            {item.authority_tier}
-                                          </span>
-                                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                                            {item.execution_strategy}
-                                          </span>
-                                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                                            {item.item_type}
-                                          </span>
-                                          <span
-                                            className={cn(
-                                              'rounded-full px-2 py-0.5 text-xs',
-                                              itemStatusTone[item.status] || 'bg-slate-100 text-slate-700'
-                                            )}
-                                          >
-                                            {item.status}
-                                          </span>
-                                        </div>
-                                        <div className="mt-1 text-xs text-muted-foreground break-all">{item.url}</div>
-                                        <div className="mt-1 text-[11px] text-muted-foreground break-all">
-                                          object {item.object_key}
-                                        </div>
-                                        <div className="mt-2 text-sm text-muted-foreground">{item.rationale}</div>
-                                        <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
-                                          <div className="rounded-lg border bg-muted/40 p-2">
-                                            authority {item.authority_score.toFixed(2)}
-                                          </div>
-                                          <div className="rounded-lg border bg-muted/40 p-2">
-                                            review every {item.review_cadence_days} days
-                                          </div>
-                                          <div className="rounded-lg border bg-muted/40 p-2">
-                                            mode {item.monitoring_mode}
-                                          </div>
-                                        </div>
+                                {groupItemsByObjectType(group.items).map((objectGroup) => (
+                                  <div key={`${group.key}-${objectGroup.key}`} className="rounded-xl border bg-muted/20 p-3">
+                                    <div className="mb-3 flex items-center justify-between gap-2">
+                                      <div className="text-sm font-medium">{objectGroup.title}</div>
+                                      <div className="rounded-full bg-background px-2 py-1 text-xs text-muted-foreground">
+                                        {objectGroup.items.length} 项
                                       </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => void subscribePlanItem(plan, item)}
-                                        disabled={subscribingPlanItemId === item.id || item.status === 'subscribed'}
-                                        className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
-                                      >
-                                        {subscribingPlanItemId === item.id ? (
-                                          <Loader2 className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                          <Plus className="h-4 w-4" />
-                                        )}
-                                        {item.status === 'subscribed' ? '已订阅' : '订阅为信息源'}
-                                      </button>
+                                    </div>
+                                    <div className="grid gap-3">
+                                      {objectGroup.items.map((item) => (
+                                        <div key={item.id} className="rounded-lg border bg-card p-3">
+                                          {(() => {
+                                            const inferredRoles = getEvidenceArray(item.evidence?.inferred_roles)
+                                            const relatedEntities = getRelatedEntities(item.evidence?.related_entities)
+                                            const activityFreshness = Number(item.evidence?.activity_freshness ?? 0)
+                                            return (
+                                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                            <div className="min-w-0">
+                                              <div className="flex flex-wrap items-center gap-2">
+                                                <span className="font-medium">{item.name}</span>
+                                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
+                                                  {item.authority_tier}
+                                                </span>
+                                                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                                  {item.execution_strategy}
+                                                </span>
+                                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                                                  {itemTypeLabels[item.item_type] || item.item_type}
+                                                </span>
+                                                <span
+                                                  className={cn(
+                                                    'rounded-full px-2 py-0.5 text-xs',
+                                                    itemStatusTone[item.status] || 'bg-slate-100 text-slate-700'
+                                                  )}
+                                                >
+                                                  {item.status}
+                                                </span>
+                                              </div>
+                                              <div className="mt-1 text-xs text-muted-foreground break-all">{item.url}</div>
+                                              <div className="mt-1 text-[11px] text-muted-foreground break-all">
+                                                object {item.object_key}
+                                              </div>
+                                              <div className="mt-2 text-sm text-muted-foreground">{item.rationale}</div>
+                                              {(inferredRoles.length > 0 || relatedEntities.length > 0 || activityFreshness > 0) && (
+                                                <div className="mt-3 space-y-2">
+                                                  {inferredRoles.length > 0 && (
+                                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                      <span className="font-medium">角色线索</span>
+                                                      {inferredRoles.map((role) => (
+                                                        <span key={role} className="rounded-full bg-violet-100 px-2 py-0.5 text-violet-700">
+                                                          {role}
+                                                        </span>
+                                                      ))}
+                                                    </div>
+                                                  )}
+                                                  {activityFreshness > 0 && (
+                                                    <div className="text-xs text-muted-foreground">
+                                                      活跃度线索 {activityFreshness.toFixed(2)}
+                                                    </div>
+                                                  )}
+                                                  {Number(item.evidence?.follow_score ?? 0) > 0 && (
+                                                    <div className="text-xs text-muted-foreground">
+                                                      关注分数 {Number(item.evidence?.follow_score ?? 0).toFixed(2)}
+                                                    </div>
+                                                  )}
+                                                  {relatedEntities.length > 0 && (
+                                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                      <span className="font-medium">关联对象</span>
+                                                      {relatedEntities.map((related) => (
+                                                        <span
+                                                          key={`${related.relation}-${related.object_key}`}
+                                                          className="rounded-full bg-cyan-100 px-2 py-0.5 text-cyan-700"
+                                                        >
+                                                          {related.relation}: {related.label || related.object_key}
+                                                        </span>
+                                                      ))}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                              <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
+                                                <div className="rounded-lg border bg-muted/40 p-2">
+                                                  authority {item.authority_score.toFixed(2)}
+                                                </div>
+                                                <div className="rounded-lg border bg-muted/40 p-2">
+                                                  review every {item.review_cadence_days} days
+                                                </div>
+                                                <div className="rounded-lg border bg-muted/40 p-2">
+                                                  mode {item.monitoring_mode}
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => void subscribePlanItem(plan, item)}
+                                              disabled={subscribingPlanItemId === item.id || item.status === 'subscribed'}
+                                              className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
+                                            >
+                                              {subscribingPlanItemId === item.id ? (
+                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                              ) : (
+                                                <Plus className="h-4 w-4" />
+                                              )}
+                                              {item.status === 'subscribed' ? '已订阅' : '订阅为信息源'}
+                                            </button>
+                                          </div>
+                                            )
+                                          })()}
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
                                 ))}

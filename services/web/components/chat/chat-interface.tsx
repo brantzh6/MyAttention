@@ -38,6 +38,9 @@ const AVAILABLE_MODELS = [
   { provider: 'qwen', model: 'kimi-k2.5', name: 'Kimi K2.5', supportsSearch: false, supportsThinking: false },
 ] as const
 
+const DEFAULT_MODEL =
+  AVAILABLE_MODELS.find((model) => model.model === 'qwen3.5-plus') ?? AVAILABLE_MODELS[0]
+
 type AvailableModel = (typeof AVAILABLE_MODELS)[number]
 
 type Locale = 'zh-CN' | 'en'
@@ -87,6 +90,10 @@ const TEXT: Record<Locale, Record<string, string>> = {
     votingModelsLabel: '\u672c\u8f6e\u53c2\u4e0e\u6a21\u578b',
     primaryDecision: '\u4e3b\u88c1',
     supportEvidence: '\u8865\u5145',
+    brainRoute: '\u5927\u8111\u8def\u7531',
+    primaryBrain: '\u4e3b\u8111',
+    supportingBrains: '\u534f\u4f5c',
+    thinkingFramework: '\u6846\u67b6',
   },
   en: {
     chatHistory: 'Conversations',
@@ -132,7 +139,26 @@ const TEXT: Record<Locale, Record<string, string>> = {
     votingModelsLabel: 'Voting models',
     primaryDecision: 'Primary',
     supportEvidence: 'Support',
+    brainRoute: 'Brain route',
+    primaryBrain: 'Primary brain',
+    supportingBrains: 'Supporting',
+    thinkingFramework: 'Framework',
   },
+}
+
+interface BrainPlan {
+  route_id: string
+  problem_type: string
+  thinking_framework: string
+  primary_brain: string
+  supporting_brains: string[]
+  review_brain?: string | null
+  fallback_brain?: string | null
+  primary_models: string[]
+  supporting_models: string[]
+  selected_models: string[]
+  execution_mode: string
+  surface?: string | null
 }
 
 interface Message {
@@ -145,6 +171,7 @@ interface Message {
   votingResults?: { model: string; content: string; success: boolean; error?: string }[]
   searchEnabled?: boolean
   modelUsed?: string
+  brainPlan?: BrainPlan
 }
 
 interface Conversation {
@@ -267,7 +294,7 @@ export function ChatInterface() {
   const [enableSearch, setEnableSearch] = useState(false)
   const [enableThinking, setEnableThinking] = useState(false)
   const [useRag, setUseRag] = useState(true)
-  const [selectedModel, setSelectedModel] = useState<AvailableModel>(AVAILABLE_MODELS[0])
+  const [selectedModel, setSelectedModel] = useState<AvailableModel>(DEFAULT_MODEL)
   const [showModelDropdown, setShowModelDropdown] = useState(false)
   const [expandedThinking, setExpandedThinking] = useState<Record<string, boolean>>({})
   const [expandedVotingResults, setExpandedVotingResults] = useState<Record<string, Record<number, boolean>>>({})
@@ -329,6 +356,7 @@ export function ChatInterface() {
         votingResults: m.voting_results?.individual_results?.map((r: any) => ({ model: r.model, content: r.content || '', success: r.success, error: r.error })),
         searchEnabled: m.search_enabled,
         modelUsed: m.model,
+        brainPlan: m.metadata?.brain_plan,
       })))
       setCurrentConversationId(conversationId)
     } catch (error) {
@@ -372,6 +400,7 @@ export function ChatInterface() {
     const assistantId = `${Date.now() + 1}`
     let assistantAdded = false
     let sources: Message['sources'] = []
+    let brainPlan: BrainPlan | undefined
 
     try {
       setChatStatus(`${t(locale, 'callingApi')} ${effectiveUseVoting ? t(locale, 'voting') : effectiveModel.name}`)
@@ -417,6 +446,10 @@ export function ChatInterface() {
                   setCurrentConversationId(parsed.conversation_id)
                 }
                 if (parsed.sources?.length) sources = parsed.sources
+                if (parsed.brain_plan) {
+                  brainPlan = parsed.brain_plan
+                  setChatStatus(`${t(locale, 'brainRoute')}: ${parsed.brain_plan.route_id}`)
+                }
                 if (parsed.type === 'voting_start') {
                   const modelStatus: VotingState['modelStatus'] = {}
                   const modelContents: VotingState['modelContents'] = {}
@@ -469,6 +502,7 @@ export function ChatInterface() {
                     sources: parsed.sources || sources,
                     searchEnabled: parsed.search_enabled,
                     votingResults,
+                    brainPlan: parsed.brain_plan || brainPlan,
                   }
                   if (!assistantAdded) {
                     assistantAdded = true
@@ -508,6 +542,7 @@ export function ChatInterface() {
                     sources,
                     searchEnabled: parsed.search_enabled,
                     modelUsed: parsed.model,
+                    brainPlan: parsed.brain_plan || brainPlan,
                   }
                   if (!assistantAdded) {
                     assistantAdded = true
@@ -521,6 +556,7 @@ export function ChatInterface() {
                             sources,
                             searchEnabled: parsed.search_enabled ?? m.searchEnabled,
                             modelUsed: parsed.model || m.modelUsed,
+                            brainPlan: parsed.brain_plan || m.brainPlan || brainPlan,
                           }
                         : m
                     )))
@@ -653,6 +689,21 @@ export function ChatInterface() {
                           <RefreshCw className={cn('h-3 w-3', isLoading && 'animate-spin')} />
                           {t(locale, 'rerunTurn')}
                         </button>
+                      </div>
+                    )}
+
+                    {message.brainPlan && (
+                      <div className="mb-3 rounded-xl border border-sky-200 bg-sky-50/80 px-3 py-2 text-xs text-sky-900">
+                        <div className="font-medium">
+                          {t(locale, 'brainRoute')}: {message.brainPlan.route_id}
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sky-800/90">
+                          <span>{t(locale, 'primaryBrain')}: {message.brainPlan.primary_brain}</span>
+                          {message.brainPlan.supporting_brains.length > 0 && (
+                            <span>{t(locale, 'supportingBrains')}: {message.brainPlan.supporting_brains.join(locale === 'zh-CN' ? '、' : ', ')}</span>
+                          )}
+                          <span>{t(locale, 'thinkingFramework')}: {message.brainPlan.thinking_framework}</span>
+                        </div>
                       </div>
                     )}
 

@@ -14,6 +14,7 @@ from datetime import datetime
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from brains.control_plane import build_execution_plan
 from llm.adapter import LLMAdapter
 from llm.voting import MultiModelVoting
 from llm.router import TaskRouter, TaskType
@@ -121,6 +122,7 @@ async def save_message(
     sources: Optional[List[dict]] = None,
     voting_results: Optional[dict] = None,
     tokens_used: Optional[int] = None,
+    extra: Optional[dict] = None,
 ) -> Message:
     """Save a message to the database"""
     msg = Message(
@@ -132,6 +134,7 @@ async def save_message(
         sources=sources or [],
         voting_results=voting_results,
         tokens_used=tokens_used,
+        extra=extra or {},
     )
     db.add(msg)
     
@@ -179,6 +182,23 @@ async def generate_conversation_title(content: str) -> str:
     return title
 
 
+def _brain_plan_payload(plan) -> dict:
+    return {
+        "route_id": plan.route_id,
+        "problem_type": plan.problem_type,
+        "thinking_framework": plan.thinking_framework,
+        "primary_brain": plan.primary_brain,
+        "supporting_brains": plan.supporting_brains,
+        "review_brain": plan.review_brain,
+        "fallback_brain": plan.fallback_brain,
+        "primary_models": plan.primary_models,
+        "supporting_models": plan.supporting_models,
+        "selected_models": plan.selected_models,
+        "execution_mode": plan.execution_mode,
+        "surface": plan.surface,
+    }
+
+
 @router.post("/chat")
 async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
     """
@@ -196,6 +216,7 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
         conversation_id = None
         context_messages = []
         voting_data = None  # Store voting individual results
+        brain_plan = None
         
         try:
             # === Phase 1: Immediate connection confirmation ===
@@ -213,6 +234,17 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
             
             # Send conversation_id immediately
             yield f"data: {json.dumps({'conversation_id': str(conversation_id), 'search_enabled': request.enable_search}, ensure_ascii=False)}\n\n"
+
+            brain_plan = await build_execution_plan(
+                db,
+                problem_type="interactive_dialog",
+                surface="chat",
+                use_voting=request.use_voting,
+                enable_search=request.enable_search,
+                enable_thinking=request.enable_thinking,
+                requested_model=request.model if request.provider and request.model else None,
+            )
+            yield f"data: {json.dumps({'brain_plan': _brain_plan_payload(brain_plan)}, ensure_ascii=False)}\n\n"
             
             # === Phase 3: Save user message ===
             t_save = time.time()
@@ -312,6 +344,8 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
                 voting_models = None
                 if request.voting_models:
                     voting_models = request.voting_models
+                elif brain_plan and brain_plan.selected_models:
+                    voting_models = brain_plan.selected_models
                 # Let MultiModelVoting handle model selection based on search/thinking capability
                 
                 voting = MultiModelVoting(
@@ -337,6 +371,9 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
                 if request.provider and request.model:
                     use_provider = request.provider
                     use_model = request.model
+                elif brain_plan and brain_plan.selected_models:
+                    use_provider = "qwen"
+                    use_model = brain_plan.selected_models[0]
                 else:
                     task_type = task_router.classify_task(request.message)
                     model_config = task_router.get_model_config(task_type)
@@ -399,10 +436,16 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
                         else:
                             full_response += actual_chunk
                             if first_chunk and sources:
-                                yield f"data: {json.dumps({'content': actual_chunk, 'sources': sources, 'model': use_model, 'search_enabled': request.enable_search}, ensure_ascii=False)}\n\n"
+                                yield f"data: {json.dumps({'content': actual_chunk, 'sources': sources, 'model': use_model, 'search_enabled': request.enable_search, 'brain_plan': _brain_plan_payload(brain_plan) if brain_plan else None}, ensure_ascii=False)}\n\n"
                                 first_chunk = False
                             else:
-                                yield f"data: {json.dumps({'content': actual_chunk}, ensure_ascii=False)}\n\n"
+                                payload = {'content': actual_chunk}
+                                if first_chunk and brain_plan:
+                                    payload['brain_plan'] = _brain_plan_payload(brain_plan)
+                                    payload['model'] = use_model
+                                    payload['search_enabled'] = request.enable_search
+                                    first_chunk = False
+                                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
                     
                     log(f"模型调用完成: 耗时={time.time()-t_model:.2f}s, 响应长度={len(full_response)}")
             
@@ -428,6 +471,11 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
                     model=model_used or ("voting" if voting_data else None),
                     sources=[{"title": s.get("title", ""), "url": s.get("url", ""), "source": s.get("source", ""), "score": s.get("score", 0)} for s in sources] if sources else [],
                     voting_results=voting_data,
+                    extra={
+                        "brain_plan": _brain_plan_payload(brain_plan) if brain_plan else None,
+                        "search_enabled": request.enable_search,
+                        "thinking_enabled": request.enable_thinking,
+                    },
                 )
                 log(f"助手消息保存成功")
             except Exception as e:

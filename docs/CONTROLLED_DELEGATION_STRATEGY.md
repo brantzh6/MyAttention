@@ -259,6 +259,67 @@ Current workaround:
 This keeps delegation inside the `acpx` control plane while preserving:
 
 - session ownership
+- agent routing
+- history/audit recovery
+- main-controller acceptance control
+
+## 13. Context Packet Rule
+
+Delegated tasks must not be sent as open-ended "go read the repo" prompts.
+
+The current stable rule is:
+
+- main controller prepares a bounded context packet
+- packet includes only the files/excerpts needed for the task
+- delegated agent is instructed to use only that packet
+- results are recovered through `acpx` session history or explicit output
+
+This reduces three failure modes:
+
+- repo-wide context drift
+- agent falling back to generic project-summary behavior
+- hidden reads that are hard to audit
+
+Current helper scripts:
+
+- `/D:/code/MyAttention/scripts/acpx/openclaw_delegate.py`
+- `/D:/code/MyAttention/scripts/acpx/build_context_packet.py`
+- `/D:/code/MyAttention/scripts/acpx/run_file_delegation.py`
+
+## 14. File-Based Delegation Protocol
+
+The preferred execution mode is now file-based delegation.
+
+Flow:
+
+1. Main controller prepares:
+   - brief file
+   - context packet file
+   - expected output schema
+2. Delegated agent receives only:
+   - brief path
+   - context path
+   - output path
+3. Delegated agent writes a UTF-8 JSON result file.
+4. Main controller validates:
+   - output exists
+   - output parses
+   - schema is acceptable
+5. Only then is the result considered for acceptance.
+
+Why this is preferred:
+
+- avoids shell/stdout instability
+- avoids Windows console encoding traps
+- makes outputs durable and auditable
+- aligns delegation with task/artifact/version objects
+
+Rule:
+
+- free-form prompt delegation is now fallback only
+- file-based delegation is the default mode for coding, review, and bounded analysis tasks
+
+- session ownership
 - bounded task routing
 - structured result recovery
 - controller-side acceptance and rollback

@@ -30,6 +30,13 @@
 - 版本化智能架构：`docs/VERSIONED_INTELLIGENCE_ARCHITECTURE.md`
 - 时间化与版本化数据研究：`docs/TEMPORAL_AND_VERSIONED_DATA_RESEARCH.md`
 - 受控任务外包与多脑协作策略：`docs/CONTROLLED_DELEGATION_STRATEGY.md`
+- IKE 迁移对齐文档：`docs/IKE_MIGRATION_ALIGNMENT.md`
+- IKE v0 执行计划：`docs/IKE_V0_EXECUTION_PLAN.md`
+- IKE v0 共享对象契约：`docs/IKE_SHARED_OBJECTS_V0.md`
+- IKE 运行时迁移顺序：`docs/IKE_RUNTIME_MIGRATION_SEQUENCE.md`
+- IKE v0 实施切片：`docs/IKE_V0_IMPLEMENTATION_SLICES.md`
+- IKE v0 委派任务清单：`docs/IKE_V0_DELEGATION_BACKLOG.md`
+- IKE v0 任务包：`docs/IKE_V0_TASK_PACKETS.md`
 - 实施准备检查点：`docs/IMPLEMENTATION_READINESS_CHECKPOINT.md`
 - gstack skill 试用与评估：`docs/GSTACK_TRIAL_PLAN.md`
 - 项目推进路线图：`docs/PROJECT_EXECUTION_ROADMAP.md`
@@ -581,6 +588,7 @@ Frontend
 - 必须测试，不能只改不验
 - 必须记录，不能只做不留痕
 - 必须让自我进化系统持续可观测
+- 必须持续补齐复杂来源获取能力，尤其是需要浏览器上下文、动态渲染或反爬适配的来源；`agent-assisted retrieval / browser-assisted retrieval / anti-bot aware collection` 属于信息获取主线能力，而不是可选附加项。
 
 ---
 

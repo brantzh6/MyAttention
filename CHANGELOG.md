@@ -264,3 +264,7 @@
   - sources such as `36kr` should not be treated as globally good/bad
   - source value must be evaluated by task intent and role in context
   - long-term attention design should evolve from `topic -> source` toward `object + task intent + role in context`
+
+- Recorded a new mainline capability gap:
+  - complex-source retrieval and anti-bot adaptation are still missing as first-class information-acquisition capabilities
+  - current `RSS / API / generic fetch / search` paths are not sufficient for sources such as WeChat articles, social platforms, and other browser-context / dynamically rendered pages

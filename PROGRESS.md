@@ -12,6 +12,18 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 
 项目不是从零开始，而是在已有聊天、知识库、记忆、信息源管理、测试问题中心和部分自我进化能力的基础上，进入“按主线重新收口”的阶段。
 
+新增判断：
+
+- `docs/ike_master_delivery/` 已成为新的顶层设计输入。
+- 当前结论不是 `fresh start`，而是 `IKE-guided migration`。
+- 已新增 `docs/IKE_MIGRATION_ALIGNMENT.md`，用于明确 IKE 与现有代码基线的映射关系、可复用资产、需要重构的结构以及第一阶段迁移切片。
+- 已新增 `docs/IKE_V0_EXECUTION_PLAN.md`，将第一阶段迁移切片收敛为可执行的 v0 闭环计划，明确 v0 只证明一个真实、可检查、可重复的 IKE 端到端循环。
+- 已新增 `docs/IKE_SHARED_OBJECTS_V0.md`，明确 v0 阶段的最小一等对象契约、统一 envelope、对象关系规则以及与现有运行时对象的初步映射。
+- 已新增 `docs/IKE_RUNTIME_MIGRATION_SEQUENCE.md`，明确 IKE 迁移不从 repo 重写开始，而是按运行时切片、共享对象、最小 API / UI / harness 闭环渐进推进。
+- 已新增 `docs/IKE_V0_IMPLEMENTATION_SLICES.md`，把 v0 闭环拆成可委派、可验收、可组合的实现切片，并明确哪些切片适合外包、哪些切片必须保留主控判断。
+- 已新增 `docs/IKE_V0_DELEGATION_BACKLOG.md`，把 v0 切片进一步压成可直接委派给 qoder/openclaw 的 bounded tasks，并明确第一批推荐委派顺序与禁止外包的控制性部分。
+- 已新增 `docs/IKE_V0_TASK_PACKETS.md`，明确当前 v0 第一批任务包的委派策略：`openclaw-glm` 负责编码实现，`openclaw-kimi` 负责分析/复核，`qoder` 暂保留为后续更稳定的半自动实现通道。
+
 新增共识：
 
 - 主控 agent 和后续进化大脑都不应机械附和需求，而应主动研究、分析、评估可行性、识别错误方向并及时纠偏。
@@ -412,3 +424,5 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - The same object/source can legitimately serve multiple topics and multiple task intents.
   - Future attention design should evolve from simple `topic -> source` thinking toward `object + task intent + role in context`.
   - This correction is now part of the attention-policy architecture to prevent future quality work from regressing into global source suppression.
+
+- 2026-03-24: Recorded a mainline capability gap for complex-source retrieval and anti-bot adaptation. Current RSS/API/generic-fetch/search paths are not sufficient for sources that require browser context, dynamic rendering, or anti-bot-aware acquisition.

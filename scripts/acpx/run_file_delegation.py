@@ -21,7 +21,27 @@ def build_prompt(
     context_path: Path,
     output_path: Path,
     output_schema: str,
+    allowed_writes: list[Path],
 ) -> str:
+    write_rules = []
+    if allowed_writes:
+        write_rules.extend(
+            [
+                "- You may modify only the explicitly allowed project files listed below.",
+                "- Do not create or modify any other project files.",
+                "- After project edits, still write exactly one UTF-8 JSON result file at the output path.",
+                "",
+                "Allowed project file writes:",
+                *[f"- {path}" for path in allowed_writes],
+            ]
+        )
+    else:
+        write_rules.extend(
+            [
+                "- Produce exactly one UTF-8 JSON file at the output path.",
+                "- Do not write any other project files.",
+            ]
+        )
     return "\n".join(
         [
             "Complete this task in one turn.",
@@ -36,9 +56,8 @@ def build_prompt(
             "",
             "Execution requirements:",
             "- Read the brief file and the context file.",
-            "- Produce exactly one UTF-8 JSON file at the output path.",
             "- Do not wrap JSON in markdown fences.",
-            "- Do not write any other project files.",
+            *write_rules,
             "- If you cannot complete the task, still write a JSON object describing the blocker.",
             "",
             "Required JSON schema:",
@@ -101,6 +120,12 @@ def main() -> int:
         default='{"summary":"string","results":[]}',
         help="Human-readable JSON schema to embed in the prompt.",
     )
+    parser.add_argument(
+        "--allowed-write",
+        action="append",
+        default=[],
+        help="Project file path that the delegate is allowed to modify. Repeat for multiple files.",
+    )
     parser.add_argument("--wait-for-output", type=int, default=30, help="Seconds to wait for output file after prompt completes.")
     args = parser.parse_args()
 
@@ -109,11 +134,12 @@ def main() -> int:
     context_path = Path(args.context).resolve()
     output_path = Path(args.output).resolve()
     prompt_path = Path(args.prompt_file).resolve()
+    allowed_writes = [Path(path).resolve() for path in args.allowed_write]
 
     prompt_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    prompt_text = build_prompt(brief_path, context_path, output_path, args.output_schema)
+    prompt_text = build_prompt(brief_path, context_path, output_path, args.output_schema, allowed_writes)
     prompt_path.write_text(prompt_text, encoding="utf-8", newline="\n")
 
     result = run_delegate(cwd, args.agent_alias, args.session, prompt_path, args.timeout)

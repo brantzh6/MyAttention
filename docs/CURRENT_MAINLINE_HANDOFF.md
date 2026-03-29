@@ -16,6 +16,24 @@ The current mainline is:
 
 Do not open new broad architecture branches before these are stabilized.
 
+## Operating Mode
+
+Default mode:
+
+- I act as the main controller.
+- Implementation work should usually be delegated to qoder/openclaw or other bounded agents.
+- I should primarily provide:
+  - architecture framing
+  - task decomposition
+  - constraints
+  - review
+  - acceptance decisions
+
+Exception mode:
+
+- Direct code edits are allowed only when the user explicitly wants a fast, bounded corrective action or when delegation is unavailable.
+- Even then, keep the patch narrow and preserve the mainline boundary.
+
 ## What Is Already True
 
 ### Runtime

@@ -1496,6 +1496,20 @@ def _focus_type_priority(item_type: str, focus: SourceDiscoveryFocus) -> int:
         return 0
 
 
+def _candidate_selection_threshold(item_type: str, focus: SourceDiscoveryFocus) -> float:
+    base_threshold = 0.45
+    if item_type in {"person", "organization", "release", "signal"}:
+        if focus in {SourceDiscoveryFocus.METHOD, SourceDiscoveryFocus.FRONTIER}:
+            return 0.38
+        if focus == SourceDiscoveryFocus.LATEST:
+            return 0.4
+    if item_type == "community" and focus in {SourceDiscoveryFocus.METHOD, SourceDiscoveryFocus.FRONTIER}:
+        return 0.42
+    if item_type == "repository" and focus == SourceDiscoveryFocus.METHOD:
+        return 0.4
+    return base_threshold
+
+
 async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) -> SourceDiscoveryResponse:
     search = AliyunWebSearch()
     classifier = get_authority_classifier()
@@ -1640,7 +1654,11 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
                     related_candidate["matched_queries"].append(query)
 
     ranked = sorted(
-        [item for item in aggregated.values() if item["authority_score"] >= 0.45],
+        [
+            item
+            for item in aggregated.values()
+            if item["authority_score"] >= _candidate_selection_threshold(item["item_type"], body.focus)
+        ],
         key=lambda item: (
             item["authority_score"],
             item["evidence_count"],

@@ -16,9 +16,13 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from ike_v0.schemas.research_task import ResearchTask
+from ike_v0.schemas.observation import Observation
+from ike_v0.schemas.entity import Entity
+from ike_v0.schemas.claim import Claim
 from ike_v0.mappers.research_task import (
     map_task_to_research_task,
     TASK_TO_RESEARCH_STATUS,
+    derive_research_task_from_entity_claim,
 )
 from ike_v0.types.ids import IKEKind
 
@@ -233,6 +237,317 @@ class TestMapTaskToResearchTask(unittest.TestCase):
         }
         rt = map_task_to_research_task(task)
         self.assertEqual(rt.status, "draft")
+
+    def test_trigger_type_evolution_governance(self):
+        """Evolution source_type triggers governance."""
+        task = {
+            "title": "Evolution Issue",
+            "goal": "Fix quality issue",
+            "status": "pending",
+            "priority": 1,
+            "source_type": "evolution_quality_check",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        rt = map_task_to_research_task(task)
+        self.assertEqual(rt.trigger_type, "governance")
+
+    def test_trigger_type_health_gap(self):
+        """System health source_type triggers gap."""
+        task = {
+            "title": "Health Check Failed",
+            "goal": "Investigate health issue",
+            "status": "pending",
+            "priority": 0,
+            "source_type": "system_health",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        rt = map_task_to_research_task(task)
+        self.assertEqual(rt.trigger_type, "gap")
+
+    def test_trigger_type_quality_gap(self):
+        """Quality issue source_type triggers gap."""
+        task = {
+            "title": "Quality Issue",
+            "goal": "Address quality gap",
+            "status": "pending",
+            "priority": 1,
+            "source_type": "quality_check",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        rt = map_task_to_research_task(task)
+        self.assertEqual(rt.trigger_type, "gap")
+
+    def test_artifact_refs_in_input_refs(self):
+        """Artifact refs from task are included in input_refs."""
+        artifact_refs = [
+            "artifact-001",
+            "artifact-002",
+        ]
+        task = {
+            "title": "Test",
+            "goal": "Test",
+            "status": "pending",
+            "priority": 2,
+            "artifact_refs": artifact_refs,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        rt = map_task_to_research_task(task)
+        for ref in artifact_refs:
+            self.assertIn(ref, rt.input_refs)
+
+    def test_artifact_refs_in_references(self):
+        """Artifact refs from task are included in references."""
+        artifact_refs = [
+            "artifact-001",
+            "artifact-002",
+        ]
+        task = {
+            "title": "Test",
+            "goal": "Test",
+            "status": "pending",
+            "priority": 2,
+            "artifact_refs": artifact_refs,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        rt = map_task_to_research_task(task)
+        for ref in artifact_refs:
+            self.assertIn(ref, rt.references)
+
+    def test_provenance_includes_artifact_count(self):
+        """Provenance includes artifact count when artifacts present."""
+        artifact_refs = ["artifact-001", "artifact-002", "artifact-003"]
+        task = {
+            "id": str(uuid4()),
+            "title": "Test",
+            "goal": "Test",
+            "status": "pending",
+            "priority": 2,
+            "artifact_refs": artifact_refs,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        rt = map_task_to_research_task(task)
+        self.assertEqual(rt.provenance.get("artifact_count"), 3)
+        self.assertEqual(rt.provenance.get("original_task_id"), task["id"])
+
+    def test_provenance_includes_context_id(self):
+        """Provenance includes context_id when task_context provided."""
+        task = {
+            "id": str(uuid4()),
+            "title": "Test",
+            "goal": "Test",
+            "status": "pending",
+            "priority": 2,
+            "context_id": "context-123",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        context = {"id": "context-123", "type": "evolution"}
+        rt = map_task_to_research_task(task, task_context=context)
+        self.assertTrue(rt.provenance.get("has_context"))
+        self.assertEqual(rt.provenance.get("context_id"), "context-123")
+
+    def test_owner_brain_preserved(self):
+        """Owner brain is preserved from task substrate."""
+        task = {
+            "title": "Test",
+            "goal": "Test",
+            "status": "pending",
+            "priority": 2,
+            "assigned_brain": "evolution-chief-brain",
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        rt = map_task_to_research_task(task)
+        self.assertEqual(rt.owner_brain, "evolution-chief-brain")
+
+    def test_input_refs_order_context_first(self):
+        """Context ID appears first in input_refs, then artifacts."""
+        artifact_refs = ["artifact-001", "artifact-002"]
+        task = {
+            "title": "Test",
+            "goal": "Test",
+            "status": "pending",
+            "priority": 2,
+            "context_id": "context-123",
+            "artifact_refs": artifact_refs,
+            "created_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(timezone.utc),
+        }
+        rt = map_task_to_research_task(task)
+        self.assertEqual(rt.input_refs[0], "context-123")
+        self.assertIn("artifact-001", rt.input_refs)
+        self.assertIn("artifact-002", rt.input_refs)
+
+
+class TestDeriveResearchTaskFromEntityClaim(unittest.TestCase):
+    """Tests for derive_research_task_from_entity_claim helper."""
+
+    def _make_test_objects(self):
+        """Create test Observation, Entity, and Claim objects."""
+        now = datetime.now(timezone.utc)
+
+        obs = Observation(
+            id="ike:observation:" + str(uuid4()),
+            kind="observation",
+            created_at=now,
+            updated_at=now,
+            source_ref="source:test",
+            observed_at=now,
+            captured_at=now,
+            title="Test Observation",
+            summary="Test summary",
+        )
+
+        entity = Entity(
+            id="ike:entity:" + str(uuid4()),
+            kind="entity",
+            created_at=now,
+            updated_at=now,
+            entity_type="organization",
+            canonical_key="org:test",
+            display_name="Test Org",
+        )
+
+        claim = Claim(
+            id="ike:claim:" + str(uuid4()),
+            kind="claim",
+            created_at=now,
+            updated_at=now,
+            claim_type="capability",
+            statement="Test Org has AI capabilities",
+            subject_refs=[entity.id],
+            source_observation_refs=[obs.id],
+        )
+
+        return obs, entity, claim
+
+    def test_derive_basic(self):
+        """Derive ResearchTask from Entity/Claim/Observation."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(obs, entity, claim)
+
+        self.assertEqual(rt.kind, "research_task")
+        self.assertEqual(rt.task_type, "discovery")
+        self.assertEqual(rt.trigger_type, "gap")
+        self.assertEqual(rt.status, "draft")
+        self.assertEqual(rt.priority, 2)
+
+    def test_derive_input_refs(self):
+        """Derived task includes all source objects in input_refs."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(obs, entity, claim)
+
+        self.assertIn(obs.id, rt.input_refs)
+        self.assertIn(entity.id, rt.input_refs)
+        self.assertIn(claim.id, rt.input_refs)
+        self.assertEqual(len(rt.input_refs), 3)
+
+    def test_derive_references(self):
+        """Derived task includes all source objects in references."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(obs, entity, claim)
+
+        self.assertIn(obs.id, rt.references)
+        self.assertIn(entity.id, rt.references)
+        self.assertIn(claim.id, rt.references)
+
+    def test_derive_provenance(self):
+        """Derived task has explicit provenance trace."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(obs, entity, claim)
+
+        self.assertEqual(rt.provenance.get("mapper"), "derive_research_task_from_entity_claim")
+        self.assertEqual(rt.provenance.get("source_observation_id"), obs.id)
+        self.assertEqual(rt.provenance.get("source_entity_id"), entity.id)
+        self.assertEqual(rt.provenance.get("source_claim_id"), claim.id)
+        self.assertEqual(rt.provenance.get("derivation_path"), "observation -> entity/claim -> research_task")
+
+    def test_derive_title_from_claim(self):
+        """Derived task title is derived from claim statement."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(obs, entity, claim)
+
+        self.assertIn("Investigate", rt.title)
+        self.assertIn("AI capabilities", rt.title)
+
+    def test_derive_custom_title(self):
+        """Derived task uses custom title when provided."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(
+            obs, entity, claim, title="Custom Research Task"
+        )
+
+        self.assertEqual(rt.title, "Custom Research Task")
+
+    def test_derive_goal_from_claim(self):
+        """Derived task goal is derived from claim statement."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(obs, entity, claim)
+
+        self.assertIn("Validate claim", rt.goal)
+        self.assertIn("AI capabilities", rt.goal)
+
+    def test_derive_custom_goal(self):
+        """Derived task uses custom goal when provided."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(
+            obs, entity, claim, goal="Custom research goal"
+        )
+
+        self.assertEqual(rt.goal, "Custom research goal")
+
+    def test_derive_custom_task_type(self):
+        """Derived task uses custom task_type when provided."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(
+            obs, entity, claim, task_type="validation"
+        )
+
+        self.assertEqual(rt.task_type, "validation")
+
+    def test_derive_assigned_brain(self):
+        """Derived task preserves assigned_brain when provided."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(
+            obs, entity, claim, assigned_brain="research-brain-001"
+        )
+
+        self.assertEqual(rt.owner_brain, "research-brain-001")
+
+    def test_derive_generated_id_format(self):
+        """Derived task generates properly formatted IKE ID."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(obs, entity, claim)
+
+        self.assertTrue(rt.id.startswith("ike:research_task:"))
+        self.assertEqual(len(rt.id), len("ike:research_task:") + 36)
+
+    def test_derive_preserves_object_ids(self):
+        """Derived task correctly extracts IDs from objects."""
+        obs, entity, claim = self._make_test_objects()
+
+        rt = derive_research_task_from_entity_claim(obs, entity, claim)
+
+        self.assertEqual(rt.provenance["source_observation_id"], obs.id)
+        self.assertEqual(rt.provenance["source_entity_id"], entity.id)
+        self.assertEqual(rt.provenance["source_claim_id"], claim.id)
 
 
 if __name__ == "__main__":

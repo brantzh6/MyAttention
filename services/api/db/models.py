@@ -1163,3 +1163,379 @@ class ProceduralMemory(Base):
     extra = Column("metadata", JSON, default=dict)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# IKE Runtime v0 – Kernel Schema Foundation
+# ═══════════════════════════════════════════════════════════════════════════
+
+# --- Runtime v0 Enums ---
+
+class RuntimeTaskStatus(str, enum.Enum):
+    INBOX = "inbox"
+    READY = "ready"
+    ACTIVE = "active"
+    WAITING = "waiting"
+    REVIEW_PENDING = "review_pending"
+    DONE = "done"
+    FAILED = "failed"
+
+
+class RuntimeProjectStatus(str, enum.Enum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    BLOCKED = "blocked"
+    COMPLETED = "completed"
+    ARCHIVED = "archived"
+
+
+class RuntimeTaskType(str, enum.Enum):
+    INBOX = "inbox"
+    STUDY = "study"
+    IMPLEMENTATION = "implementation"
+    REVIEW = "review"
+    MAINTENANCE = "maintenance"
+    WORKFLOW = "workflow"
+    DAEMON = "daemon"
+
+
+class RuntimeOwnerKind(str, enum.Enum):
+    CONTROLLER = "controller"
+    DELEGATE = "delegate"
+    RUNTIME = "runtime"
+    SCHEDULER = "scheduler"
+    REVIEWER = "reviewer"
+    USER = "user"
+
+
+class RuntimeReviewStatus(str, enum.Enum):
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    NEEDS_REVISION = "needs_revision"
+
+
+class RuntimeDecisionOutcome(str, enum.Enum):
+    ADOPT = "adopt"
+    REJECT = "reject"
+    DEFER = "defer"
+    ESCALATE = "escalate"
+
+
+class RuntimeDecisionStatus(str, enum.Enum):
+    DRAFT = "draft"
+    REVIEW_PENDING = "review_pending"
+    FINAL = "final"
+    SUPERSEDED = "superseded"
+
+
+class RuntimePacketStatus(str, enum.Enum):
+    DRAFT = "draft"
+    PENDING_REVIEW = "pending_review"
+    ACCEPTED = "accepted"
+
+
+class RuntimeLeaseStatus(str, enum.Enum):
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    RELEASED = "released"
+
+
+class RuntimeContextStatus(str, enum.Enum):
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class RuntimeOutboxPublishStatus(str, enum.Enum):
+    PENDING = "pending"
+    PUBLISHED = "published"
+    FAILED = "failed"
+
+
+# --- Runtime v0 DB Enum Helpers ---
+
+RuntimeTaskStatusDbEnum = Enum(
+    RuntimeTaskStatus,
+    name="runtime_task_status",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimeProjectStatusDbEnum = Enum(
+    RuntimeProjectStatus,
+    name="runtime_project_status",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimeTaskTypeDbEnum = Enum(
+    RuntimeTaskType,
+    name="runtime_task_type",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimeOwnerKindDbEnum = Enum(
+    RuntimeOwnerKind,
+    name="runtime_owner_kind",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimeReviewStatusDbEnum = Enum(
+    RuntimeReviewStatus,
+    name="runtime_review_status",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimeDecisionOutcomeDbEnum = Enum(
+    RuntimeDecisionOutcome,
+    name="runtime_decision_outcome",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimeDecisionStatusDbEnum = Enum(
+    RuntimeDecisionStatus,
+    name="runtime_decision_status",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimePacketStatusDbEnum = Enum(
+    RuntimePacketStatus,
+    name="runtime_packet_status",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimeLeaseStatusDbEnum = Enum(
+    RuntimeLeaseStatus,
+    name="runtime_lease_status",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimeContextStatusDbEnum = Enum(
+    RuntimeContextStatus,
+    name="runtime_context_status",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+RuntimeOutboxPublishStatusDbEnum = Enum(
+    RuntimeOutboxPublishStatus,
+    name="runtime_outbox_publish_status",
+    create_type=False,
+    values_callable=lambda x: [e.value for e in x]
+)
+
+
+# --- Runtime v0 Models ---
+
+class RuntimeProject(Base):
+    """Long-lived project scope in IKE Runtime v0."""
+    __tablename__ = "runtime_projects"
+
+    project_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    project_key = Column(String(100), nullable=False, unique=True)
+    title = Column(String(500), nullable=False)
+    goal = Column(Text)
+    status = Column(RuntimeProjectStatusDbEnum, nullable=False, default=RuntimeProjectStatus.ACTIVE)
+    current_phase = Column(String(100))
+    priority = Column(Integer, nullable=False, default=2)
+    owner_type = Column(String(50))
+    owner_id = Column(String(255))
+    current_work_context_id = Column(UUID(as_uuid=True))
+    blocker_summary = Column(Text)
+    next_milestone = Column(String(500))
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    closed_at = Column(DateTime(timezone=True))
+    extra = Column("metadata", JSON, nullable=False, default=dict)
+
+
+class RuntimeTask(Base):
+    """Durable executable or reviewable work unit in IKE Runtime v0."""
+    __tablename__ = "runtime_tasks"
+
+    task_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("runtime_projects.project_id", ondelete="CASCADE"), nullable=False)
+    task_type = Column(RuntimeTaskTypeDbEnum, nullable=False)
+    title = Column(String(500), nullable=False)
+    goal = Column(Text)
+    status = Column(RuntimeTaskStatusDbEnum, nullable=False, default=RuntimeTaskStatus.INBOX)
+    priority = Column(Integer, nullable=False, default=2)
+    owner_kind = Column(RuntimeOwnerKindDbEnum)
+    owner_id = Column(String(255))
+    parent_task_id = Column(UUID(as_uuid=True), ForeignKey("runtime_tasks.task_id", ondelete="SET NULL"))
+    decision_id = Column(UUID(as_uuid=True))
+    active_checkpoint_id = Column(UUID(as_uuid=True))
+    current_lease_id = Column(UUID(as_uuid=True))
+    review_required = Column(Boolean, nullable=False, default=False)
+    review_status = Column(RuntimeReviewStatusDbEnum)
+    waiting_reason = Column(String(100))
+    waiting_detail = Column(Text)
+    lease_expiry_policy = Column(String(100))
+    next_action_summary = Column(Text)
+    result_summary = Column(Text)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    started_at = Column(DateTime(timezone=True))
+    ended_at = Column(DateTime(timezone=True))
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    extra = Column("metadata", JSON, nullable=False, default=dict)
+
+    # Relationships
+    project = relationship("RuntimeProject", foreign_keys=[project_id])
+    parent_task = relationship("RuntimeTask", remote_side=[task_id], backref="child_tasks")
+    events = relationship("RuntimeTaskEvent", back_populates="task", cascade="all, delete-orphan")
+    checkpoints = relationship("RuntimeTaskCheckpoint", back_populates="task", cascade="all, delete-orphan")
+    leases = relationship("RuntimeWorkerLease", back_populates="task", cascade="all, delete-orphan")
+    memory_packets = relationship("RuntimeMemoryPacket", back_populates="task", cascade="all, delete-orphan")
+
+
+class RuntimeDecision(Base):
+    """Durable decision state in IKE Runtime v0."""
+    __tablename__ = "runtime_decisions"
+
+    decision_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("runtime_projects.project_id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("runtime_tasks.task_id", ondelete="SET NULL"))
+    decision_scope = Column(String(100), nullable=False)
+    title = Column(String(500), nullable=False)
+    summary = Column(Text)
+    rationale = Column(Text)
+    outcome = Column(RuntimeDecisionOutcomeDbEnum)
+    status = Column(RuntimeDecisionStatusDbEnum, nullable=False, default=RuntimeDecisionStatus.DRAFT)
+    impact_scope = Column(String(200))
+    supersedes_decision_id = Column(UUID(as_uuid=True), ForeignKey("runtime_decisions.decision_id", ondelete="SET NULL"))
+    created_by_kind = Column(RuntimeOwnerKindDbEnum, nullable=False)
+    created_by_id = Column(String(255))
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    finalized_at = Column(DateTime(timezone=True))
+    extra = Column("metadata", JSON, nullable=False, default=dict)
+
+    # Relationships
+    project = relationship("RuntimeProject", foreign_keys=[project_id])
+    task = relationship("RuntimeTask", foreign_keys=[task_id])
+    supersedes_decision = relationship("RuntimeDecision", remote_side=[decision_id])
+
+
+class RuntimeTaskEvent(Base):
+    """Append-only event log for task state transitions and execution actions."""
+    __tablename__ = "runtime_task_events"
+
+    event_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("runtime_projects.project_id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("runtime_tasks.task_id", ondelete="CASCADE"), nullable=False)
+    event_type = Column(String(100), nullable=False)
+    from_status = Column(RuntimeTaskStatusDbEnum)
+    to_status = Column(RuntimeTaskStatusDbEnum)
+    triggered_by_kind = Column(RuntimeOwnerKindDbEnum, nullable=False)
+    triggered_by_id = Column(String(255))
+    reason = Column(Text)
+    payload = Column("payload", JSON, nullable=False, default=dict)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    # Relationships
+    task = relationship("RuntimeTask", back_populates="events")
+
+
+class RuntimeWorkerLease(Base):
+    """Ephemeral-but-durable ownership records for task execution."""
+    __tablename__ = "runtime_worker_leases"
+
+    lease_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("runtime_tasks.task_id", ondelete="CASCADE"), nullable=False)
+    owner_kind = Column(RuntimeOwnerKindDbEnum, nullable=False)
+    owner_id = Column(String(255))
+    lease_status = Column(RuntimeLeaseStatusDbEnum, nullable=False, default=RuntimeLeaseStatus.ACTIVE)
+    heartbeat_at = Column(DateTime(timezone=True))
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    extra = Column("metadata", JSON, nullable=False, default=dict)
+
+    # Relationships
+    task = relationship("RuntimeTask", back_populates="leases")
+
+
+class RuntimeWorkContext(Base):
+    """Current restorable working set for a project."""
+    __tablename__ = "runtime_work_contexts"
+
+    work_context_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("runtime_projects.project_id", ondelete="CASCADE"), nullable=False)
+    status = Column(RuntimeContextStatusDbEnum, nullable=False, default=RuntimeContextStatus.ACTIVE)
+    active_task_id = Column(UUID(as_uuid=True), ForeignKey("runtime_tasks.task_id", ondelete="SET NULL"))
+    latest_decision_id = Column(UUID(as_uuid=True), ForeignKey("runtime_decisions.decision_id", ondelete="SET NULL"))
+    current_focus = Column(Text)
+    blockers_summary = Column(Text)
+    next_steps_summary = Column(Text)
+    packet_ref_id = Column(UUID(as_uuid=True))
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    extra = Column("metadata", JSON, nullable=False, default=dict)
+
+    # Relationships
+    project = relationship("RuntimeProject", foreign_keys=[project_id])
+    active_task = relationship("RuntimeTask", foreign_keys=[active_task_id])
+    latest_decision = relationship("RuntimeDecision", foreign_keys=[latest_decision_id])
+
+
+class RuntimeMemoryPacket(Base):
+    """Compact recoverable runtime summaries (immutable snapshots)."""
+    __tablename__ = "runtime_memory_packets"
+
+    memory_packet_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    project_id = Column(UUID(as_uuid=True), ForeignKey("runtime_projects.project_id", ondelete="CASCADE"), nullable=False)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("runtime_tasks.task_id", ondelete="SET NULL"))
+    packet_type = Column(String(100), nullable=False)
+    status = Column(RuntimePacketStatusDbEnum, nullable=False, default=RuntimePacketStatus.DRAFT)
+    acceptance_trigger = Column(String(200))
+    title = Column(String(500), nullable=False)
+    summary = Column(Text)
+    storage_ref = Column(String(500))
+    content_hash = Column(String(128))
+    parent_packet_id = Column(UUID(as_uuid=True), ForeignKey("runtime_memory_packets.memory_packet_id", ondelete="SET NULL"))
+    created_by_kind = Column(RuntimeOwnerKindDbEnum, nullable=False)
+    created_by_id = Column(String(255))
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    accepted_at = Column(DateTime(timezone=True))
+    extra = Column("metadata", JSON, nullable=False, default=dict)
+
+    # Relationships
+    project = relationship("RuntimeProject", foreign_keys=[project_id])
+    task = relationship("RuntimeTask", back_populates="memory_packets")
+    parent_packet = relationship("RuntimeMemoryPacket", remote_side=[memory_packet_id])
+
+
+class RuntimeTaskCheckpoint(Base):
+    """Checkpoint metadata for task resume capability."""
+    __tablename__ = "runtime_task_checkpoints"
+
+    checkpoint_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    task_id = Column(UUID(as_uuid=True), ForeignKey("runtime_tasks.task_id", ondelete="CASCADE"), nullable=False)
+    checkpoint_type = Column(String(100), nullable=False)
+    step_label = Column(String(200))
+    summary = Column(Text)
+    storage_ref = Column(String(500))
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    extra = Column("metadata", JSON, nullable=False, default=dict)
+
+    # Relationships
+    task = relationship("RuntimeTask", back_populates="checkpoints")
+
+
+class RuntimeOutboxEvent(Base):
+    """Outbox pattern for reliable async side effects."""
+    __tablename__ = "runtime_outbox_events"
+
+    outbox_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
+    aggregate_type = Column(String(100), nullable=False)
+    aggregate_id = Column(String(255), nullable=False)
+    event_type = Column(String(100), nullable=False)
+    payload = Column("payload", JSON, nullable=False, default=dict)
+    publish_status = Column(RuntimeOutboxPublishStatusDbEnum, nullable=False, default=RuntimeOutboxPublishStatus.PENDING)
+    attempt_count = Column(Integer, nullable=False, default=0)
+    last_attempt_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

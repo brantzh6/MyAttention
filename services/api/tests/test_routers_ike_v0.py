@@ -435,6 +435,37 @@ class TestIKERouter(unittest.TestCase):
 
         self.assertEqual(obs_data["confidence"], 0.8)
 
+    def test_chain_inspect_returns_404_for_missing_artifact(self):
+        """Chain inspect returns 404 with helpful message for missing artifact."""
+        # Import get_db inside test to avoid heavy import chain at module level
+        from db import get_db
+        
+        # Override DB dependency to return None (artifact not found)
+        async def mock_get_db():
+            # Create a mock async session that returns None for any query
+            class MockResult:
+                def scalar_one_or_none(self):
+                    return None
+            class MockDB:
+                async def execute(self, query):
+                    return MockResult()
+            return MockDB()
+        
+        test_app.dependency_overrides[get_db] = mock_get_db
+        try:
+            payload = {
+                "artifact_id": "00000000-0000-0000-0000-000000000000",
+            }
+
+            response = self.client.post("/api/ike/v0/chains/inspect", json=payload)
+
+            self.assertEqual(response.status_code, 404)
+            detail = response.json()["detail"]
+            self.assertIn("not found", detail.lower())
+            self.assertIn("TaskArtifact", detail)
+        finally:
+            test_app.dependency_overrides.clear()
+
 
 if __name__ == "__main__":
     unittest.main()

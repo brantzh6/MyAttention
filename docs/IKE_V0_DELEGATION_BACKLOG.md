@@ -362,6 +362,109 @@ Goal:
 
 - provide a thin inspectable view for one observation's entity/claim outputs
 
+### Task V0-L1. Shared Envelope Deduplication
+
+Priority:
+
+- `P0`
+
+Supports slice:
+
+- v0.1 loop hardening
+
+Goal:
+
+- remove shared-envelope field duplication across the v0 object layer
+
+Constraint:
+
+- keep object semantics unchanged
+- reduce drift risk without broad schema redesign
+
+### Task V0-L2. ResearchTask Substrate Wiring
+
+Priority:
+
+- `P0`
+
+Supports slice:
+
+- v0.1 real loop
+
+Goal:
+
+- wire `ResearchTask` onto the current task/context/artifact substrate for one
+  real loop path
+
+Constraint:
+
+- one starter slice only
+- no generalized task-platform redesign
+
+### Task V0-L3. Experiment Stub Runtime Wiring
+
+Priority:
+
+- `P0`
+
+Supports slice:
+
+- v0.1 real loop
+
+Goal:
+
+- create one real experiment stub that attaches to the chosen `ResearchTask`
+
+Constraint:
+
+- one experiment type only
+- one evidence linkage path only
+
+### Task V0-L4. Chain Artifact / Inspect Surface
+
+Priority:
+
+- `P0`
+
+Supports slice:
+
+- v0.1 real loop
+
+Goal:
+
+- expose one inspectable chain surface for:
+  - `Observation`
+  - `Entity/Claim`
+  - `ResearchTask`
+  - `Experiment`
+  - `Decision`
+  - `HarnessCase`
+
+Constraint:
+
+- do not add durable `GET /{type}/{id}`
+- keep this as inspect/chain surface, not a fake object-store API
+
+### Task V0-L5. Harness Loop Validation
+
+Priority:
+
+- `P0`
+
+Supports slice:
+
+- v0.1 real loop
+
+Goal:
+
+- make `HarnessCase` validate loop completeness and traceability for the first
+  real runtime-backed chain
+
+Constraint:
+
+- pass/fail criteria must stay explicit
+- no broad harness platform redesign
+
 ## Later
 
 ### Task V0-J1. End-to-End Runtime Wiring
@@ -397,6 +500,17 @@ Recommended first sequence:
 Reason:
 
 - this gets the object shell and workflow shell into the codebase before broader UI/API spread
+- after the current seam is present, the next controller-approved sequence is:
+  7. `V0-L1`
+  8. `V0-L2`
+  9. `V0-L3`
+  10. `V0-L4`
+  11. `V0-L5`
+
+Additional reason:
+
+- the next proof point is not more isolated preview endpoints
+- it is one real inspectable runtime loop
 
 ## What Not To Delegate From This Backlog
 

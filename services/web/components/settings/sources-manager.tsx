@@ -197,6 +197,55 @@ const itemStatusTone: Record<string, string> = {
   subscribed: 'bg-emerald-100 text-emerald-700',
 }
 
+// Plan activity classification for visual hierarchy
+// active: currently working, needs attention
+// recent: updated within last 7 days but stable
+// stale: merged, inactive, or old
+function classifyPlanActivity(plan: SourcePlan): 'active' | 'recent' | 'stale' {
+  // Stale: merged or inactive status
+  if (plan.review_status === 'merged' || plan.status !== 'active') {
+    return 'stale'
+  }
+
+  // Active: needs review, has pending new version, or policy requires attention
+  const policyNeedsAttention = plan.policy_decision_status === 'needs_review' || plan.policy_decision_status === 'rejected'
+  if (plan.review_status === 'needs_review' || plan.current_version < plan.latest_version || policyNeedsAttention) {
+    return 'active'
+  }
+
+  // Check recency (within 7 days)
+  const updatedAt = plan.updated_at ? new Date(plan.updated_at).getTime() : 0
+  const createdAt = plan.created_at ? new Date(plan.created_at).getTime() : 0
+  const lastActivity = Math.max(updatedAt, createdAt)
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+
+  if (lastActivity >= sevenDaysAgo) {
+    return 'recent'
+  }
+
+  // Default to stale for old plans
+  return 'stale'
+}
+
+function sortPlansByActivity(plans: SourcePlan[]): SourcePlan[] {
+  const priority: Record<string, number> = { active: 0, recent: 1, stale: 2 }
+
+  return [...plans].sort((a, b) => {
+    const aClass = classifyPlanActivity(a)
+    const bClass = classifyPlanActivity(b)
+
+    // First sort by activity class
+    if (priority[aClass] !== priority[bClass]) {
+      return priority[aClass] - priority[bClass]
+    }
+
+    // Then by most recent update within same class
+    const aTime = new Date(a.updated_at || a.created_at || 0).getTime()
+    const bTime = new Date(b.updated_at || b.created_at || 0).getTime()
+    return bTime - aTime
+  })
+}
+
 function formatPlanTime(value: string | null) {
   if (!value) return '未安排'
   const date = new Date(value)
@@ -233,6 +282,26 @@ const itemTypeLabels: Record<string, string> = {
   signal: '动态信号',
   event: '事件',
   domain: '站点',
+}
+
+// Visual distinction for object types - left border colors
+const itemTypeTone: Record<string, string> = {
+  person: 'border-l-amber-500 bg-amber-50/20',
+  organization: 'border-l-blue-500 bg-blue-50/20',
+  repository: 'border-l-emerald-500 bg-emerald-50/20',
+  community: 'border-l-purple-500 bg-purple-50/20',
+  release: 'border-l-rose-500 bg-rose-50/20',
+  signal: 'border-l-cyan-500 bg-cyan-50/20',
+  event: 'border-l-orange-500 bg-orange-50/20',
+  domain: 'border-l-slate-500 bg-slate-50/20',
+}
+
+// Authority tier visual distinction
+const authorityTierTone: Record<string, string> = {
+  S: 'bg-amber-100 text-amber-800 ring-amber-200',
+  A: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
+  B: 'bg-blue-100 text-blue-800 ring-blue-200',
+  C: 'bg-slate-100 text-slate-700 ring-slate-200',
 }
 
 function groupItemsByObjectType(items: SourcePlanItem[]): PlanObjectGroup[] {
@@ -661,10 +730,19 @@ export function SourcesManager() {
               还没有 source plan。先围绕一个主题生成建源计划，再选择候选项进入真实信息源。
             </div>
           ) : (
-            sourcePlans.map((plan) => (
-              <div key={plan.id} className="rounded-2xl border p-4 shadow-sm">
+            sortPlansByActivity(sourcePlans).map((plan) => (
+              <div
+                key={plan.id}
+                className={cn(
+                  'rounded-2xl border p-4 shadow-sm transition-all',
+                  classifyPlanActivity(plan) === 'active' && 'border-l-4 border-l-amber-500 bg-amber-50/30',
+                  classifyPlanActivity(plan) === 'recent' && 'border-l-4 border-l-emerald-500',
+                  classifyPlanActivity(plan) === 'stale' && 'opacity-60 grayscale-[0.3]'
+                )}
+              >
                 {(() => {
                   const summary = buildPlanSummary(plan)
+                  const activityClass = classifyPlanActivity(plan)
                   const itemGroups = [
                     {
                       key: 'subscribed',
@@ -695,6 +773,24 @@ export function SourcesManager() {
                             <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs text-sky-700">
                               {focusLabels[plan.focus] || plan.focus}
                             </span>
+                            {/* Activity indicator - shows plan state at a glance */}
+                            {activityClass === 'active' && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                活跃中
+                              </span>
+                            )}
+                            {activityClass === 'recent' && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                近期更新
+                              </span>
+                            )}
+                            {activityClass === 'stale' && (
+                              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs text-slate-600">
+                                历史归档
+                              </span>
+                            )}
                             <span
                               className={cn(
                                 'rounded-full px-2 py-0.5 text-xs',
@@ -884,102 +980,125 @@ export function SourcesManager() {
                                     </div>
                                     <div className="grid gap-3">
                                       {objectGroup.items.map((item) => (
-                                        <div key={item.id} className="rounded-lg border bg-card p-3">
+                                        <div
+                                          key={item.id}
+                                          className={cn(
+                                            'rounded-lg border border-l-4 bg-card p-3',
+                                            itemTypeTone[item.item_type] || 'border-l-slate-400'
+                                          )}
+                                        >
                                           {(() => {
                                             const inferredRoles = getEvidenceArray(item.evidence?.inferred_roles)
                                             const relatedEntities = getRelatedEntities(item.evidence?.related_entities)
                                             const activityFreshness = Number(item.evidence?.activity_freshness ?? 0)
                                             return (
-                                          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                                            <div className="min-w-0">
-                                              <div className="flex flex-wrap items-center gap-2">
-                                                <span className="font-medium">{item.name}</span>
-                                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
-                                                  {item.authority_tier}
-                                                </span>
-                                                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                                                  {item.execution_strategy}
-                                                </span>
-                                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
-                                                  {itemTypeLabels[item.item_type] || item.item_type}
-                                                </span>
-                                                <span
-                                                  className={cn(
-                                                    'rounded-full px-2 py-0.5 text-xs',
-                                                    itemStatusTone[item.status] || 'bg-slate-100 text-slate-700'
+                                              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                                                <div className="min-w-0 flex-1">
+                                                  {/* Row 1: Object type badge + Name (primary) */}
+                                                  <div className="flex flex-wrap items-center gap-2">
+                                                    <span
+                                                      className={cn(
+                                                        'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1',
+                                                        authorityTierTone[item.authority_tier] || authorityTierTone.C
+                                                      )}
+                                                    >
+                                                      {itemTypeLabels[item.item_type] || item.item_type}
+                                                    </span>
+                                                    <span className="font-semibold text-foreground">{item.name}</span>
+                                                    <span
+                                                      className={cn(
+                                                        'rounded-full px-1.5 py-0.5 text-[10px] font-medium',
+                                                        itemStatusTone[item.status] || 'bg-slate-100 text-slate-700'
+                                                      )}
+                                                    >
+                                                      {item.status}
+                                                    </span>
+                                                  </div>
+
+                                                  {/* Row 2: Object key (secondary) + URL + Authority */}
+                                                  <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                                    <span className="font-mono text-[11px] opacity-70">{item.object_key}</span>
+                                                    <span className="text-[11px]">·</span>
+                                                    <a
+                                                      href={item.url}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="max-w-[200px] truncate text-[11px] opacity-60 hover:opacity-100 hover:underline"
+                                                      title={item.url}
+                                                    >
+                                                      {item.url}
+                                                    </a>
+                                                    <span className="text-[11px]">·</span>
+                                                    <span className="text-[11px]">authority {item.authority_score.toFixed(1)}</span>
+                                                    <span className="text-[11px]">·</span>
+                                                    <span className="rounded bg-muted px-1 py-0.5 text-[10px]">{item.execution_strategy}</span>
+                                                  </div>
+
+                                                  {/* Row 3: Rationale (why this matters) */}
+                                                  {item.rationale && (
+                                                    <div className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                                                      {item.rationale}
+                                                    </div>
                                                   )}
+
+                                                  {/* Row 4: Evidence summary (compact) */}
+                                                  {(inferredRoles.length > 0 || relatedEntities.length > 0 || activityFreshness > 0) && (
+                                                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                                      {inferredRoles.length > 0 && (
+                                                        <span className="inline-flex items-center gap-1">
+                                                          <span className="text-[10px] opacity-60">角色</span>
+                                                          {inferredRoles.slice(0, 2).map((role) => (
+                                                            <span key={role} className="rounded bg-violet-50 px-1.5 py-0.5 text-[10px] text-violet-600">
+                                                              {role}
+                                                            </span>
+                                                          ))}
+                                                          {inferredRoles.length > 2 && (
+                                                            <span className="text-[10px] opacity-50">+{inferredRoles.length - 2}</span>
+                                                          )}
+                                                        </span>
+                                                      )}
+                                                      {relatedEntities.length > 0 && (
+                                                        <span className="inline-flex items-center gap-1">
+                                                          <span className="text-[10px] opacity-60">关联</span>
+                                                          <span className="text-[10px]">{relatedEntities.length}</span>
+                                                        </span>
+                                                      )}
+                                                      {activityFreshness > 0 && (
+                                                        <span className="text-[10px] opacity-60">
+                                                          活跃度 {activityFreshness.toFixed(1)}
+                                                        </span>
+                                                      )}
+                                                    </div>
+                                                  )}
+
+                                                  {/* Row 5: Meta info (compact inline) */}
+                                                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                                                    <span className="inline-flex items-center gap-1 rounded bg-slate-50 px-1.5 py-0.5">
+                                                      <span className="opacity-60">复查</span>
+                                                      <span>{item.review_cadence_days}d</span>
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1 rounded bg-slate-50 px-1.5 py-0.5">
+                                                      <span className="opacity-60">模式</span>
+                                                      <span>{item.monitoring_mode}</span>
+                                                    </span>
+                                                  </div>
+                                                </div>
+
+                                                {/* Action button */}
+                                                <button
+                                                  type="button"
+                                                  onClick={() => void subscribePlanItem(plan, item)}
+                                                  disabled={subscribingPlanItemId === item.id || item.status === 'subscribed'}
+                                                  className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50 shrink-0"
                                                 >
-                                                  {item.status}
-                                                </span>
+                                                  {subscribingPlanItemId === item.id ? (
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                  ) : (
+                                                    <Plus className="h-4 w-4" />
+                                                  )}
+                                                  {item.status === 'subscribed' ? '已订阅' : '订阅'}
+                                                </button>
                                               </div>
-                                              <div className="mt-1 text-xs text-muted-foreground break-all">{item.url}</div>
-                                              <div className="mt-1 text-[11px] text-muted-foreground break-all">
-                                                object {item.object_key}
-                                              </div>
-                                              <div className="mt-2 text-sm text-muted-foreground">{item.rationale}</div>
-                                              {(inferredRoles.length > 0 || relatedEntities.length > 0 || activityFreshness > 0) && (
-                                                <div className="mt-3 space-y-2">
-                                                  {inferredRoles.length > 0 && (
-                                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                                      <span className="font-medium">角色线索</span>
-                                                      {inferredRoles.map((role) => (
-                                                        <span key={role} className="rounded-full bg-violet-100 px-2 py-0.5 text-violet-700">
-                                                          {role}
-                                                        </span>
-                                                      ))}
-                                                    </div>
-                                                  )}
-                                                  {activityFreshness > 0 && (
-                                                    <div className="text-xs text-muted-foreground">
-                                                      活跃度线索 {activityFreshness.toFixed(2)}
-                                                    </div>
-                                                  )}
-                                                  {Number(item.evidence?.follow_score ?? 0) > 0 && (
-                                                    <div className="text-xs text-muted-foreground">
-                                                      关注分数 {Number(item.evidence?.follow_score ?? 0).toFixed(2)}
-                                                    </div>
-                                                  )}
-                                                  {relatedEntities.length > 0 && (
-                                                    <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                                      <span className="font-medium">关联对象</span>
-                                                      {relatedEntities.map((related) => (
-                                                        <span
-                                                          key={`${related.relation}-${related.object_key}`}
-                                                          className="rounded-full bg-cyan-100 px-2 py-0.5 text-cyan-700"
-                                                        >
-                                                          {related.relation}: {related.label || related.object_key}
-                                                        </span>
-                                                      ))}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )}
-                                              <div className="mt-3 grid gap-2 text-xs text-muted-foreground md:grid-cols-3">
-                                                <div className="rounded-lg border bg-muted/40 p-2">
-                                                  authority {item.authority_score.toFixed(2)}
-                                                </div>
-                                                <div className="rounded-lg border bg-muted/40 p-2">
-                                                  review every {item.review_cadence_days} days
-                                                </div>
-                                                <div className="rounded-lg border bg-muted/40 p-2">
-                                                  mode {item.monitoring_mode}
-                                                </div>
-                                              </div>
-                                            </div>
-                                            <button
-                                              type="button"
-                                              onClick={() => void subscribePlanItem(plan, item)}
-                                              disabled={subscribingPlanItemId === item.id || item.status === 'subscribed'}
-                                              className="inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted transition-colors disabled:opacity-50"
-                                            >
-                                              {subscribingPlanItemId === item.id ? (
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                              ) : (
-                                                <Plus className="h-4 w-4" />
-                                              )}
-                                              {item.status === 'subscribed' ? '已订阅' : '订阅为信息源'}
-                                            </button>
-                                          </div>
                                             )
                                           })()}
                                         </div>

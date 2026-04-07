@@ -69,6 +69,14 @@ The first runtime target remains the v0 loop:
 
 The runtime migration succeeds only if this loop can run on the current stack with explicit objects and inspectable artifacts.
 
+The migration is not considered proven merely because schemas and preview
+routes exist. A slice is only truly proven when the loop becomes inspectable in
+the running system.
+
+Reference:
+
+- `docs/IKE_MIGRATION_EXIT_CRITERIA.md`
+
 ## Recommended Migration Order
 
 ### Stage 0. Freeze the current shape

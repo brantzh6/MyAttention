@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Bell, Brain, Database, Rss, Sparkles } from 'lucide-react'
+import { Bell, Brain, Database, FlaskConical, Rss, Sparkles } from 'lucide-react'
 
 const settingsItems = [
   {
@@ -31,6 +31,12 @@ const settingsItems = [
     description: '配置飞书、钉钉等通知通道。',
     href: '/settings/notifications',
     icon: Bell,
+  },
+  {
+    title: 'IKE Workspace',
+    description: 'Experimental workspace for inspecting IKE v0.1 loop objects.',
+    href: '/settings/ike',
+    icon: FlaskConical,
   },
 ]
 

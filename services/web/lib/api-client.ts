@@ -536,4 +536,80 @@ export const apiClient = {
       notes: string | null
     }>
   },
+
+  // ========== IKE v0.1 Experimental API ==========
+
+  async inspectObservation(feedItem: {
+    source_id: string
+    title: string
+    summary?: string
+    fetched_at?: string
+    url?: string
+  }): Promise<{
+    ref: {
+      id: string
+      kind: string
+      id_scope: 'provisional'
+      stability: 'experimental'
+      permalink: null
+    }
+    data: {
+      id: string
+      kind: 'observation'
+      title: string
+      summary: string
+      source_ref: string
+      [key: string]: any
+    }
+  }> {
+    const res = await fetch(`${API_URL}/api/ike/v0/observations/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feed_item: feedItem }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Inspection failed' }))
+      throw new Error(err.detail || 'Failed to inspect observation')
+    }
+    return res.json()
+  },
+
+  async inspectChain(artifactId: string): Promise<{
+    ref: {
+      id: string
+      kind: string
+      id_scope: 'provisional'
+      stability: 'experimental'
+      permalink: null
+    }
+    data: {
+      chain_id: string
+      is_complete: boolean
+      observation?: any
+      entity?: any
+      claim?: any
+      research_task?: any
+      experiment?: any
+      decision?: any
+      harness_case?: any
+      [key: string]: any
+    }
+    completeness: {
+      chain_id: string
+      is_complete: boolean
+      objects: Record<string, string | null>
+      object_count: number
+    }
+  }> {
+    const res = await fetch(`${API_URL}/api/ike/v0/chains/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artifact_id: artifactId }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Chain inspection failed' }))
+      throw new Error(err.detail || 'Failed to inspect chain')
+    }
+    return res.json()
+  },
 }

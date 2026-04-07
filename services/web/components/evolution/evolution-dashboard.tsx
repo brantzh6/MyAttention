@@ -234,6 +234,99 @@ function eventLabel(eventType?: string | null, action?: string | null) {
   return eventType || action || '事件'
 }
 
+// Task classification for visual hierarchy
+// actionable: needs immediate attention (failed, pending, confirmed with high priority)
+// auto_trace: system-generated monitoring events
+// historical: completed, cancelled, or low priority old tasks
+function classifyTaskStatus(task: ContextDetail['tasks'][0]): 'actionable' | 'auto_trace' | 'historical' {
+  const actionableStatuses = ['pending', 'confirmed', 'failed']
+  const historicalStatuses = ['completed', 'cancelled']
+  const autoTraceSources = ['log_analysis', 'system_health', 'auto_cleanup']
+
+  // Historical: completed or cancelled
+  if (historicalStatuses.includes(task.status)) {
+    return 'historical'
+  }
+
+  // Actionable: failed, pending, confirmed with P0/P1 priority (check first)
+  if (actionableStatuses.includes(task.status) && task.priority <= 1) {
+    return 'actionable'
+  }
+
+  // Auto-trace: system-generated monitoring tasks (check after actionable)
+  if (autoTraceSources.includes(task.source_type || '')) {
+    return 'auto_trace'
+  }
+
+  // Default: auto_trace for executing or lower priority
+  return 'auto_trace'
+}
+
+function classifyEventStatus(event: ContextDetail['recent_events'][0]): 'actionable' | 'auto_trace' | 'historical' {
+  // Auto-trace: dedupe and routine maintenance
+  if (event.action === 'dedupe_update' || event.action?.includes('cleanup')) {
+    return 'auto_trace'
+  }
+
+  // Actionable: failed results or manual actions
+  if (event.result === 'failed' || event.event_type === 'manual_action') {
+    return 'actionable'
+  }
+
+  // Historical: older than 24h
+  const eventTime = event.created_at ? new Date(event.created_at).getTime() : 0
+  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000
+  if (eventTime < oneDayAgo) {
+    return 'historical'
+  }
+
+  // Default: auto_trace for routine events
+  return 'auto_trace'
+}
+
+function sortTasksByStatus(tasks: ContextDetail['tasks']): ContextDetail['tasks'] {
+  const priority: Record<string, number> = { actionable: 0, auto_trace: 1, historical: 2 }
+
+  return [...tasks].sort((a, b) => {
+    const aClass = classifyTaskStatus(a)
+    const bClass = classifyTaskStatus(b)
+
+    // First sort by classification
+    if (priority[aClass] !== priority[bClass]) {
+      return priority[aClass] - priority[bClass]
+    }
+
+    // Then by priority within same class
+    if (a.priority !== b.priority) {
+      return a.priority - b.priority
+    }
+
+    // Finally by update time
+    const aTime = new Date(a.updated_at || 0).getTime()
+    const bTime = new Date(b.updated_at || 0).getTime()
+    return bTime - aTime
+  })
+}
+
+function sortEventsByStatus(events: ContextDetail['recent_events']): ContextDetail['recent_events'] {
+  const priority: Record<string, number> = { actionable: 0, auto_trace: 1, historical: 2 }
+
+  return [...events].sort((a, b) => {
+    const aClass = classifyEventStatus(a)
+    const bClass = classifyEventStatus(b)
+
+    // First sort by classification
+    if (priority[aClass] !== priority[bClass]) {
+      return priority[aClass] - priority[bClass]
+    }
+
+    // Then by time (newest first)
+    const aTime = new Date(a.created_at || 0).getTime()
+    const bTime = new Date(b.created_at || 0).getTime()
+    return bTime - aTime
+  })
+}
+
 function buildContextGuidance(context?: ContextDetail | null) {
   if (!context) {
     return {
@@ -575,24 +668,79 @@ export function EvolutionDashboard() {
 
           <section className="grid gap-6 xl:grid-cols-2">
             <div className="rounded-2xl border bg-card p-6 shadow-sm">
-              <div className="flex items-center gap-2">
-                <Clock3 className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-semibold">最近事件</h3>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Clock3 className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">最近事件</h3>
+                </div>
+                {selectedContext && selectedContext.recent_events && selectedContext.recent_events.length > 0 && (
+                  <div className="flex gap-2 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                      需关注 {selectedContext.recent_events.filter((e: ContextDetail['recent_events'][0]) => classifyEventStatus(e) === 'actionable').length}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="mt-4 space-y-3">
                 {selectedContext?.recent_events?.length ? (
-                  selectedContext.recent_events.map((event) => (
-                    <div key={event.id} className="rounded-xl border bg-background p-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-medium">{eventLabel(event.event_type, event.action)}</p>
-                        <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(event.result))}>
-                          {event.result}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">{event.reason || event.action}</p>
-                      <p className="mt-2 text-[11px] text-muted-foreground">{formatTime(event.created_at)}</p>
-                    </div>
-                  ))
+                  (() => {
+                    const sortedEvents = sortEventsByStatus(selectedContext.recent_events)
+                    const actionableCount = sortedEvents.filter(e => classifyEventStatus(e) === 'actionable').length
+
+                    return (
+                      <>
+                        {/* Actionable events - highlighted */}
+                        {sortedEvents.filter(e => classifyEventStatus(e) === 'actionable').map((event) => (
+                          <div
+                            key={event.id}
+                            className="rounded-xl border border-l-4 border-l-amber-500 bg-amber-50/30 p-4"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                <p className="text-sm font-medium">{eventLabel(event.event_type, event.action)}</p>
+                              </div>
+                              <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(event.result))}>
+                                {event.result}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">{event.reason || event.action}</p>
+                            <p className="mt-2 text-[11px] text-muted-foreground">{formatTime(event.created_at)}</p>
+                          </div>
+                        ))}
+
+                        {/* Divider if there are actionable events */}
+                        {actionableCount > 0 && sortedEvents.length > actionableCount && (
+                          <div className="my-4 flex items-center gap-2">
+                            <div className="flex-1 border-t" />
+                            <span className="text-xs text-muted-foreground">以下为历史事件或系统自动痕迹</span>
+                            <div className="flex-1 border-t" />
+                          </div>
+                        )}
+
+                        {/* Auto-trace and historical events - de-emphasized */}
+                        {sortedEvents.filter(e => classifyEventStatus(e) !== 'actionable').map((event) => (
+                          <div
+                            key={event.id}
+                            className={cn(
+                              'rounded-xl border bg-background p-4',
+                              classifyEventStatus(event) === 'historical' && 'opacity-60 grayscale-[0.3]'
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium">{eventLabel(event.event_type, event.action)}</p>
+                              <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(event.result))}>
+                                {event.result}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">{event.reason || event.action}</p>
+                            <p className="mt-2 text-[11px] text-muted-foreground">{formatTime(event.created_at)}</p>
+                          </div>
+                        ))}
+                      </>
+                    )
+                  })()
                 ) : (
                   <p className="text-sm text-muted-foreground">暂无事件。</p>
                 )}
@@ -624,26 +772,87 @@ export function EvolutionDashboard() {
 
           <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="rounded-2xl border bg-card p-6 shadow-sm">
-              <div className="flex items-center gap-2">
-                <BrainCircuit className="h-4 w-4 text-muted-foreground" />
-                <h3 className="text-sm font-semibold">上下文任务</h3>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold">上下文任务</h3>
+                </div>
+                {selectedContext && selectedContext.tasks && selectedContext.tasks.length > 0 && (
+                  <div className="flex gap-2 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                      需关注 {selectedContext.tasks.filter((t: ContextDetail['tasks'][0]) => classifyTaskStatus(t) === 'actionable').length}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-slate-400" />
+                      自动 {selectedContext.tasks.filter((t: ContextDetail['tasks'][0]) => classifyTaskStatus(t) === 'auto_trace').length}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="mt-4 space-y-3">
                 {selectedContext?.tasks?.length ? (
-                  selectedContext.tasks.map((task) => (
-                    <div key={task.id} className="rounded-xl border bg-background p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-sm font-medium">{task.title}</p>
-                        <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(task.status))}>
-                          {task.status}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {task.task_type || 'workflow'} · {task.source_type || 'unknown'} · {task.assigned_brain || 'unassigned'}
-                      </p>
-                      <p className="mt-2 text-[11px] text-muted-foreground">最近更新 {formatTime(task.updated_at)}</p>
-                    </div>
-                  ))
+                  (() => {
+                    const sortedTasks = sortTasksByStatus(selectedContext.tasks)
+                    const actionableCount = sortedTasks.filter(t => classifyTaskStatus(t) === 'actionable').length
+
+                    return (
+                      <>
+                        {/* Actionable tasks - highlighted */}
+                        {sortedTasks.filter(t => classifyTaskStatus(t) === 'actionable').map((task) => (
+                          <div
+                            key={task.id}
+                            className="rounded-xl border border-l-4 border-l-amber-500 bg-amber-50/30 p-4"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                <p className="text-sm font-medium">{task.title}</p>
+                              </div>
+                              <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(task.status))}>
+                                {task.status}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {task.task_type || 'workflow'} · {task.source_type || 'unknown'} · {task.assigned_brain || 'unassigned'}
+                            </p>
+                            <p className="mt-2 text-[11px] text-muted-foreground">最近更新 {formatTime(task.updated_at)}</p>
+                          </div>
+                        ))}
+
+                        {/* Divider if there are actionable tasks */}
+                        {actionableCount > 0 && sortedTasks.length > actionableCount && (
+                          <div className="my-4 flex items-center gap-2">
+                            <div className="flex-1 border-t" />
+                            <span className="text-xs text-muted-foreground">以下任务已归档或为系统自动痕迹</span>
+                            <div className="flex-1 border-t" />
+                          </div>
+                        )}
+
+                        {/* Auto-trace and historical tasks - de-emphasized */}
+                        {sortedTasks.filter(t => classifyTaskStatus(t) !== 'actionable').map((task) => (
+                          <div
+                            key={task.id}
+                            className={cn(
+                              'rounded-xl border bg-background p-4',
+                              classifyTaskStatus(task) === 'historical' && 'opacity-60 grayscale-[0.3]'
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-sm font-medium">{task.title}</p>
+                              <span className={cn('inline-flex items-center rounded-full px-2 py-1 text-xs ring-1', tone(task.status))}>
+                                {task.status}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {task.task_type || 'workflow'} · {task.source_type || 'unknown'} · {task.assigned_brain || 'unassigned'}
+                            </p>
+                            <p className="mt-2 text-[11px] text-muted-foreground">最近更新 {formatTime(task.updated_at)}</p>
+                          </div>
+                        ))}
+                      </>
+                    )
+                  })()
                 ) : (
                   <p className="text-sm text-muted-foreground">这个上下文还没有挂接任务。</p>
                 )}

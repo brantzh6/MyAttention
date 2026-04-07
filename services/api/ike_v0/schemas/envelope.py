@@ -23,8 +23,12 @@ class SharedEnvelope(BaseModel):
     """
     Common envelope for all IKE v0 objects.
 
+    This base class defines the shared fields that all IKE v0 objects carry.
+    Subclasses should override the 'kind' field with a Literal type for their
+    specific object type.
+
     Fields:
-        id: Unique identifier for the object (UUID string format)
+        id: Unique identifier for the object (IKE typed ID format)
         kind: Object type discriminator (e.g., 'observation', 'entity', 'claim')
         version: Schema version string (e.g., 'v0.1.0')
         status: Lifecycle status (e.g., 'draft', 'active', 'archived')
@@ -35,7 +39,7 @@ class SharedEnvelope(BaseModel):
         references: List of related object references
     """
 
-    id: str = Field(..., description="Unique identifier (UUID string)")
+    id: str = Field(..., description="Unique identifier (IKE typed ID)")
     kind: str = Field(..., description="Object type discriminator")
     version: str = Field(default="v0.1.0", description="Schema version")
     status: str = Field(default="draft", description="Lifecycle status")

@@ -15,7 +15,15 @@ from datetime import datetime, timezone
 from uuid import uuid4
 
 from ike_v0.schemas.harness_case import HarnessCase
-from ike_v0.mappers.harness_case import create_loop_completeness_harness_case
+from ike_v0.schemas.observation import Observation
+from ike_v0.schemas.research_task import ResearchTask
+from ike_v0.schemas.experiment import Experiment
+from ike_v0.schemas.decision import Decision
+from ike_v0.mappers.harness_case import (
+    create_loop_completeness_harness_case,
+    validate_chain_loop_completeness,
+)
+from ike_v0.runtime.chain_artifact import ChainArtifact
 from ike_v0.types.ids import IKEKind
 
 
@@ -261,6 +269,228 @@ class TestCreateLoopCompletenessHarnessCase(unittest.TestCase):
         )
 
         self.assertEqual(hc.provenance.get("subject_count"), 3)
+
+
+class TestValidateChainLoopCompleteness(unittest.TestCase):
+    """Tests for validate_chain_loop_completeness helper."""
+
+    def _make_complete_chain(self):
+        """Create a complete chain for testing."""
+        now = datetime.now(timezone.utc)
+        task_id = "ike:research_task:" + str(uuid4())
+        exp_id = "ike:experiment:" + str(uuid4())
+        
+        obs = Observation(
+            id="ike:observation:" + str(uuid4()),
+            kind="observation",
+            created_at=now,
+            updated_at=now,
+            source_ref="source:test",
+            observed_at=now,
+            captured_at=now,
+            title="Test Observation",
+            summary="Test summary",
+        )
+        
+        task = ResearchTask(
+            id=task_id,
+            kind="research_task",
+            created_at=now,
+            updated_at=now,
+            task_type="discovery",
+            title="Test Task",
+            goal="Test goal",
+        )
+        
+        exp = Experiment(
+            id=exp_id,
+            kind="experiment",
+            created_at=now,
+            updated_at=now,
+            task_ref=task_id,
+            experiment_type="source_plan_comparison",
+            title="Test Experiment",
+            hypothesis="Test hypothesis",
+            method_ref="test_method:v0.1",
+        )
+        
+        dec = Decision(
+            id="ike:decision:" + str(uuid4()),
+            kind="decision",
+            created_at=now,
+            updated_at=now,
+            task_ref=task_id,
+            experiment_refs=[exp_id],
+            decision_type="experiment_evaluation",
+            decision_outcome="adopt",
+            rationale="Test rationale",
+        )
+        
+        return ChainArtifact(
+            chain_id="chain-test-001",
+            observation=obs,
+            research_task=task,
+            experiment=exp,
+            decision=dec,
+        )
+
+    def test_validate_complete_chain_passes(self):
+        """Complete chain with valid references passes validation."""
+        chain = self._make_complete_chain()
+        
+        hc = validate_chain_loop_completeness(chain)
+        
+        self.assertTrue(hc.pass_fail)
+        self.assertEqual(hc.case_type, "loop_completeness")
+        self.assertEqual(hc.status, "completed")
+        self.assertIn(chain.research_task.id, hc.subject_refs)
+        self.assertIn(chain.experiment.id, hc.subject_refs)
+        self.assertIn(chain.decision.id, hc.subject_refs)
+        self.assertIn(chain.observation.id, hc.evidence_refs)
+
+    def test_validate_incomplete_chain_fails(self):
+        """Incomplete chain fails validation."""
+        now = datetime.now(timezone.utc)
+        
+        obs = Observation(
+            id="ike:observation:" + str(uuid4()),
+            kind="observation",
+            created_at=now,
+            updated_at=now,
+            source_ref="source:test",
+            observed_at=now,
+            captured_at=now,
+            title="Test",
+            summary="Test",
+        )
+        
+        # Missing research_task, experiment, decision
+        chain = ChainArtifact(
+            chain_id="chain-incomplete",
+            observation=obs,
+        )
+        
+        hc = validate_chain_loop_completeness(chain)
+        
+        self.assertFalse(hc.pass_fail)
+        self.assertEqual(hc.status, "open")
+        self.assertIn("Missing required objects", hc.notes)
+        self.assertFalse(hc.provenance.get("required_present", True))
+
+    def test_validate_traceability_issue_fails(self):
+        """Chain with traceability issues fails validation."""
+        now = datetime.now(timezone.utc)
+        
+        obs = Observation(
+            id="ike:observation:" + str(uuid4()),
+            kind="observation",
+            created_at=now,
+            updated_at=now,
+            source_ref="source:test",
+            observed_at=now,
+            captured_at=now,
+            title="Test",
+            summary="Test",
+        )
+        
+        task = ResearchTask(
+            id="ike:research_task:" + str(uuid4()),
+            kind="research_task",
+            created_at=now,
+            updated_at=now,
+            task_type="discovery",
+            title="Test",
+            goal="Test",
+        )
+        
+        # experiment.task_ref does NOT match task.id
+        exp = Experiment(
+            id="ike:experiment:" + str(uuid4()),
+            kind="experiment",
+            created_at=now,
+            updated_at=now,
+            task_ref="ike:research_task:wrong-id",
+            experiment_type="source_plan_comparison",
+            title="Test",
+            hypothesis="Test",
+            method_ref="test:v0.1",
+        )
+        
+        dec = Decision(
+            id="ike:decision:" + str(uuid4()),
+            kind="decision",
+            created_at=now,
+            updated_at=now,
+            task_ref=task.id,
+            experiment_refs=[exp.id],
+            decision_type="experiment_evaluation",
+            decision_outcome="adopt",
+            rationale="Test",
+        )
+        
+        chain = ChainArtifact(
+            chain_id="chain-trace-issue",
+            observation=obs,
+            research_task=task,
+            experiment=exp,
+            decision=dec,
+        )
+        
+        hc = validate_chain_loop_completeness(chain)
+        
+        self.assertFalse(hc.pass_fail)
+        self.assertGreater(hc.provenance.get("traceability_issues_count", 0), 0)
+        self.assertIn("traceability", hc.notes.lower())
+
+    def test_validate_derives_expected_behavior(self):
+        """Validation derives explicit expected_behavior."""
+        chain = self._make_complete_chain()
+        
+        hc = validate_chain_loop_completeness(chain)
+        
+        self.assertIn("required_objects", hc.expected_behavior)
+        self.assertIn("observation", hc.expected_behavior["required_objects"])
+        self.assertIn("research_task", hc.expected_behavior["required_objects"])
+        self.assertIn("experiment", hc.expected_behavior["required_objects"])
+        self.assertIn("decision", hc.expected_behavior["required_objects"])
+        self.assertIn("traceability_checks", hc.expected_behavior)
+
+    def test_validate_derives_actual_behavior(self):
+        """Validation derives actual_behavior from chain."""
+        chain = self._make_complete_chain()
+        
+        hc = validate_chain_loop_completeness(chain)
+        
+        self.assertIn("present_objects", hc.actual_behavior)
+        self.assertIn("object_count", hc.actual_behavior)
+        self.assertEqual(hc.actual_behavior["object_count"], 4)  # obs, task, exp, dec
+
+    def test_validate_provenance_includes_chain_id(self):
+        """Provenance includes source chain_id."""
+        chain = self._make_complete_chain()
+        
+        hc = validate_chain_loop_completeness(chain)
+        
+        self.assertEqual(hc.provenance.get("chain_id"), "chain-test-001")
+        self.assertEqual(hc.provenance.get("mapper"), "validate_chain_loop_completeness")
+
+    def test_validate_references_includes_all_refs(self):
+        """References includes all object IDs from chain."""
+        chain = self._make_complete_chain()
+        
+        hc = validate_chain_loop_completeness(chain)
+        
+        all_chain_refs = chain.get_all_refs()
+        for ref in all_chain_refs:
+            self.assertIn(ref, hc.references)
+
+    def test_validate_evidence_refs_includes_observation(self):
+        """Evidence refs includes observation ID."""
+        chain = self._make_complete_chain()
+        
+        hc = validate_chain_loop_completeness(chain)
+        
+        self.assertIn(chain.observation.id, hc.evidence_refs)
 
 
 if __name__ == "__main__":

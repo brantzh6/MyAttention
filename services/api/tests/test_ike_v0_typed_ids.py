@@ -31,6 +31,7 @@ class TestIKEKind(unittest.TestCase):
             "experiment",
             "decision",
             "harness_case",
+            "procedure",
         }
         actual_kinds = {k.value for k in IKEKind}
         self.assertEqual(expected_kinds, actual_kinds)
@@ -83,6 +84,7 @@ class TestValidateIKEId(unittest.TestCase):
             "ike:experiment:ffffffff-ffff-ffff-ffff-ffffffffffff",
             "ike:decision:12345678-90ab-cdef-1234-567890abcdef",
             "ike:harness_case:87654321-dcba-4321-fedc-ba0987654321",
+            "ike:procedure:550e8400-e29b-41d4-a716-446655440000",
         ]
         for ike_id in valid_ids:
             with self.subTest(ike_id=ike_id):

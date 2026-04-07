@@ -218,10 +218,30 @@ v0 is complete only if all of the following are true:
 1. one real observation can enter the loop
 2. one explicit structured interpretation is produced
 3. one research task is created
-4. one experiment record is created and completed
-5. one decision record exists
-6. one harness case exists
-7. the full chain is inspectable without reading raw logs
+4. one experiment is created or inspected in a real loop path
+5. one decision is recorded from explicit evidence
+6. one harness record validates whether the loop satisfied the contract
+7. the chain is inspectable without reading raw logs
+
+## Review-Converged Clarification
+
+Recent review convergence across internal voting and external review reached the
+same practical conclusion:
+
+- the current IKE v0 milestone is a valid migration seam
+- but it is not yet the full v0 proof point
+
+This means:
+
+1. The transitional API work is correct and should continue.
+2. The next milestone must not be "more preview endpoints".
+3. The next milestone must be one real inspectable loop in the running system.
+
+References:
+
+- `docs/IKE_API_TRANSITION_PRINCIPLES.md`
+- `docs/IKE_MIGRATION_EXIT_CRITERIA.md`
+- `docs/IKE_V0_1_LOOP_PLAN.md`
 
 ## Failure Conditions
 

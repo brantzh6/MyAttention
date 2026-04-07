@@ -224,3 +224,48 @@ This is now a controller decision, not an open question.
 Reference:
 
 - `docs/IKE_API_TRANSITION_PRINCIPLES.md`
+
+## Next Milestone Rule
+
+After the current transitional API packets, the next controller-approved
+milestone is:
+
+- one real inspectable loop
+
+not:
+
+- more isolated preview endpoints with no chain proof
+
+That means future packets should increasingly support:
+
+- real `ResearchTask` / `Experiment` mapping onto current substrates
+- chain artifacts or inspect surfaces
+- HarnessCase-backed validation of the full loop
+
+References:
+
+- `docs/IKE_MIGRATION_EXIT_CRITERIA.md`
+- `docs/IKE_V0_1_LOOP_PLAN.md`
+
+## Immediate Packet Priority After The Transitional API Seam
+
+The next packet sequence should be:
+
+1. `V0-L1 Shared Envelope Deduplication`
+2. `V0-L2 ResearchTask Substrate Wiring`
+3. `V0-L3 Experiment Stub Runtime Wiring`
+4. `V0-L4 Chain Artifact / Inspect Surface`
+5. `V0-L5 Harness Loop Validation`
+
+Recommended delegate split:
+
+- coding:
+  - `openclaw-glm`
+- analysis/review:
+  - `openclaw-kimi`
+
+Controller note:
+
+- these packets should be launched one by one
+- do not batch-launch the whole loop
+- if semantic drift appears, stop and correct it immediately before the next packet

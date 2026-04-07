@@ -23,6 +23,7 @@ class IKEKind(str, Enum):
     EXPERIMENT = "experiment"
     DECISION = "decision"
     HARNESS_CASE = "harness_case"
+    PROCEDURE = "procedure"
 
 
 # Prefix mapping for all supported v0 object kinds
@@ -34,6 +35,7 @@ IKE_ID_PREFIXES = {
     IKEKind.EXPERIMENT: "ike:experiment:",
     IKEKind.DECISION: "ike:decision:",
     IKEKind.HARNESS_CASE: "ike:harness_case:",
+    IKEKind.PROCEDURE: "ike:procedure:",
 }
 
 # Regex pattern for validating IKE IDs

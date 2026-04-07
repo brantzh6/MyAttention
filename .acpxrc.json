@@ -1,5 +1,8 @@
 {
   "agents": {
+    "openclaw-coder": {
+      "command": "openclaw-myattention-coder.cmd"
+    },
     "openclaw-qwen": {
       "command": "openclaw-myattention-coder.cmd"
     },
@@ -7,7 +10,10 @@
       "command": "openclaw acp --session agent:myattention-glm-coder:main"
     },
     "openclaw-kimi": {
-      "command": "openclaw acp --session agent:myattention-reviewer:main"
+      "command": "openclaw acp --session agent:myattention-kimi-review:main"
+    },
+    "openclaw-kimi-review": {
+      "command": "openclaw acp --session agent:myattention-kimi-review:main"
     },
     "openclaw-reviewer": {
       "command": "openclaw acp --session agent:myattention-reviewer:main"

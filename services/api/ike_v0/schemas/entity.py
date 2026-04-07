@@ -7,12 +7,14 @@ See: docs/IKE_SHARED_OBJECTS_V0.md
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any, Literal
+from typing import Optional, List, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from .envelope import SharedEnvelope
 
 
-class Entity(BaseModel):
+class Entity(SharedEnvelope):
     """
     IKE v0 Entity object.
 
@@ -22,16 +24,8 @@ class Entity(BaseModel):
     Fields follow the v0 contract from IKE_SHARED_OBJECTS_V0.md.
     """
 
-    # Shared envelope fields (explicitly defined for clarity)
-    id: str = Field(..., description="Unique identifier (IKE typed ID)")
+    # Override kind with specific literal type
     kind: Literal["entity"] = Field(default="entity", description="Object type discriminator")
-    version: str = Field(default="v0.1.0", description="Schema version")
-    status: str = Field(default="draft", description="Lifecycle status (draft, active, archived)")
-    created_at: datetime = Field(..., description="Creation timestamp (UTC, timezone-aware)")
-    updated_at: datetime = Field(..., description="Last update timestamp (UTC, timezone-aware)")
-    provenance: Dict[str, Any] = Field(default_factory=dict, description="Origin and derivation metadata")
-    confidence: float = Field(default=0.5, ge=0.0, le=1.0, description="Confidence score 0.0-1.0")
-    references: List[str] = Field(default_factory=list, description="Related object references")
 
     # Entity-specific fields
     entity_type: str = Field(..., description="Type of entity (e.g., 'organization', 'person', 'technology')")

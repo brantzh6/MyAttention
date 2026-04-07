@@ -4,6 +4,7 @@ from routers.feeds import (
     SourceDiscoveryFocus,
     _build_related_candidate_seed,
     _candidate_identity,
+    _candidate_selection_threshold,
     _domain_quality_adjustment,
     _focus_type_priority,
     _person_activity_freshness,
@@ -72,6 +73,16 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertLess(_domain_quality_adjustment("36kr.com", SourceDiscoveryFocus.FRONTIER), 0.0)
         self.assertGreater(_domain_quality_adjustment("36kr.com", SourceDiscoveryFocus.LATEST), 0.0)
         self.assertLess(_domain_quality_adjustment("m.36kr.com", SourceDiscoveryFocus.FRONTIER), 0.0)
+
+    def test_candidate_threshold_lowers_for_person_and_release_objects(self) -> None:
+        self.assertLess(
+            _candidate_selection_threshold("person", SourceDiscoveryFocus.METHOD),
+            _candidate_selection_threshold("domain", SourceDiscoveryFocus.METHOD),
+        )
+        self.assertLess(
+            _candidate_selection_threshold("release", SourceDiscoveryFocus.FRONTIER),
+            _candidate_selection_threshold("domain", SourceDiscoveryFocus.FRONTIER),
+        )
 
     def test_related_repository_owner_can_seed_person_candidate(self) -> None:
         candidate = _build_related_candidate_seed(

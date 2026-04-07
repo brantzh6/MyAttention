@@ -10,12 +10,17 @@ See: docs/IKE_API_TRANSITION_PRINCIPLES.md
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, field_validator
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from db import get_db
+from db.models import TaskArtifact
 from ike_v0.mappers.decision import create_experiment_evaluation_decision
 from ike_v0.mappers.harness_case import create_loop_completeness_harness_case
 from ike_v0.mappers.observation import map_feed_item_to_observation
+from ike_v0.runtime.chain_artifact import ChainArtifact, assemble_chain_artifact, ARTIFACT_TYPE_IKE_CHAIN
 
 
 def _parse_iso_datetime(value):
@@ -90,6 +95,16 @@ class ObservationInspectRequest(BaseModel):
     feed_item: Dict[str, Any]
     raw_ingest: Optional[Dict[str, Any]] = None
     signal_type: str = "feed_item"
+
+
+class ChainInspectRequest(BaseModel):
+    """
+    Request model for IKE v0.1 chain inspection endpoint.
+
+    Accepts artifact_id to lookup a stored chain artifact from TaskArtifact substrate.
+    This is a transitional inspect-style endpoint, not durable GET retrieval.
+    """
+    artifact_id: str
 
 
 # =============================================================================
@@ -246,4 +261,94 @@ async def inspect_observation(request: ObservationInspectRequest, response: Resp
             permalink=None,
         ),
         data=observation.model_dump(mode="json"),
+    )
+
+
+class ChainInspectResponse(BaseModel):
+    """
+    Response model for chain inspection endpoint.
+
+    Returns the chain artifact with completeness summary.
+    """
+    ref: ObjectRef
+    data: Dict[str, Any]
+    completeness: Dict[str, Any]
+
+
+async def _lookup_chain_artifact_from_substrate(db: AsyncSession, artifact_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Lookup a chain artifact from the TaskArtifact substrate.
+
+    Queries the TaskArtifact table by artifact_id and filters by
+    artifact_type == 'ike_v0_chain'.
+
+    Args:
+        db: Async database session
+        artifact_id: The TaskArtifact UUID to lookup
+
+    Returns:
+        The chain payload dict from TaskArtifact.extra, or None if not found
+    """
+    result = await db.execute(
+        select(TaskArtifact).where(
+            TaskArtifact.id == artifact_id,
+            TaskArtifact.artifact_type == ARTIFACT_TYPE_IKE_CHAIN,
+        )
+    )
+    artifact = result.scalar_one_or_none()
+    return artifact.extra if artifact else None
+
+
+@router.post("/chains/inspect", response_model=ChainInspectResponse)
+async def inspect_chain(
+    request: ChainInspectRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Inspect one IKE v0.1 loop chain artifact from TaskArtifact substrate.
+
+    This endpoint looks up a stored chain artifact by artifact_id and
+    returns it in a transitional provisional envelope with completeness summary.
+
+    This is an inspect-style endpoint, not durable GET retrieval.
+    The chain is read from TaskArtifact substrate, not assembled inline.
+
+    Response headers:
+        X-IKE-Version: v0-experimental
+        Cache-Control: no-store
+    """
+    # Lookup chain artifact from TaskArtifact substrate
+    chain_payload = await _lookup_chain_artifact_from_substrate(db, request.artifact_id)
+
+    if chain_payload is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Chain artifact not found: {request.artifact_id}. "
+                   "Chain artifacts are stored in TaskArtifact substrate with type 'ike_v0_chain'."
+        )
+
+    # Set transitional response headers
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    # Build response from stored payload
+    # The payload already contains the serialized chain data
+    chain_id = chain_payload.get("chain_id", request.artifact_id)
+
+    return ChainInspectResponse(
+        ref=ObjectRef(
+            id=chain_id,
+            kind="ike_chain",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data=chain_payload,
+        completeness={
+            "chain_id": chain_id,
+            "is_complete": chain_payload.get("is_complete", False),
+            "objects": chain_payload.get("objects", {}),
+            "object_count": len([v for v in chain_payload.get("objects", {}).values() if v]),
+        },
     )

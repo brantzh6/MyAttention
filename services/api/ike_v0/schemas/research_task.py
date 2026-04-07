@@ -8,12 +8,14 @@ See: docs/IKE_SHARED_OBJECTS_V0.md
 """
 
 from datetime import datetime
-from typing import Optional, List, Dict, Any, Literal
+from typing import Optional, List, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from .envelope import SharedEnvelope
 
 
-class ResearchTask(BaseModel):
+class ResearchTask(SharedEnvelope):
     """
     IKE v0 ResearchTask object.
 
@@ -23,16 +25,8 @@ class ResearchTask(BaseModel):
     Fields follow the v0 contract from IKE_SHARED_OBJECTS_V0.md.
     """
 
-    # Shared envelope fields
-    id: str = Field(..., description="Unique identifier (IKE typed ID)")
+    # Override kind with specific literal type
     kind: Literal["research_task"] = Field(default="research_task", description="Object type discriminator")
-    version: str = Field(default="v0.1.0", description="Schema version")
-    status: str = Field(default="draft", description="Lifecycle status (draft, open, in_progress, blocked, completed, cancelled)")
-    created_at: datetime = Field(..., description="Creation timestamp (UTC, timezone-aware)")
-    updated_at: datetime = Field(..., description="Last update timestamp (UTC, timezone-aware)")
-    provenance: Dict[str, Any] = Field(default_factory=dict, description="Origin and derivation metadata")
-    confidence: float = Field(default=0.5, ge=0.0, le=1.0, description="Confidence score 0.0-1.0")
-    references: List[str] = Field(default_factory=list, description="Related object references")
 
     # ResearchTask-specific fields
     task_type: str = Field(..., description="Type of research task (e.g., 'discovery', 'validation', 'comparison')")

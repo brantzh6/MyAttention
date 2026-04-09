@@ -16,6 +16,7 @@ from uuid import uuid4
 from .state_machine import (
     OwnerKind,
     TaskStatus,
+    ClaimContext,
     validate_transition,
     TransitionError,
     InvalidTransitionError,
@@ -49,7 +50,7 @@ class TransitionRequest:
     reason: str = ""
     allow_runtime_policy: bool = False
     allow_controller_gate: bool = False
-    allow_claim: bool = False
+    claim_context: ClaimContext | None = None
     extra_payload: dict = field(default_factory=dict)
 
 
@@ -72,6 +73,10 @@ def execute_transition(request: TransitionRequest) -> TransitionResult:
     It validates the transition against the v0 state machine and
     role permissions before producing a result.
 
+    For CLAIM_REQUIRED transitions (e.g., delegate ready->active),
+    the request must include a `claim_context` with verified claim proof.
+    The legacy `allow_claim` flag has been removed (R1-C1 hardening).
+
     The caller is responsible for persisting the result:
     - Update runtime_tasks.status, updated_at, and any changed fields
     - Append a runtime_task_events row
@@ -88,7 +93,7 @@ def execute_transition(request: TransitionRequest) -> TransitionResult:
             request.role,
             allow_runtime_policy=request.allow_runtime_policy,
             allow_controller_gate=request.allow_controller_gate,
-            allow_claim=request.allow_claim,
+            claim_context=request.claim_context,
         )
     except TransitionError as e:
         return TransitionResult(

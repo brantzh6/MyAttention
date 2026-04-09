@@ -15,6 +15,7 @@ to avoid heavy dependency imports from other routers.
 import unittest
 import sys
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
 # Add parent directory to path for direct imports
 api_dir = Path(__file__).resolve().parent.parent
@@ -22,6 +23,13 @@ sys.path.insert(0, str(api_dir))
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from runtime.project_surface import ProjectRuntimeReadSurface
+from runtime.service_preflight import (
+    ApiHealthInfo,
+    PortOwnershipInfo,
+    PreflightResult,
+    PreflightStatus,
+)
 
 
 # Import router directly from module file to avoid routers/__init__.py chain
@@ -33,10 +41,11 @@ def load_ike_v0_router():
     spec = importlib.util.spec_from_file_location("ike_v0_router", router_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return module.router
+    return module
 
 
-ike_v0_router = load_ike_v0_router()
+ike_v0_module = load_ike_v0_router()
+ike_v0_router = ike_v0_module.router
 
 # Create isolated test app with only the IKE v0 router
 test_app = FastAPI(title="IKE v0 Test API")
@@ -465,6 +474,479 @@ class TestIKERouter(unittest.TestCase):
             self.assertIn("TaskArtifact", detail)
         finally:
             test_app.dependency_overrides.clear()
+
+    def test_runtime_project_surface_inspect_basic(self):
+        """Runtime project surface inspect returns provisional runtime surface."""
+        from db import get_db
+
+        surface = ProjectRuntimeReadSurface(
+            project_id="11111111-1111-1111-1111-111111111111",
+            project_key="runtime-mainline",
+            title="Runtime Mainline",
+            status="active",
+            current_phase="R2-C",
+            priority=1,
+            current_work_context_id=None,
+            current_focus="Bridge runtime truth into visible surface",
+            blockers_summary=None,
+            next_steps_summary="Expose a narrow runtime card",
+            active_tasks=[],
+            waiting_tasks=[],
+            latest_decision=None,
+            trusted_packets=[],
+            metadata={
+                "source": "runtime_truth_only",
+                "has_current_context": False,
+            },
+        )
+
+        class MockDB:
+            async def run_sync(self, fn):
+                return surface
+
+        async def mock_get_db():
+            return MockDB()
+
+        original_builder = ike_v0_module.build_latest_project_runtime_read_surface
+        ike_v0_module.build_latest_project_runtime_read_surface = (
+            lambda sync_session, project_key=None: surface
+        )
+        test_app.dependency_overrides[get_db] = mock_get_db
+        try:
+            response = self.client.post("/api/ike/v0/runtime/project-surface/inspect", json={})
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(response.headers.get("X-IKE-Version"), "v0-experimental")
+            self.assertEqual(data["ref"]["kind"], "runtime_project_surface")
+            self.assertEqual(data["data"]["project_key"], "runtime-mainline")
+            self.assertEqual(data["data"]["metadata"]["source"], "runtime_truth_only")
+        finally:
+            ike_v0_module.build_latest_project_runtime_read_surface = original_builder
+            test_app.dependency_overrides.clear()
+
+    def test_runtime_project_surface_inspect_returns_404_when_unavailable(self):
+        """Runtime project surface inspect returns bounded 404 when no project exists."""
+        from db import get_db
+
+        class MockDB:
+            async def run_sync(self, fn):
+                return None
+
+        async def mock_get_db():
+            return MockDB()
+
+        test_app.dependency_overrides[get_db] = mock_get_db
+        try:
+            response = self.client.post("/api/ike/v0/runtime/project-surface/inspect", json={})
+            self.assertEqual(response.status_code, 404)
+            self.assertIn("Runtime project surface not available", response.json()["detail"])
+        finally:
+            test_app.dependency_overrides.clear()
+
+    def test_runtime_project_surface_bootstrap_basic(self):
+        """Runtime project surface bootstrap returns provisional runtime surface."""
+        from db import get_db
+
+        surface = ProjectRuntimeReadSurface(
+            project_id="22222222-2222-2222-2222-222222222222",
+            project_key="runtime-bootstrap",
+            title="Runtime Bootstrap",
+            status="active",
+            current_phase="R2-D",
+            priority=1,
+            current_work_context_id=None,
+            current_focus=None,
+            blockers_summary=None,
+            next_steps_summary=None,
+            active_tasks=[],
+            waiting_tasks=[],
+            latest_decision=None,
+            trusted_packets=[],
+            metadata={
+                "source": "runtime_truth_only",
+                "bootstrap_created": True,
+                "bootstrap_source": "explicit_request",
+            },
+        )
+
+        class MockDB:
+            async def run_sync(self, fn):
+                return surface
+
+        async def mock_get_db():
+            return MockDB()
+
+        original_builder = ike_v0_module.bootstrap_runtime_project_surface
+        ike_v0_module.bootstrap_runtime_project_surface = (
+            lambda sync_session, project_key, title, current_phase=None, priority=1: surface
+        )
+        test_app.dependency_overrides[get_db] = mock_get_db
+        try:
+            response = self.client.post(
+                "/api/ike/v0/runtime/project-surface/bootstrap",
+                json={
+                    "project_key": "runtime-bootstrap",
+                    "title": "Runtime Bootstrap",
+                    "current_phase": "R2-D",
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(data["data"]["project_key"], "runtime-bootstrap")
+            self.assertEqual(data["data"]["metadata"]["bootstrap_created"], True)
+            self.assertEqual(response.headers.get("X-IKE-Version"), "v0-experimental")
+        finally:
+            ike_v0_module.bootstrap_runtime_project_surface = original_builder
+            test_app.dependency_overrides.clear()
+
+    def test_runtime_benchmark_candidate_import_basic(self):
+        """Benchmark candidate import returns a provisional runtime packet."""
+        from db import get_db
+
+        class MockStatus:
+            value = "pending_review"
+
+        class MockCreatedByKind:
+            value = "runtime"
+
+        class MockPacket:
+            memory_packet_id = "33333333-3333-3333-3333-333333333333"
+            project_id = "22222222-2222-2222-2222-222222222222"
+            packet_type = "benchmark_procedural_candidate"
+            status = MockStatus()
+            title = "Candidate packet"
+            summary = "Candidate summary"
+            created_by_kind = MockCreatedByKind()
+            created_by_id = "benchmark_bridge"
+            storage_ref = None
+
+        class MockDB:
+            async def run_sync(self, fn):
+                return MockPacket()
+
+        async def mock_get_db():
+            return MockDB()
+
+        original_importer = ike_v0_module.import_benchmark_candidate_into_runtime_project
+        ike_v0_module.import_benchmark_candidate_into_runtime_project = (
+            lambda sync_session, project_key, payload: MockPacket()
+        )
+        test_app.dependency_overrides[get_db] = mock_get_db
+        try:
+            response = self.client.post(
+                "/api/ike/v0/runtime/benchmark-candidate/import",
+                json={
+                    "project_key": "myattention-runtime-mainline",
+                    "candidate_payload": {
+                        "title": "Candidate packet",
+                        "lesson": "Lesson",
+                        "why_it_mattered": "Why it mattered",
+                        "how_to_apply": "How to apply",
+                        "confidence": 0.7,
+                        "source_artifact_ref": "artifact-ref",
+                        "status": "candidate",
+                        "derived_from": {"study_result_ref": "SR-1"},
+                        "notes": [],
+                    },
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(response.headers.get("X-IKE-Version"), "v0-experimental")
+            self.assertEqual(data["ref"]["kind"], "runtime_memory_packet")
+            self.assertEqual(data["data"]["packet_type"], "benchmark_procedural_candidate")
+            self.assertEqual(data["data"]["status"], "pending_review")
+        finally:
+            ike_v0_module.import_benchmark_candidate_into_runtime_project = original_importer
+            test_app.dependency_overrides.clear()
+
+    def test_runtime_benchmark_candidate_import_returns_400_for_bridge_error(self):
+        """Benchmark candidate import returns bounded 400 for invalid payloads."""
+        from db import get_db
+        from runtime.benchmark_bridge import BenchmarkBridgeError
+
+        class MockDB:
+            async def run_sync(self, fn):
+                raise BenchmarkBridgeError("Benchmark bridge requires valid reviewed payload.")
+
+        async def mock_get_db():
+            return MockDB()
+
+        test_app.dependency_overrides[get_db] = mock_get_db
+        try:
+            response = self.client.post(
+                "/api/ike/v0/runtime/benchmark-candidate/import",
+                json={
+                    "project_key": "myattention-runtime-mainline",
+                    "candidate_payload": {},
+                },
+            )
+            self.assertEqual(response.status_code, 400)
+            self.assertIn("Benchmark bridge", response.json()["detail"])
+        finally:
+            test_app.dependency_overrides.clear()
+
+    def test_runtime_service_preflight_inspect_basic(self):
+        """Runtime service preflight inspect returns provisional operational result."""
+        result = PreflightResult(
+            status=PreflightStatus.AMBIGUOUS,
+            timestamp="2026-04-08T15:51:11+00:00",
+            api_health=ApiHealthInfo(
+                endpoint="http://127.0.0.1:8000/health",
+                is_healthy=True,
+                response_status=200,
+                response_body={"status": "healthy"},
+                response_time_ms=123.4,
+            ),
+            port_ownership=PortOwnershipInfo(
+                port=8000,
+                listening_processes=[
+                    {"pid": 1, "name": "python.exe"},
+                    {"pid": 2, "name": "python.exe"},
+                ],
+                unique_count=2,
+                is_clear=False,
+                inspection_method="windows_powershell",
+            ),
+            summary="Ambiguous: 2 processes claim port 8000",
+            details={"listening_process_count": 2},
+        )
+
+        with patch.object(ike_v0_module, "run_preflight", AsyncMock(return_value=result)):
+            response = self.client.post("/api/ike/v0/runtime/service-preflight/inspect")
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.headers.get("X-IKE-Version"), "v0-experimental")
+            data = response.json()
+            self.assertEqual(data["ref"]["kind"], "runtime_service_preflight")
+            self.assertEqual(data["data"]["status"], "ambiguous")
+            self.assertEqual(data["data"]["port_ownership"]["unique_count"], 2)
+            self.assertEqual(data["data"]["summary"], "Ambiguous: 2 processes claim port 8000")
+
+    def test_runtime_service_preflight_inspect_strict_preferred_owner(self):
+        """Runtime service preflight inspect forwards strict preferred-owner mode."""
+        result = PreflightResult(
+            status=PreflightStatus.AMBIGUOUS,
+            timestamp="2026-04-09T03:20:00+00:00",
+            api_health=ApiHealthInfo(
+                endpoint="http://127.0.0.1:8000/health",
+                is_healthy=True,
+                response_status=200,
+                response_body={"status": "healthy"},
+                response_time_ms=21.0,
+            ),
+            port_ownership=PortOwnershipInfo(
+                port=8000,
+                listening_processes=[{"pid": 1, "name": "python.exe"}],
+                unique_count=1,
+                is_clear=True,
+                inspection_method="windows_powershell",
+            ),
+            summary="Ambiguous: preferred owner mismatch on port 8000",
+              details={
+                  "preferred_owner": {
+                      "status": "preferred_mismatch",
+                      "matched": False,
+                      "matched_hint": None,
+                  },
+                  "owner_chain": {
+                      "status": "parent_preferred_child_mismatch",
+                      "parent_matches_preferred": True,
+                      "matched_hint": r"d:\code\myattention\.venv\scripts\python.exe",
+                  },
+                  "strict_preferred_owner": True,
+              },
+          )
+
+        with patch.object(ike_v0_module, "run_preflight", AsyncMock(return_value=result)) as mock_run_preflight:
+            response = self.client.post(
+                "/api/ike/v0/runtime/service-preflight/inspect",
+                json={"strict_preferred_owner": True},
+            )
+            self.assertEqual(response.status_code, 200)
+            mock_run_preflight.assert_awaited_once_with(
+                host="127.0.0.1",
+                port=8000,
+                strict_preferred_owner=True,
+                expected_code_fingerprint=None,
+                strict_code_freshness=False,
+            )
+            data = response.json()
+            self.assertEqual(data["data"]["details"]["strict_preferred_owner"], True)
+            self.assertEqual(data["data"]["details"]["preferred_owner"]["status"], "preferred_mismatch")
+            self.assertEqual(data["data"]["owner_chain"]["status"], "parent_preferred_child_mismatch")
+            self.assertEqual(data["data"]["repo_launcher"], None)
+
+    def test_runtime_service_preflight_inspect_strict_code_freshness(self):
+        """Runtime service preflight inspect forwards strict code-freshness mode."""
+        result = PreflightResult(
+            status=PreflightStatus.AMBIGUOUS,
+            timestamp="2026-04-09T03:45:00+00:00",
+            api_health=ApiHealthInfo(
+                endpoint="http://127.0.0.1:8000/health",
+                is_healthy=True,
+                response_status=200,
+                response_body={"status": "healthy"},
+                response_time_ms=18.0,
+            ),
+            port_ownership=PortOwnershipInfo(
+                port=8000,
+                listening_processes=[{"pid": 1, "name": "python.exe"}],
+                unique_count=1,
+                is_clear=True,
+                inspection_method="windows_powershell",
+            ),
+            summary="Ambiguous: live service code fingerprint mismatch",
+            details={
+                "code_fingerprint": {
+                    "status": "available",
+                    "scope": "runtime_service_preflight_surface_v1",
+                    "fingerprint": "actual-1234",
+                    "sources": ["service_preflight.py", "ike_v0.py"],
+                    "source_count": 2,
+                },
+                "code_freshness": {
+                    "status": "mismatch",
+                    "expected_fingerprint": "expected-9999",
+                    "actual_fingerprint": "actual-1234",
+                },
+                "strict_code_freshness": True,
+            },
+        )
+
+        with patch.object(ike_v0_module, "run_preflight", AsyncMock(return_value=result)) as mock_run_preflight:
+            response = self.client.post(
+                "/api/ike/v0/runtime/service-preflight/inspect",
+                json={
+                    "strict_code_freshness": True,
+                    "expected_code_fingerprint": "expected-9999",
+                },
+            )
+            self.assertEqual(response.status_code, 200)
+            mock_run_preflight.assert_awaited_once_with(
+                host="127.0.0.1",
+                port=8000,
+                strict_preferred_owner=False,
+                expected_code_fingerprint="expected-9999",
+                strict_code_freshness=True,
+            )
+            data = response.json()
+            self.assertEqual(data["data"]["details"]["strict_code_freshness"], True)
+            self.assertEqual(data["data"]["details"]["code_freshness"]["status"], "mismatch")
+
+    def test_runtime_service_preflight_inspect_accepts_explicit_host_port(self):
+        """Runtime service preflight inspect can target a non-default live-proof port."""
+        result = PreflightResult(
+            status=PreflightStatus.READY,
+            timestamp="2026-04-09T04:00:00+00:00",
+            api_health=ApiHealthInfo(
+                endpoint="http://127.0.0.1:8011/health",
+                is_healthy=True,
+                response_status=200,
+                response_body={"status": "healthy"},
+                response_time_ms=15.0,
+            ),
+            port_ownership=PortOwnershipInfo(
+                port=8011,
+                listening_processes=[{"pid": 10, "name": "python.exe"}],
+                unique_count=1,
+                is_clear=True,
+                inspection_method="windows_powershell",
+            ),
+            summary="Ready: API healthy at http://127.0.0.1:8011/health (15.0ms), single process owns port 8011",
+            details={},
+        )
+
+        with patch.object(ike_v0_module, "run_preflight", AsyncMock(return_value=result)) as mock_run_preflight:
+            response = self.client.post(
+                "/api/ike/v0/runtime/service-preflight/inspect",
+                json={"host": "127.0.0.1", "port": 8011},
+            )
+            self.assertEqual(response.status_code, 200)
+            mock_run_preflight.assert_awaited_once_with(
+                host="127.0.0.1",
+                port=8011,
+                strict_preferred_owner=False,
+                expected_code_fingerprint=None,
+                strict_code_freshness=False,
+            )
+            data = response.json()
+            self.assertEqual(data["data"]["port_ownership"]["port"], 8011)
+
+    def test_runtime_service_preflight_inspect_exposes_repo_launcher(self):
+        """Runtime service preflight inspect exposes repo-launcher evidence."""
+        result = PreflightResult(
+            status=PreflightStatus.AMBIGUOUS,
+            timestamp="2026-04-09T04:40:00+00:00",
+            api_health=ApiHealthInfo(
+                endpoint="http://127.0.0.1:8013/health",
+                is_healthy=True,
+                response_status=200,
+                response_body={"status": "healthy"},
+                response_time_ms=12.0,
+            ),
+            port_ownership=PortOwnershipInfo(
+                port=8013,
+                listening_processes=[{"pid": 10, "name": "python.exe"}],
+                unique_count=1,
+                is_clear=True,
+                inspection_method="windows_powershell",
+            ),
+            summary="Ambiguous: port ownership unclear",
+            details={
+                "repo_launcher": {
+                    "status": "parent_and_child_repo_launcher_match",
+                    "child_matches": True,
+                    "parent_matches": True,
+                    "matched_hint": r"d:\code\myattention\.venv\scripts\uvicorn.exe",
+                }
+            },
+        )
+
+        with patch.object(ike_v0_module, "run_preflight", AsyncMock(return_value=result)):
+            response = self.client.post("/api/ike/v0/runtime/service-preflight/inspect")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(
+                data["data"]["repo_launcher"]["status"],
+                "parent_and_child_repo_launcher_match",
+            )
+
+    def test_runtime_service_preflight_inspect_exposes_controller_acceptability(self):
+        """Runtime service preflight inspect exposes controller acceptability."""
+        result = PreflightResult(
+            status=PreflightStatus.AMBIGUOUS,
+            timestamp="2026-04-09T04:50:00+00:00",
+            api_health=ApiHealthInfo(
+                endpoint="http://127.0.0.1:8013/health",
+                is_healthy=True,
+                response_status=200,
+                response_body={"status": "healthy"},
+                response_time_ms=14.0,
+            ),
+            port_ownership=PortOwnershipInfo(
+                port=8013,
+                listening_processes=[{"pid": 10, "name": "python.exe"}],
+                unique_count=1,
+                is_clear=True,
+                inspection_method="windows_powershell",
+            ),
+            summary="Ambiguous: port ownership unclear",
+            details={
+                "controller_acceptability": {
+                    "status": "bounded_live_proof_ready",
+                    "acceptable": True,
+                }
+            },
+        )
+
+        with patch.object(ike_v0_module, "run_preflight", AsyncMock(return_value=result)):
+            response = self.client.post("/api/ike/v0/runtime/service-preflight/inspect")
+            self.assertEqual(response.status_code, 200)
+            data = response.json()
+            self.assertEqual(
+                data["data"]["controller_acceptability"]["status"],
+                "bounded_live_proof_ready",
+            )
 
 
 if __name__ == "__main__":

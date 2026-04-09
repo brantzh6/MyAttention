@@ -5,10 +5,14 @@ Validates:
 - Legal transitions per v0 state machine
 - Illegal transition blocking
 - Role-based permission guardrails
-- Delegate claim boundary for ready -> active (CORRECTED)
-- Waiting transition requires explicit waiting reason (CORRECTED)
+- Delegate claim boundary for ready -> active (R1-C1: claim_context required)
+- Waiting transition requires explicit waiting reason
 - Control actions (non-state events)
 - Guardrail: delegate cannot move review_pending -> done
+
+R1-C1 Hardening:
+- allow_claim=True is removed; ClaimContext is now required for
+  CLAIM_REQUIRED transitions.
 """
 
 import pytest
@@ -20,6 +24,8 @@ from runtime.state_machine import (
     PermissionLevel,
     ControlAction,
     WaitingReason,
+    ClaimContext,
+    ClaimType,
     is_valid_transition,
     get_valid_next_states,
     get_transition_permission,
@@ -257,14 +263,14 @@ class TestRolePermissionsAllowed:
 
 
 # ──────────────────────────────────────────────────────────────
-# CORRECTED: Delegate Claim Boundary for ready -> active
+# R1-C1: Delegate Claim Boundary – claim_context Required
 # ──────────────────────────────────────────────────────────────
 
 class TestDelegateClaimBoundary:
-    """FIX: delegate ready -> active must NOT be globally direct-allowed.
+    """R1-C1: delegate ready -> active requires ClaimContext.
 
-    Design rule: delegate may move ready -> active only when explicitly
-    assigned or when lease claim succeeds under policy.
+    The legacy allow_claim=True path is removed. The runtime now
+    owns the truth rule for whether a delegate can claim work.
     """
 
     def test_delegate_ready_to_active_is_claim_required(self):
@@ -276,11 +282,7 @@ class TestDelegateClaimBoundary:
             f"Expected CLAIM_REQUIRED, got {level}"
 
     def test_delegate_ready_to_active_is_not_is_role_allowed(self):
-        """is_role_allowed should return False for claim-required transitions.
-
-        The caller must use validate_transition with allow_claim=True
-        after verifying assignment or lease claim.
-        """
+        """is_role_allowed should return False for claim-required transitions."""
         assert is_role_allowed(
             TaskStatus.READY, TaskStatus.ACTIVE, OwnerKind.DELEGATE
         ) is False
@@ -292,18 +294,91 @@ class TestDelegateClaimBoundary:
         ) is False
 
     def test_delegate_validate_fails_without_claim(self):
-        """validate_transition must raise ClaimRequiredError without claim flag."""
+        """validate_transition must raise ClaimRequiredError without claim."""
         with pytest.raises(ClaimRequiredError):
             validate_transition(
-                TaskStatus.READY, TaskStatus.ACTIVE, OwnerKind.DELEGATE
+                TaskStatus.READY,
+                TaskStatus.ACTIVE,
+                OwnerKind.DELEGATE,
             )
 
-    def test_delegate_validate_passes_with_claim_flag(self):
-        """validate_transition passes when claim is verified."""
-        validate_transition(
-            TaskStatus.READY, TaskStatus.ACTIVE, OwnerKind.DELEGATE,
-            allow_claim=True,
+    def test_delegate_validate_passes_with_claim_context(self):
+        """validate_transition passes with a valid ClaimContext."""
+        ctx = ClaimContext(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref="lease-001",
+            delegate_id="del-001",
+            task_id="task-001",
         )
+        validate_transition(
+            TaskStatus.READY,
+            TaskStatus.ACTIVE,
+            OwnerKind.DELEGATE,
+            claim_context=ctx,
+        )
+
+    def test_delegate_validate_passes_with_assignment_claim(self):
+        """validate_transition passes with explicit assignment claim."""
+        ctx = ClaimContext(
+            claim_type=ClaimType.EXPLICIT_ASSIGNMENT,
+            claim_ref="assign-001",
+            delegate_id="del-001",
+            task_id="task-001",
+        )
+        validate_transition(
+            TaskStatus.READY,
+            TaskStatus.ACTIVE,
+            OwnerKind.DELEGATE,
+            claim_context=ctx,
+        )
+
+    def test_delegate_validate_fails_with_empty_claim_ref(self):
+        """Empty claim_ref is rejected."""
+        ctx = ClaimContext(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref="",
+            delegate_id="del-001",
+            task_id="task-001",
+        )
+        with pytest.raises(ClaimRequiredError, match="claim_ref"):
+            validate_transition(
+                TaskStatus.READY,
+                TaskStatus.ACTIVE,
+                OwnerKind.DELEGATE,
+                claim_context=ctx,
+            )
+
+    def test_delegate_validate_fails_with_empty_delegate_id(self):
+        """Empty delegate_id is rejected."""
+        ctx = ClaimContext(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref="lease-001",
+            delegate_id="",
+            task_id="task-001",
+        )
+        with pytest.raises(ClaimRequiredError, match="delegate_id"):
+            validate_transition(
+                TaskStatus.READY,
+                TaskStatus.ACTIVE,
+                OwnerKind.DELEGATE,
+                claim_context=ctx,
+            )
+
+    def test_delegate_validate_fails_with_empty_task_id(self):
+        """Empty task_id is rejected."""
+        ctx = ClaimContext(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref="lease-001",
+            delegate_id="del-001",
+            task_id="",
+        )
+        with pytest.raises(ClaimRequiredError, match="task_id"):
+            validate_transition(
+                TaskStatus.READY,
+                TaskStatus.ACTIVE,
+                OwnerKind.DELEGATE,
+                claim_context=ctx,
+            )
 
     def test_controller_still_allowed_ready_to_active(self):
         """Controller should not be affected by the delegate fix."""
@@ -330,18 +405,18 @@ class TestDelegateClaimBoundary:
             allow_runtime_policy=True,
         )
 
-    def test_delegate_claim_error_message_is_actionable(self):
-        """Error message should guide the caller to set allow_claim."""
+    def test_delegate_claim_error_message_mentions_claim_context(self):
+        """Error message should reference ClaimContext, not allow_claim."""
         with pytest.raises(ClaimRequiredError) as exc_info:
             validate_transition(
                 TaskStatus.READY, TaskStatus.ACTIVE, OwnerKind.DELEGATE
             )
         msg = str(exc_info.value).lower()
-        assert "allow_claim" in msg
-        assert "assignment" in msg or "lease" in msg
+        assert "claimcontext" in msg or "claim_context" in msg
+        assert "allow_claim" not in msg
 
-    def test_execute_transition_delegate_claim_without_flag(self):
-        """execute_transition returns error for delegate ready->active without claim."""
+    def test_execute_transition_delegate_claim_without_context(self):
+        """execute_transition returns error for delegate ready->active without claim_context."""
         req = TransitionRequest(
             task_id=str(uuid4()),
             project_id=str(uuid4()),
@@ -355,16 +430,22 @@ class TestDelegateClaimBoundary:
         assert result.error is not None
         assert "claim" in result.error.lower()
 
-    def test_execute_transition_delegate_claim_with_flag(self):
-        """execute_transition succeeds when claim flag is set."""
+    def test_execute_transition_delegate_claim_with_context(self):
+        """execute_transition succeeds with claim_context."""
+        ctx = ClaimContext(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref="lease-001",
+            delegate_id="del-001",
+            task_id="task-001",
+        )
         req = TransitionRequest(
-            task_id=str(uuid4()),
+            task_id="task-001",
             project_id=str(uuid4()),
             from_status=TaskStatus.READY,
             to_status=TaskStatus.ACTIVE,
             role=OwnerKind.DELEGATE,
             role_id="del-001",
-            allow_claim=True,
+            claim_context=ctx,
         )
         result = execute_transition(req)
         assert result.success is True
@@ -496,22 +577,20 @@ class TestRuntimePolicyTransitions:
 
 
 # ──────────────────────────────────────────────────────────────
-# CORRECTED: Waiting Reason Validation
+# Waiting Reason Validation
 # ──────────────────────────────────────────────────────────────
 
 class TestWaitingReasonValidation:
-    """FIX: validate_waiting_reason rejects None and empty strings."""
+    """validate_waiting_reason rejects None and empty strings."""
 
     def test_valid_waiting_reasons(self):
         for reason in WaitingReason:
             assert validate_waiting_reason(reason.value) is True
 
     def test_none_is_not_valid(self):
-        """FIX: None should be rejected."""
         assert validate_waiting_reason(None) is False
 
     def test_empty_string_is_not_valid(self):
-        """FIX: empty string should be rejected."""
         assert validate_waiting_reason("") is False
 
     def test_invalid_waiting_reason(self):
@@ -528,14 +607,13 @@ class TestWaitingReasonValidation:
 
 
 # ──────────────────────────────────────────────────────────────
-# CORRECTED: build_task_update requires waiting_reason
+# build_task_update requires waiting_reason
 # ──────────────────────────────────────────────────────────────
 
 class TestWaitingUpdateSemantics:
-    """FIX: build_task_update must require valid waiting_reason for WAITING."""
+    """build_task_update must require valid waiting_reason for WAITING."""
 
     def test_waiting_transition_requires_reason(self):
-        """FIX: transitioning to WAITING without waiting_reason raises ValueError."""
         result = TransitionResult(
             success=True,
             task_id=str(uuid4()),
@@ -548,7 +626,6 @@ class TestWaitingUpdateSemantics:
             build_task_update(result)
 
     def test_waiting_transition_with_valid_reason_succeeds(self):
-        """With a valid waiting_reason, the update succeeds."""
         result = TransitionResult(
             success=True,
             task_id=str(uuid4()),
@@ -567,7 +644,6 @@ class TestWaitingUpdateSemantics:
         assert updates["waiting_detail"] == "Waiting on external API"
 
     def test_waiting_transition_with_invalid_reason_fails(self):
-        """Invalid waiting reasons are rejected."""
         result = TransitionResult(
             success=True,
             task_id=str(uuid4()),
@@ -580,7 +656,6 @@ class TestWaitingUpdateSemantics:
             build_task_update(result, waiting_reason="blocked")
 
     def test_waiting_transition_with_none_reason_fails(self):
-        """None as waiting_reason is rejected."""
         result = TransitionResult(
             success=True,
             task_id=str(uuid4()),
@@ -593,7 +668,6 @@ class TestWaitingUpdateSemantics:
             build_task_update(result, waiting_reason=None)
 
     def test_waiting_transition_with_empty_string_fails(self):
-        """Empty string as waiting_reason is rejected."""
         result = TransitionResult(
             success=True,
             task_id=str(uuid4()),
@@ -607,8 +681,8 @@ class TestWaitingUpdateSemantics:
 
     def test_force_bypasses_waiting_reason_check(self):
         """force=True bypasses the validation as an escape hatch.
-        
-        R1-A5 ENFORCEMENT: force=True now requires explicit role parameter.
+
+        R1-C1: force=True now requires explicit role parameter.
         Only controller and runtime roles are authorized to use force=True.
         """
         result = TransitionResult(
@@ -619,7 +693,6 @@ class TestWaitingUpdateSemantics:
             event_type="state_transition",
             event_reason="",
         )
-        # R1-A5: role must be provided when force=True
         updates = build_task_update(
             result,
             waiting_reason=None,

@@ -58,6 +58,42 @@ The delegate should receive one task with one scope and one expected result.
 
 Use the narrowest fitting agent.
 
+### Main Automated Delivery Chain
+
+The routine project delivery chain should prefer **automatable** agents.
+
+Default practical chain:
+
+- `GPT / Codex`
+  - main controller
+  - decision routing
+  - brief authoring
+  - review gate
+  - final acceptance
+- `Claude Code`
+  - local bounded coding lane
+  - local bounded review lane
+  - long-task execution candidate
+- `OpenClaw`
+  - automatable model-backed coding/review lane
+  - preferred for routine repeatable delivery where API-backed models are available
+
+Important constraint:
+
+- manual `Claude`
+- manual `Gemini`
+- manual `GPT` cross-review
+
+are **not** part of the routine delivery chain.
+
+Use them for:
+
+- milestone reviews
+- architecture disputes
+- high-risk final cross-checks
+
+Do not design the daily workflow to depend on manual models.
+
 ### `openclaw-glm`
 
 Use for:
@@ -84,6 +120,36 @@ Use for:
 Do not use for:
 
 - primary implementation
+
+### `openclaw-qwen` / `Qwen3.6 Plus`
+
+Use for:
+
+- frontend
+- page and demo implementation
+- bounded UI/interaction work
+- general coding packets where quick stable iteration matters
+- supplemental review when needed
+
+Current rule:
+
+- prefer the latest available `Qwen3.6 Plus` lane for routine Qwen-backed work
+
+### `Claude Code`
+
+Use for:
+
+- bounded local coding
+- bounded local review
+- long-task execution experiments
+- comparison packets against OpenClaw coding lanes
+
+Do not use for:
+
+- main controller
+- runtime truth ownership
+- task truth ownership
+- memory truth ownership
 
 ### `qoder`
 
@@ -252,6 +318,26 @@ Delegated work is not considered complete just because code compiles.
 
 Each task must satisfy the right QA level for its type.
 
+## 11. Lane Comparison Rule
+
+When two automatable coding lanes are both viable, do not choose by feel.
+
+Default comparison dimensions:
+
+- success rate
+- timeout rate
+- durable final artifact completion
+- patch boundedness
+- validation quality
+- controller acceptance cost
+
+Current routine comparison target:
+
+- `OpenClaw (Qwen3.6 Plus / GLM-5)`
+- `Claude Code`
+
+Use milestone comparisons to decide the default lane for a class of tasks.
+
 ### For coding tasks
 
 Minimum:
@@ -350,6 +436,30 @@ Default pattern:
 3. review packet
 4. test packet
 5. evolution packet
+
+### Runtime Proof Rule
+
+For narrow runtime-proof work, the default proof shape should be:
+
+- one explicit lifecycle path
+- one explicit exclusion list
+- one explicit truth boundary
+
+Current accepted template:
+
+- `inbox -> ready -> active -> review_pending -> done`
+
+Mandatory guardrails for this proof pattern:
+
+- do not broaden into scheduler work
+- do not broaden into UI/runtime surface work
+- do not broaden into benchmark integration
+- do not introduce new first-class runtime objects unless the packet is
+  explicitly about object design
+- require live validation, not AST-only claims
+
+This lifecycle-proof template should be treated as a reusable project method
+rule, not a one-off packet accident.
 
 Reference:
 

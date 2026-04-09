@@ -145,6 +145,40 @@ export interface ConversationMessage {
 }
 
 export const apiClient = {
+  async bootstrapRuntimeProjectSurface(data: {
+    project_key: string
+    title: string
+    current_phase?: string
+    priority?: number
+  }): Promise<any> {
+    const res = await fetch(`${API_URL}/api/ike/v0/runtime/project-surface/bootstrap`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to bootstrap runtime surface' }))
+      throw new Error(err.detail || 'Failed to bootstrap runtime surface')
+    }
+    return res.json()
+  },
+
+  async importRuntimeBenchmarkCandidate(data: {
+    project_key: string
+    candidate_payload: Record<string, any>
+  }): Promise<any> {
+    const res = await fetch(`${API_URL}/api/ike/v0/runtime/benchmark-candidate/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to import benchmark candidate' }))
+      throw new Error(err.detail || 'Failed to import benchmark candidate')
+    }
+    return res.json()
+  },
+
   async getFeeds(sourceId?: string, category?: string): Promise<FeedItem[]> {
     const params = new URLSearchParams()
     if (sourceId) params.set('source_id', sourceId)

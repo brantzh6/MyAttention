@@ -89,6 +89,13 @@ Notes:
   - event-aware memory
   - relation-aware memory
   - procedural memory evolution
+- after `R2-A`, procedural memory evolution should no longer remain an implicit
+  carry item; it must receive a formal planned reactivation point
+- formal scheduling note:
+  - [D:\code\MyAttention\docs\IKE_STRATEGIC_SCHEDULING_NOTE_2026-04-08.md](/D:/code/MyAttention/docs/IKE_STRATEGIC_SCHEDULING_NOTE_2026-04-08.md)
+- current planned placement:
+  - after `R2-B`
+  - likely `R2-C` or `R3`, depending on runtime gate outcome
 
 ### 1.3 Event- and Time-Aware Retrieval
 
@@ -228,6 +235,16 @@ Why deferred now:
 Reactivation condition:
 
 - once benchmark method frame is fixed and `harness` is rerun under it
+
+Notes:
+
+- after `R2-A`, the second concept benchmark should receive a formal planned
+  phase/schedule rather than continuing as an implicit deferred direction
+- formal scheduling note:
+  - [D:\code\MyAttention\docs\IKE_STRATEGIC_SCHEDULING_NOTE_2026-04-08.md](/D:/code/MyAttention/docs/IKE_STRATEGIC_SCHEDULING_NOTE_2026-04-08.md)
+- current planned placement:
+  - after `R2-B`
+  - likely `R2-C` if the runtime gate passes
 
 ### 1.10 First-Class Test Agent System
 

@@ -9,6 +9,7 @@ const B4_REPORT_FILE = path.join('.runtime', 'benchmarks', 'ike_b4_harness_repor
 const B3_REPORT_FILE = path.join('.runtime', 'benchmarks', 'ike_b3_harness_report.json')
 const CLOSURE_EXAMPLE_FILE = path.join('.runtime', 'benchmarks', 'ike_harness_study_closure_example.json')
 const PROCEDURAL_MEMORY_CANDIDATE_FILE = path.join('.runtime', 'benchmarks', 'ike_harness_procedural_memory_candidate.json')
+const API_URL = process.env.API_URL || 'http://localhost:8000'
 
 function findBenchmarkRoot(): string | null {
   const candidates: string[] = []
@@ -102,12 +103,90 @@ async function loadBenchmarkData() {
   }
 }
 
+async function loadRuntimeSurface() {
+  try {
+    const res = await fetch(`${API_URL}/api/ike/v0/runtime/project-surface/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+      cache: 'no-store',
+    })
+
+    if (res.status === 404) {
+      const err = await res.json().catch(() => ({ detail: 'Runtime project surface not available' }))
+      return {
+        runtimeSurface: null,
+        runtimeError: err.detail || 'Runtime project surface not available',
+      }
+    }
+
+    if (!res.ok) {
+      throw new Error(`Failed to load runtime surface (${res.status})`)
+    }
+
+    const payload = await res.json()
+    return {
+      runtimeSurface: payload?.data ?? null,
+      runtimeError: null,
+    }
+  } catch (err: any) {
+    return {
+      runtimeSurface: null,
+      runtimeError: err.message || 'Failed to load runtime surface',
+    }
+  }
+}
+
+async function loadRuntimePreflight() {
+  try {
+    const res = await fetch(`${API_URL}/api/ike/v0/runtime/service-preflight/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ strict_preferred_owner: true }),
+      cache: 'no-store',
+    })
+
+    if (!res.ok) {
+      throw new Error(`Failed to load runtime preflight (${res.status})`)
+    }
+
+    const payload = await res.json()
+    return {
+      runtimePreflight: payload?.data ?? null,
+      runtimePreflightError: null,
+    }
+  } catch (err: any) {
+    return {
+      runtimePreflight: null,
+      runtimePreflightError: err.message || 'Failed to load runtime preflight',
+    }
+  }
+}
+
 export default async function IKEWorkspacePage() {
-  const { report, closure, proceduralMemoryCandidate, error, isB4 } = await loadBenchmarkData()
+  const [
+    { report, closure, proceduralMemoryCandidate, error, isB4 },
+    { runtimeSurface, runtimeError },
+    { runtimePreflight, runtimePreflightError },
+  ] = await Promise.all([
+    loadBenchmarkData(),
+    loadRuntimeSurface(),
+    loadRuntimePreflight(),
+  ])
 
   return (
     <div className="p-6">
-      <IKEWorkspaceManager report={report} closure={closure} proceduralMemoryCandidate={proceduralMemoryCandidate} loadError={error} isB4={isB4} />
+      <IKEWorkspaceManager
+        report={report}
+        closure={closure}
+        proceduralMemoryCandidate={proceduralMemoryCandidate}
+        runtimeSurface={runtimeSurface}
+        runtimeError={runtimeError}
+        runtimePreflight={runtimePreflight}
+        runtimePreflightError={runtimePreflightError}
+        loadError={error}
+        isB4={isB4}
+      />
     </div>
   )
 }

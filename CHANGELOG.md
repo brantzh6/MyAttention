@@ -8,6 +8,285 @@
 
 ### Added
 
+- 2026-04-09: Added durable `R2-G14` controller-acceptability rule records,
+  explicitly separating:
+  - canonical live proof
+  - bounded alternate-port live proof
+  - blocked owner-mismatch and code-freshness cases
+- 2026-04-09: Added phase-level `R2-G` result records, clarifying that service
+  observability and bounded fresh live proof are materially complete, while the
+  remaining blocker is canonical launch-path normalization rather than missing
+  service-preflight diagnosis.
+- 2026-04-09: Opened `R2-H Canonical Service Launch Path Normalization` as the
+  next narrow runtime phase after materially complete `R2-G`.
+- 2026-04-09: Added durable `R2-H1` result records and a narrow `R2-H` plan,
+  making the controller-acceptable canonical launch command machine-readable in
+  `service_preflight` and visible in the settings runtime panel, while keeping
+  canonical live normalization explicitly pending.
+- 2026-04-09: Added durable `R2-H2` result records after a bounded canonical
+  restart on `8000`, proving the canonical service now serves the latest
+  preflight schema while the remaining blocker has narrowed to interpreter
+  ownership drift rather than code freshness.
+- 2026-04-09: Added durable `R2-H3` diagnosis records for the Windows
+  parent-repo/child-system interpreter split now observed on canonical `8000`,
+  preserving this as a review item instead of prematurely relaxing the
+  controller acceptability rule.
+- 2026-04-09: Added durable `R2-H4` diagnosis records, making the current
+  parent-repo/child-system process shape machine-readable as a
+  `windows_venv_redirector_candidate`, while preserving the current blocked
+  controller rule pending a deliberate acceptability decision.
+- 2026-04-09: Added repository/workspace isolation planning artifacts for the
+  future `MyAttention -> IKE` migration, including:
+  - a root restructuring plan
+  - a migration inventory
+  - a backup-and-rollback checklist
+
+- 2026-04-08: Added durable `R2-G1` service-discipline evidence, clarifying
+  that the current operational risk is ambiguous API ownership rather than
+  permanent downtime. The controller baseline now treats repo `.venv` +
+  `services/api/run_service.py` as the truthful local launch path for live
+  proof.
+- 2026-04-08: Added a bounded methodology PDF study packet for local Claude
+  over the extracted corpus from
+  `D:\BaiduNetdiskDownload\万维钢·现代思维工具100讲\PDF`, including:
+  - UTF-8 extracted text artifacts in
+    `.runtime/methodology-pdf-study/stable_texts`
+  - a stable manifest for numbered text files
+  - an active local Claude worker run to judge which tools/models are
+    candidates for the future IKE thinking armory
+- 2026-04-08: Added a batch-recovery plan for the methodology PDF study so the
+  original full-corpus run remains preserved while narrower batch A / batch B
+  review runs can complete more reliably.
+- 2026-04-08: Added `R2-G2` as the next narrow runtime coding packet for
+  service-preflight hardening, with an active local Claude delegated coding run
+  focused on machine-readable live-proof readiness rather than new runtime
+  semantics.
+- 2026-04-08: Added durable `R2-G2` controller validation results for the
+  service-preflight helper. The runtime can now truthfully classify live proof
+  as `ready/ambiguous/down`, but current live ownership still points at system
+  `Python312` rather than the preferred repo `.venv` baseline. A fresh repo
+  `.venv` `uvicorn` instance on `8011` proved the new inspect route works live,
+  so the remaining issue is stale service ownership rather than route logic.
+  Preferred-owner mismatch is now machine-readable in the preflight output.
+- 2026-04-09: Added durable detached-completion evidence for local Claude
+  worker runs, confirming that several active coding/review runs still time out
+  under detached wait and should not yet be treated as routine unattended
+  delegated closure.
+- 2026-04-08: Added durable `R2-C1` result records for the first narrow
+  runtime-backed visible-surface proof, including:
+  - a runtime project/work read helper
+  - a narrow `ike_v0` runtime project-surface inspect route
+  - settings-surface integration that truthfully shows runtime data or bounded
+    unavailability
+  - combined DB-backed validation at `89 passed, 1 warning`
+- 2026-04-08: Added phase-level `R2-C` result records and opened
+  `R2-D Runtime Project Bootstrap Alignment` as the next narrow runtime phase,
+  clarifying that the next live gap is runtime project presence rather than
+  visible-surface shape.
+- 2026-04-08: Added durable `R2-D1` result records for an explicit runtime
+  project bootstrap path, including a narrow bootstrap route and a live
+  bootstrap+inspect proof for `myattention-runtime-mainline`.
+- 2026-04-08: Added phase-level `R2-D` result records and opened
+  `R2-E Runtime Surface Activation Narrow Integration` as the next narrow
+  runtime phase, clarifying that the next gap is direct settings-surface
+  usability rather than runtime project presence itself.
+- 2026-04-08: Added durable `R2-E1` result records for the first explicit
+  settings-surface activation proof, including:
+  - a user-triggered runtime activation button in the runtime-unavailable panel
+  - a narrow bootstrap call from the settings surface
+  - live bootstrap + inspect validation for `myattention-runtime-mainline`
+- 2026-04-08: Added phase-level `R2-E` result records, clarifying that
+  runtime surface activation is now materially complete as a narrow proof and
+  broader UI/runtime integration remains closed.
+- 2026-04-08: Added durable `R2-F1` result records for the first visible
+  benchmark-to-runtime review bridge, including:
+  - a narrow benchmark candidate import endpoint
+  - a settings-surface action to send the reviewed benchmark candidate into runtime review
+  - explicit preservation of `pending_review` status rather than trusted-memory promotion
+- 2026-04-08: Added phase-level `R2-F` result records, clarifying that the
+  visible benchmark queue bridge is materially complete as a narrow proof and
+  broad benchmark/runtime integration remains closed.
+- 2026-04-08: Added `R2-G Runtime Service Stability And Delegated Closure Hardening`
+  as the next narrow runtime phase, clarifying that the main remaining risks are
+  operational reliability rather than new runtime truth semantics.
+- 2026-04-08: Added durable coding-lane and worker-hardening notes:
+  - `docs/IKE_RUNTIME_OPENCLAW_VS_CLAUDE_CODING_BASELINE_2026-04-08.md`
+  - `docs/CLAUDE_WORKER_RUNTIME_HARDENING_REQUIREMENTS_2026-04-08.md`
+
+- 2026-04-08: Added durable `R1-K1`, `R1-K3`, and phase-level `R1-K` result
+  records, closing the read-path trust semantics phase with mixed
+  delegated/controller evidence and promoting upstream relevance as the
+  explicit trusted-packet rule for the current runtime read surfaces.
+- 2026-04-08: Added `R2-A Runtime v0 Consolidated Readiness Review` as the
+  next controller phase after materially complete `R1-K`, including phase
+  judgment, consolidated review plan, and a concise runtime-v0 review pack.
+- 2026-04-08: Added a single-file runtime-v0 cross-model review pack:
+  - `docs/IKE_RUNTIME_V0_SINGLE_FILE_REVIEW_PACK_2026-04-08.md`
+  so the current runtime base can be reviewed without assembling the full doc tree.
+- 2026-04-08: Added durable `R2-A` review synthesis after returned
+  cross-model review, clarifying that runtime direction remains on track but
+  broader integration is still gated behind debt settlement and consolidated
+  readiness judgment.
+- 2026-04-08: Added `R2-A` debt-settlement records:
+  - unified retained runtime notes backlog
+  - formalized runtime method rules
+  - durably closed the carried `force=True` review debt as a closure-discipline item
+- 2026-04-08: Added `R2-A` readiness-gate result, clarifying that the runtime
+  base is now a strong candidate kernel but broader integration is still gated,
+  and opened `R2-B` as the next narrow runtime proof phase.
+- 2026-04-08: Added a strategic scheduling note so the second concept benchmark
+  and procedural memory evolution are now formally scheduled after `R2-B`
+  instead of remaining implicit carry items.
+- 2026-04-08: Materialized `R2-B` into a narrow execution surface for the first
+  real task lifecycle proof, with coding/review/test/evolution briefs and a
+  phase execution pack.
+
+- 2026-04-08: Added `R1-J DB-backed Runtime Test Stability Hardening` as the
+  next narrow runtime phase after `R1-I`, including phase judgment, plan,
+  execution pack, packet briefs, and `.runtime/delegation` entrypoints for
+  coding/review/testing/evolution.
+- 2026-04-08: Added durable `R1-J1` and `R1-J3` result records showing repeated
+  DB-backed runtime slices are currently stable under controller reruns, so no
+  new stability patch is presently justified.
+- 2026-04-08: Added durable `R1-J2`, `R1-J4`, and phase-level `R1-J` result
+  records, closing the narrow DB-backed stability phase with mixed
+  delegated/controller evidence and promoting repeated targeted green runs as a
+  valid no-patch stability-phase closure rule.
+- 2026-04-08: Added `R1-K Read-Path Trust Semantics Alignment` as the next
+  narrow runtime phase after `R1-J`, with phase judgment, plan, execution pack,
+  packet briefs, and `.runtime/delegation` entrypoints for
+  coding/review/testing/evolution.
+
+- 2026-04-08: Added durable `R1-I1` result records after controller-side
+  correction of the first operational-guardrail coding pass:
+  - `docs/IKE_RUNTIME_V0_R1-I1_RESULT_MILESTONE_2026-04-08.md`
+  - `docs/review-for IKE_RUNTIME_R1-I1_OPERATIONAL_GUARDRAILS_RESULT.md`
+- 2026-04-08: Added durable `R1-I2` delegated review records after a real
+  local Claude review run:
+  - `docs/IKE_RUNTIME_V0_R1-I2_RESULT_MILESTONE_2026-04-08.md`
+  - `docs/review-for IKE_RUNTIME_R1-I2_OPERATIONAL_GUARDRAILS_REVIEW_RESULT.md`
+- 2026-04-08: Added durable `R1-I3` testing records for operational guardrails:
+  - `docs/IKE_RUNTIME_V0_R1-I3_RESULT_MILESTONE_2026-04-08.md`
+  - `docs/review-for IKE_RUNTIME_R1-I3_OPERATIONAL_GUARDRAILS_TEST_RESULT.md`
+- 2026-04-08: Added durable `R1-I4` evolution records and phase-level
+  `R1-I` milestone:
+  - `docs/IKE_RUNTIME_V0_R1-I4_RESULT_MILESTONE_2026-04-08.md`
+  - `docs/review-for IKE_RUNTIME_R1-I4_OPERATIONAL_GUARDRAILS_EVOLUTION_RESULT.md`
+  - `docs/IKE_RUNTIME_V0_R1-I_RESULT_MILESTONE_2026-04-08.md`
+
+- 2026-04-08: Marked `R1-H` materially complete for the current delegated-evidence
+  recovery scope and opened the next runtime phase:
+  - `R1-I Operational Guardrail Hardening`
+  - added phase judgment, plan, packet briefs, execution pack, and
+    `.runtime/delegation` entrypoints for `R1-I1 ~ R1-I4`
+
+- 2026-04-08: Completed the `R1-H` recovery wave for `R1-D` using local
+  Claude delegated artifacts:
+  - `R1-D2` review recovered
+  - `R1-D3` testing recovered
+  - refreshed phase evidence now shows `R1-D`, `R1-E`, `R1-F`, and `R1-G`
+    are all fully delegated across coding/review/testing/evolution
+  - `R1-H` can now be treated as materially complete for the current recovery
+    scope
+  - added durable recovery note:
+    - `docs/IKE_RUNTIME_V0_R1-H_R1-D_RECOVERY_RESULT_2026-04-08.md`
+
+- 2026-04-08: Completed the `R1-H` recovery wave for `R1-E` using local
+  Claude delegated artifacts:
+  - `R1-E2` review recovered
+  - `R1-E3` testing recovered
+  - `R1-E4` evolution recovered
+  - refreshed phase evidence now shows `R1-E` is fully delegated across
+    coding/review/testing/evolution
+  - `R1-D` is now the next `R1-H` recovery target
+  - added durable recovery note:
+    - `docs/IKE_RUNTIME_V0_R1-H_R1-E_RECOVERY_RESULT_2026-04-08.md`
+
+- 2026-04-07: Completed `R1-G1` review provenance hardening:
+  - tightened `transition_to_review(...)` metadata with:
+    - `review_submitted_by_id`
+    - nested `review_submission`
+  - made `transition_packet_to_review(...)` derive review provenance from the
+    packet's real creator role/id instead of hardcoding `delegate`
+  - added malformed attribution rejection for empty review-submission actor ids
+  - included `test_runtime_v0_project_surface.py` in shared runtime table
+    cleanup to remove a previously observed cross-suite DB-backed interaction
+  - validation passed with:
+    - `3 passed, 48 deselected, 1 warning`
+    - `2 passed, 8 deselected, 1 warning`
+    - `4 passed, 1 warning` for standalone `project_surface`
+    - `65 passed, 1 warning` for the combined
+      `project_surface + operational_closure + memory_packets` slice
+
+- 2026-04-07: Added durable `R1-G` result records and controller fallback
+  review/testing/evolution coverage so review-provenance hardening no longer
+  depends on chat-only controller state.
+
+- Added `docs/IKE_RUNTIME_V0_R1-E1_RESULT_MILESTONE_2026-04-07.md` and
+  `docs/review-for IKE_RUNTIME_R1-E1_PROJECT_SURFACE_ALIGNMENT_RESULT.md` so
+  the first `R1-E` result is durable and does not depend on chat-only controller
+  state.
+
+- Added `docs/IKE_RUNTIME_V0_R1-E_RESULT_MILESTONE_2026-04-07.md` plus
+  controller fallback records for:
+  - `R1-E2` review
+  - `R1-E3` testing
+  - `R1-E4` evolution
+  so the `R1-E` phase now has durable phase-level review coverage even without
+  recovered independent delegated lane artifacts.
+
+- Added the next runtime phase judgment and packet set for:
+  - `R1-F Controller Runtime Read Surface`
+  so the mainline now moves from project-pointer alignment to one narrow
+  controller-facing runtime read surface without opening broader UI/API work.
+
+- Materialized `R1-F` into `.runtime/delegation` entrypoints for:
+  - `R1-F1` coding
+  - `R1-F2` review
+  - `R1-F3` testing
+  - `R1-F4` evolution
+  so the next runtime phase now has an execution surface, not just docs-level
+  phase judgment.
+
+- 2026-04-07: Completed `R1-F1` controller runtime read surface:
+  - added `services/api/runtime/project_surface.py`
+  - added `services/api/tests/test_runtime_v0_project_surface.py`
+  - proved controller-facing current project visibility can be assembled from
+    existing runtime truth only
+  - validation passed with:
+    - `4 passed, 1 warning`
+    - `101 passed, 1 warning` on the combined truth-adjacent slice
+- 2026-04-07: Added durable `R1-F` result records and controller fallback
+  review/testing/evolution coverage so the full phase no longer depends on
+  chat-only controller state.
+
+- Added the next runtime phase judgment and packet set for:
+  - `R1-G Review Provenance Hardening`
+  so the mainline now moves from controller-facing read visibility to narrower
+  review/acceptance attribution hardening without widening the platform.
+
+- Materialized `R1-G` into `.runtime/delegation` entrypoints for:
+  - `R1-G1` coding
+  - `R1-G2` review
+  - `R1-G3` testing
+  - `R1-G4` evolution
+  so the new phase has an execution surface immediately instead of only docs.
+
+- Added `docs/IKE_RUNTIME_V0_R1-C5_ASSIGNMENT_TRUTH_OPTIONS.md` to turn the
+  `R1-C5` assignment-truth ambiguity into explicit controller options and a v0
+  recommendation instead of leaving it as an implicit coding assumption
+
+- Added `docs/IKE_RUNTIME_V0_R1-C5_C6_DIAGNOSIS_2026-04-07.md` to record the
+  controller-side truth that:
+  - `R1-C6` is a concrete pytest DB-harness restoration task
+  - `R1-C5` is still blocked on clarifying explicit assignment truth in the
+    runtime schema
+
+- Added `docs/IKE_RUNTIME_V0_R1-C1_RESULT_MILESTONE_2026-04-07.md` and
+  `docs/review-for IKE_RUNTIME_R1-C1_TRUTH_LAYER_RESULT.md` so the current
+  truth-layer hardening result is durable and no longer depends on chat history
+  or a partially populated delegation result template
+
 - 新增受控任务外包策略文档，明确主控不外包、结构化交接、结果回收与版本记录要求
 - 新增第一批受控外包任务候选清单，用于把高 token 的 coding/review/research 子任务纳入多脑协作试点
 - 新增程序性知识架构文档，明确自然语言 SOP、Method、Playbook、Skill、Policy 属于正式知识层并应进入版本与评估体系
@@ -26,6 +305,293 @@
 - 新增启动器日志目录与查看能力：`.runtime/logs/` 和 `manage.py logs <component>`
 
 ### Changed
+
+- 2026-04-08: Narrow-corrected `R1-I1` operational guardrails:
+  - fixed wrong-project explicit-alignment test setup
+  - stabilized upstream relevance reason strings to enum-name labels
+  - validation now passes with:
+    - `23 passed, 1 warning`
+    - `114 passed, 1 warning` on the combined
+      `operational_closure + work_context + memory_packets` slice
+
+- 2026-04-07: Completed `R1-E1` project-surface alignment:
+  - `RuntimeProject.current_work_context_id` can now be aligned to the
+    runtime-owned active `RuntimeWorkContext`
+  - project-facing current active work can be resolved through the project
+    pointer without introducing a second truth source
+  - corrected two narrow issues during controller validation:
+    - JSON serialization for alignment metadata timestamps
+    - DB-backed test fixture update path that violated the existing
+      `DONE -> result_summary` constraint
+  - validation now passes with:
+    - `8 passed, 1 warning` for the narrow `operational_closure` suite
+    - `97 passed, 1 warning` for the combined
+      `operational_closure + work_context + memory_packets` slice
+
+- 2026-04-07: Completed `R1-C7` truth-surface cleanup:
+  - removed deprecated `allow_claim` from
+    `runtime.state_machine.validate_transition`
+  - updated runtime tests so `allow_claim` is now rejected rather than treated
+    as a compatibility no-op
+  - claim-related runtime suites remain green with `194 passed, 1 warning`
+
+- 2026-04-07: Completed `R1-C5` narrow Postgres-backed claim-truth integration:
+  - added `services/api/runtime/postgres_claim_verifier.py`
+  - explicit assignment now verifies through `runtime_tasks.owner_kind/owner_id`
+  - active lease now verifies through `runtime_tasks.current_lease_id` plus
+    `runtime_worker_leases`
+  - added `services/api/tests/test_runtime_v0_postgres_claim_verifier.py`
+  - targeted verifier suite passes with `4 passed, 1 warning`
+  - combined narrow DB-backed runtime evidence passes with
+    `57 passed, 1 warning`
+  - materialized the next narrow follow-up as:
+    - `docs/IKE_RUNTIME_V0_R1-C7_ALLOW_CLAIM_REMOVAL_PLAN.md`
+    - `docs/IKE_RUNTIME_V0_PACKET_R1-C7_CODING_BRIEF.md`
+
+- 2026-04-07: Completed `R1-C6` DB-backed schema-foundation restoration:
+  - restored local Postgres reachability
+  - applied runtime kernel migration `013`
+  - added repo-level pytest fixture support in
+    `services/api/tests/conftest.py`
+  - aligned schema-foundation test fixtures with runtime truth
+  - `services/api/tests/test_runtime_v0_schema_foundation.py` now passes with
+    `53 passed, 1 warning`
+
+- 2026-04-07: Reordered `R1-C` narrow follow-ups based on controller diagnosis:
+  - `R1-C6` now comes first because wide runtime DB failures are a real
+    fixture/harness gap
+  - `R1-C5` now uses `runtime_tasks.owner_kind/owner_id` as the `v0`
+    explicit-assignment truth source once `R1-C6` is complete
+
+- 2026-04-07: Controller-corrected `R1-C1` truth-layer coding so runtime claim
+  semantics now align on one rule:
+  - executable `allow_claim=True` access is closed for CLAIM_REQUIRED transitions
+  - `TransitionRequest` now carries `claim_context`
+  - `ClaimVerifier` / `InMemoryClaimVerifier` now define the runtime truth
+    adapter boundary
+  - narrow runtime validation passed with `256` tests
+  - wider runtime sweep revealed a separate DB fixture/environment gap
+    (`417 passed, 35 errors`) rather than a proven truth-layer regression
+
+- 2026-04-07: Materialized `R1-C` into executable `.runtime/delegation`
+  entrypoints for coding, review, testing, and evolution, and added
+  `docs/IKE_RUNTIME_V0_R1-C_EXECUTION_PACK_2026-04-07.md` as the single-file
+  controller/review/execution handoff for the truth-layer phase.
+
+- Re-audited `IKE Runtime v0` `R1-B` against the current live repo state and
+  recorded the truthful controller judgment:
+  - lifecycle component semantics already exist in runtime logic/tests
+  - `R1-B1` now has a dedicated lifecycle-proof test artifact
+  - controller live pytest validation passed across lifecycle/state/event suites
+  - delegated `R1-B2` review and `R1-B4` evolution still timed out without durable results
+  - controller fallback review/evolution were recorded so the lifecycle-proof milestone is still reviewable
+  - the active gap is now delegated reviewer/evolution lane recovery rather than more planning
+
+- Added a first-class independent testing-leg document and validation matrix so
+  coding, review, and testing are no longer treated as the same function in
+  current project delivery
+- Added a project-level durable-recording and Git-discipline rule so important
+  controller judgments, review outcomes, and reusable method changes no longer
+  depend on chat history or long-lived dirty working trees alone
+- Added a first-class evolution-loop and method-upgrade document so reviewed
+  closures, future-preserve findings, and procedural memory candidates have a
+  durable promotion path instead of living only in controller judgment
+- Updated the project harness contract to explicitly require independent testing
+  and independent evolution legs for the current project method
+- Added both the independent testing leg and independent evolution leg to the
+  long-horizon backlog/current method structure so they are preserved as active
+  project directions
+- Added a concrete second-wave runtime hardening plan so the project now moves
+  from first-wave kernel execution into:
+  - claim/trust/migration hardening first
+  - then one real task lifecycle proof
+  - then narrow kernel integration
+  instead of drifting into premature platform expansion
+- Added a multi-agent second-wave runtime cycle so hardening is now explicitly
+  structured as:
+  - coding
+  - review
+  - testing
+  - evolution
+  rather than only a coding packet followed by ad hoc controller follow-up
+- Materialized the first second-wave runtime hardening packet into
+  `.runtime/delegation`, including a coding brief, context packet, result
+  template, and stable review-result file for `R1-A1`
+- Materialized the remaining `R1-A` multi-agent runtime hardening packets into
+  `.runtime/delegation` for:
+  - review
+  - testing
+  - evolution
+  so second-wave now has a complete bounded collaboration cycle
+- Executed `R1-A1` second-wave hardening via delegate and recorded controller
+  review with `accept_with_changes`; the patch materially tightened claim/trust
+  semantics but still preserves two known soft spots:
+  - `role=None` legacy force-path softness
+  - caller-supplied upstream verifier trust
+- Restored the broken `openclaw-kimi` review/evolution lane by correcting the
+  underlying OpenClaw agent model route, then verified both review and
+  evolution packets execute successfully again
+- Cleaned up OpenClaw alias semantics so the active lanes are now:
+  - primary coding: `openclaw-glm`
+  - primary review/evolution: `openclaw-kimi`
+  - backup coding: `openclaw-coder` (`qwen3.6-plus`)
+  - backup review: `openclaw-reviewer` (`qwen3.6-plus`)
+- Executed the independent `R1-A3` hardening test packet and recorded durable
+  test evidence:
+  - `36` state-machine tests passed
+  - `49` memory-packet trust tests passed
+  - `7` migration-validation-support tests passed
+  The remaining second-wave weaknesses are now explicitly tested residual risks,
+  not unvalidated assumptions
+- Added a single-file `R1-A` result milestone plus matching `review-for ...`
+  template so future cross-model review can start from one durable second-wave
+  summary instead of four separate packet result files
+- Added the next narrow second-wave enforcement cycle so runtime work does not
+  jump into `R1-B` prematurely; materialized:
+  - `R1-A5` coding
+  - `R1-A6` review
+  - `R1-A7` testing
+  - `R1-A8` evolution
+  as both docs-level packet briefs and `.runtime/delegation` entry points
+- Executed `R1-A5` coding and rejected it in controller review because live
+  pytest disproved two claimed closures:
+  - claim hardening broke the legal claim path by binding delegate proof to role kind
+  - migration-validation path normalization still resolved the wrong migration root
+- Executed a narrow `R1-A5-FIX` correction pass and accepted it with changes:
+  - restored the legal claim path
+  - preserved closure of the `role=None` force bypass
+  - fixed migration-validation path normalization so the controller-side subset now passes
+- Executed `R1-A6` review and `R1-A8` evolution via `openclaw-kimi`, completing the
+  second-wave enforcement cycle as a real multi-agent loop rather than controller-only follow-up
+- Added the first real runtime lifecycle proof track (`R1-B`) and materialized
+  its first coding packet so the mainline now moves from pure hardening into a
+  narrow truthful state/event lifecycle proof
+- Expanded `R1-B` from a single coding brief into a full four-leg executable
+  cycle with:
+  - delegate-ready review/test/evolution packets
+  - a single-file execution pack
+  - a result milestone file
+  - a stable `review-for ...` result template
+- IKE benchmark progression is now explicitly staged:
+  - `B1` is treated as `signal + meaning + relevance hint`
+  - `B2` is the next benchmark stage: `concept deepening + research trigger`
+- The harness benchmark now produces a real three-brain report instead of only inspect-oriented internal artifacts
+- `/settings/ike` now renders real bilingual benchmark body content for the
+  current harness story instead of only bilingual labels
+- Added a compact cross-model review packet so external review can start from
+  one milestone brief and one prompt instead of the full document tree
+- Added a project-specific agent harness contract for OpenClaw/Codex/Qoder
+  contributors, covering task packets, review rules, truthfulness constraints,
+  and bounded QA expectations
+- Added `IKE Runtime v0` subproject decision, clarifying that the first runtime
+  kernel of IKE must cover memory, task, decision, and work-context control
+  rather than memory alone
+- Clarified that task governance is now a dual-front requirement:
+  it must improve both OpenClaw runtime continuity and the project's own
+  controller/delegate engineering continuity
+- Added a dedicated task-state and storage architecture document for
+  `IKE Runtime v0`, locking in explicit task states, transition discipline,
+  Postgres/Redis/object-storage responsibilities, leases, checkpoints, outbox,
+  and recovery rules before implementation
+- Added a companion document-and-memory governance document for `IKE Runtime v0`,
+  clarifying that docs are necessary but not the runtime truth model, and that
+  stable operation requires explicit separation between runtime state, artifacts,
+  documents, and recall memory
+- Added a research note on `MAGMA` and `Chronos`, clarifying how their
+  memory ideas should influence IKE: adopt typed, temporal, event-aware, and
+  relation-aware memory principles, but keep the first implementation step as a
+  durable runtime state kernel rather than jumping straight to a graph-memory engine
+- Added an implementation-grade data-model and transaction-boundary design for
+  `IKE Runtime v0`, specifying minimum tables, transactional write units, read
+  paths, leases, outbox discipline, and recovery rules before any build begins
+- Added an explicit role-permission and state-transition matrix for
+  `IKE Runtime v0`, clarifying which actors may move tasks, decisions, and
+  memory packets between states and which transitions require controller review
+- Added a focused single-file cross-model review packet for the current
+  `IKE Runtime v0` design milestone so external review can target the state
+  machine, permission matrix, storage split, and recovery model before
+  implementation begins
+- Absorbed the first external `IKE Runtime v0` review round into the design:
+  - compressed the v0 task state machine
+  - moved `blocked/cancelled/dropped` out of the durable v0 state list
+  - added explicit `MemoryPacket` acceptance flow
+  - added task-type lease-expiry recovery policy
+  - added explicit JSONB discipline to prevent hidden canonical state
+- Added a long-horizon backlog and decision log so strategically valuable but
+  deferred directions are explicitly preserved instead of disappearing between
+  review rounds
+- Added a first explicit thinking-model armory document so benchmark methods,
+  deep research, and runtime governance can be routed from top-layer reasoning
+  models instead of only from execution habits
+- Added `IKE_RUNTIME_EVOLUTION_ROADMAP.md` so `IKE Runtime` now has an
+  explicit v0 -> v0.1 -> v1 -> v2 capability path instead of relying on
+  short-horizon implementation docs alone
+- Added `IKE_RUNTIME_V0_IMPLEMENTATION_READINESS.md` to lock the first runtime
+  build slice, prerequisites, acceptance checks, and deferred work before any
+  implementation begins
+- Added `IKE_RUNTIME_V0_IMPLEMENTATION_PACKETS.md` to break the first runtime
+  build slice into bounded controller-ready implementation packets instead of
+  treating the runtime kernel as one large undifferentiated task
+- Added runtime delegation prep artifacts:
+  - `IKE_RUNTIME_V0_DELEGATION_BACKLOG.md`
+  - `IKE_RUNTIME_V0_PACKET_R0-A_BRIEF.md`
+  - `IKE_RUNTIME_V0_PACKET_R0-B_BRIEF.md`
+  - `IKE_RUNTIME_V0_PACKET_R0-C_BRIEF.md`
+  - `IKE_RUNTIME_V0_PACKET_R0-D_BRIEF.md`
+  - `IKE_RUNTIME_V0_PACKET_R0-E_BRIEF.md`
+  - `IKE_RUNTIME_V0_PACKET_R0-F_BRIEF.md`
+  - `IKE_RUNTIME_V0_FIRST_WAVE_PACKET_INDEX.md`
+  so the first runtime packet can be handed to a coding delegate without
+  reinterpreting the full design tree on the fly
+- Materialized the first runtime delegation packet into `.runtime/delegation`:
+  - `briefs/ike-runtime-r0-a-core-schema-glm.md`
+  - `contexts/ike-runtime-r0-a-core-schema-glm.md`
+  - `results/ike-runtime-r0-a-core-schema-glm.json`
+  so `R0-A` no longer exists only as design intent
+- Materialized the second runtime delegation packet into `.runtime/delegation`:
+  - `briefs/ike-runtime-r0-b-task-state-semantics-glm.md`
+  - `contexts/ike-runtime-r0-b-task-state-semantics-glm.md`
+  - `results/ike-runtime-r0-b-task-state-semantics-glm.json`
+  so compressed task-state semantics now also have an executable handoff form
+- Materialized the third runtime delegation packet into `.runtime/delegation`:
+  - `briefs/ike-runtime-r0-c-events-leases-glm.md`
+  - `contexts/ike-runtime-r0-c-events-leases-glm.md`
+  - `results/ike-runtime-r0-c-events-leases-glm.json`
+  so the first lease/recovery packet now also has an executable handoff form
+- Materialized the remaining first-wave runtime delegation packets into
+  `.runtime/delegation`:
+  - `ike-runtime-r0-d-work-context-glm`
+  - `ike-runtime-r0-e-memory-packets-glm`
+  - `ike-runtime-r0-f-redis-rebuild-glm`
+  so the full first-wave runtime kernel packet set now has executable handoff forms
+- Added `IKE_RUNTIME_V0_IMPLEMENTATION_EXECUTION_PACK_2026-04-05.md` as a
+  single-file review/execution pack for the whole first-wave runtime kernel,
+  combining packet order, review focus, and concrete handoff links
+- Added a blank review-result template:
+  - `docs/review-for IKE_RUNTIME_V0_IMPLEMENTATION_EXECUTION_PACK_2026-04-05.md`
+  so future cross-model reviews can be recorded with stable naming instead of
+  ad hoc chat-only responses
+- Absorbed the first review of the runtime implementation execution pack:
+  - added global stop conditions
+  - expanded `R0-A` so the first schema packet covers the full first-wave table footprint
+  - added reconstruction/trust-boundary proof expectations for `R0-D` and `R0-E`
+  - added explicit controller pre-review reminders for `R0-B` and `R0-E`
+- Updated the review process so every meaningful review must now produce both:
+  - `now_to_absorb`
+  - `future_to_preserve`
+  and added runtime-review-derived future items into the long-horizon backlog
+- Added a stable review template for the first runtime execution packet result:
+  - `docs/review-for IKE_RUNTIME_R0-A_CORE_SCHEMA_RESULT.md`
+- Recorded previously chat-only cross-model review artifacts into the durable
+  handoff reference set so they are less likely to disappear between sessions
+- Added follow-up planning after the latest B4 review:
+  - an entity-judgment strengthening plan
+  - a second-benchmark selection plan to reduce method overfitting to `harness`
+- Added a controller note for the first B5 harness entity review and recorded
+  the current truthful baseline that `harness` still has no justified
+  `concept_defining` entity
+- Added a second-benchmark shortlist with `agent memory` as the current
+  preferred next candidate
 
 - 主架构文档已明确对象存储属于正式存储层，不再仅隐含在专项设计中
 - 部署文档已补充开发期 `LocalObjectStore` 和生产期 `MinIO / S3 / OSS` 的扩展路径
@@ -268,3 +834,171 @@
 - Recorded a new mainline capability gap:
   - complex-source retrieval and anti-bot adaptation are still missing as first-class information-acquisition capabilities
   - current `RSS / API / generic fetch / search` paths are not sufficient for sources such as WeChat articles, social platforms, and other browser-context / dynamically rendered pages
+- Added IKE review-convergence planning documents:
+  - `docs/IKE_MIGRATION_EXIT_CRITERIA.md`
+  - `docs/IKE_V0_1_LOOP_PLAN.md`
+- Locked the next IKE milestone onto one honest, inspectable runtime loop instead of expanding transitional API breadth.
+- Reaffirmed that durable `GET /{type}/{id}` retrieval is still out of scope until object access, identity, and reconstruction semantics are real.
+## 2026-04-01
+
+- planning: added `B5` continued-study plan for the `harness` benchmark after
+  the first real study closure
+- benchmark: locked current `harness` state to `study / partially_applicable /
+  continue_study`
+- benchmark: corrected `openclaw-master-skills` from
+  `implementation_relevant` to `ecosystem_relevant` in the live harness
+  benchmark artifacts
+- docs: add entity discovery/event capture method and Claude Code reference
+  plan; extend B4 evidence layers with primary local artifact and structured
+  secondary interpretation
+- docs: add Claude Code B1 mapping and B2 memdir study plan; prepare bounded
+  delegation packet for memdir analysis
+- docs: add Claude Code B2 memdir study and update reference-plan progress
+- docs: add B3 prototype decision and procedural-memory v1 implementation
+  packet
+- 2026-04-05: Executed `IKE Runtime v0` packet `R0-A` through OpenClaw GLM and completed controller review. Accepted with changes. Recorded current absorption items and future-preserve items in the stable runtime result review file.
+- 2026-04-05: Executed `IKE Runtime v0` packet `R0-B`, rejected the first result, then accepted a narrow fix with changes. Delegate claim semantics for `ready -> active` are now claim-gated rather than blanket-allowed.
+- 2026-04-05: Executed `IKE Runtime v0` packet `R0-C` and accepted it with changes. Event/lease/recovery helpers are now present as the first truthful baseline for runtime auditability and recovery.
+- 2026-04-05: Executed `IKE Runtime v0` packet `R0-D` and accepted it with changes. WorkContext reconstruction helpers now exist as the first truthful snapshot-carrier baseline.
+- 2026-04-05: Executed `IKE Runtime v0` packet `R0-E`, rejected the first result, then accepted a narrow trust-boundary fix with changes. Accepted packets now require explicit upstream linkage before they can become trusted for recall.
+- 2026-04-05: Executed `IKE Runtime v0` packet `R0-F` and accepted it with changes. Redis acceleration/rebuild now exists as a truthful command-generation baseline, while real Redis execution, observability, and tighter incremental sync discipline remain future hardening work.
+- 2026-04-05: Added a single-file runtime first-wave result milestone plus matching blank review file so future cross-model review can evaluate `R0-A ~ R0-F` as one kernel baseline instead of reconstructing state from scattered packet reviews.
+- Fixed OpenClaw Kimi reviewer channel drift: reviewer agents had been pinned to an invalid `bailian-coding-plan/kimi-k2.5` auth route. Switched reviewer/evolution agents back to `modelstudio/kimi-k2.5`, reset the polluted reviewer session, and restored real `R1-A2` review + `R1-A4` evolution packet execution.
+- Cleaned OpenClaw local alias semantics: added `openclaw-coder`, split `openclaw-kimi` onto the dedicated `myattention-kimi-review` session, kept `openclaw-reviewer` as the generic reviewer route, and documented `openclaw-qwen` as legacy compatibility only.
+- Standardized backup OpenClaw lanes on `qwen3.6-plus`: `myattention-coder` and `myattention-reviewer` now use `bailian/qwen3.6-plus`, leaving `openclaw-glm` and `openclaw-kimi` as the primary specialized lanes.
+- 2026-04-07: Corrected reviewer/evolution lane config drift in local
+  OpenClaw:
+  - `myattention-kimi-review` restored to `modelstudio/kimi-k2.5`
+  - `myattention-reviewer` restored to `bailian/qwen3.6-plus`
+  - stale `bailian-coding-plan:default` session overrides cleared
+- 2026-04-07: Verified both reviewer lanes with minimal prompt-mode probes and
+  reran `R1-B2` review plus `R1-B4` evolution successfully. `R1-B` now has
+  real delegated results on all four legs: coding, review, testing, and
+  evolution.
+- 2026-04-07: Added `docs/IKE_CLAUDE_WORKER_MCP_FEASIBILITY_2026-04-07.md`
+  after evaluating the local Claude worker MCP package. Current conclusion:
+  feasible and valuable as a new bounded coding lane, but not yet a drop-in
+  replacement for the full OpenClaw stack because:
+  - `claude` is not installed/on `PATH`
+  - result schema still needs adaptation to project harness expectations
+- 2026-04-07: Opened `R1-C` as the next active runtime phase and turned the
+  remaining `R1-B` substantive changes into a narrow truth-layer packet set:
+  - remove executable legacy `allow_claim=True`
+  - move delegate claim truth into runtime-owned verification
+  - durably absorb lifecycle-proof method rules into the project harness
+# 2026-04-07
+
+## Added
+
+- `services/api/tests/conftest.py`
+  - adds a narrow sync-style adapter over the existing async runtime DB session
+    for DB-backed pytest suites
+
+## Changed
+
+- `IKE_RUNTIME_V0_R1-C5_C6_DIAGNOSIS_2026-04-07.md`
+  - now records that `R1-C6` fixture restoration is partially complete and the
+    remaining blocker is local Postgres reachability
+- `CURRENT_MAINLINE_HANDOFF.md`
+  - now records that `db_session` fixture absence is no longer the primary
+    blocker for `R1-C6`
+- `PROGRESS.md`
+  - now records the narrowed `R1-C6` blocker:
+    `MyAttentionPostgres` stopped / `localhost:5432` unreachable
+- 2026-04-07: Accepted `R1-D Operational Closure Layer` as the next runtime
+  phase after materially complete `R1-C`. Added `R1-D1 ~ R1-D4` packet briefs,
+  a single-file execution pack, and `.runtime/delegation` entrypoints for the
+  coding/review/testing/evolution legs. `R1-D` is intentionally narrowed to
+  runtime-backed `WorkContext` reconstruction and trusted `MemoryPacket`
+  promotion without introducing a second truth source.
+- 2026-04-07: Executed `R1-D1` as a narrow DB-backed operational-closure proof.
+  Added `runtime/operational_closure.py` plus
+  `test_runtime_v0_operational_closure.py`. The runtime kernel now has a
+  truthful helper path for:
+  - reconstructing `WorkContext` from canonical runtime truth
+  - persisting one active context per project without second-truth drift
+  - promoting reviewed upstream work into trusted accepted `MemoryPacket`
+    records
+  Validation passed:
+  - `5 passed, 1 warning` for the narrow DB-backed closure suite
+  - `94 passed, 1 warning` for the combined closure/work-context/memory suite
+- 2026-04-07: Added durable controller review for `R1-D1` and kept the verdict
+  at `accept_with_changes`. Preserved two follow-up items without reopening the
+  phase:
+  - review-submission attribution in the helper is still delegate-only
+  - project-level `current_work_context_id` is not yet updated by the new
+    persistence path
+- 2026-04-07: Added a single-file `R1-D` result milestone so the operational
+  closure phase no longer needs to be reconstructed from the execution pack,
+  handoff, and `R1-D1` result separately.
+- 2026-04-07: Added controller-side fallback records for `R1-D2 ~ R1-D4` so
+  the operational-closure phase now has durable review/testing/evolution
+  judgments even before independent delegated lanes are recovered.
+- 2026-04-07: Marked `R1-D` materially complete with fallback review coverage
+  and opened the next narrow runtime phase:
+  - `R1-E Project Surface Alignment`
+  This next step is intentionally limited to project-level
+  `current_work_context_id` truth alignment and controller-facing current-work
+  visibility, not broad UI/runtime expansion.
+- 2026-04-07: Materialized `R1-E` into a full controller-ready packet set plus
+  a single-file execution pack so the next runtime phase no longer depends on
+  reconstructing packet boundaries from the phase judgment alone.
+- 2026-04-07: Marked `R1-G Review Provenance Hardening` materially complete
+  with fallback review coverage after DB-backed proof of truthful review
+  provenance. Preserved the next remaining quality gap as independent delegated
+  review/testing/evolution evidence recovery, not a new runtime truth semantic
+  hole.
+- 2026-04-07: Opened `R1-H Independent Delegated Evidence Recovery` as the next
+  active runtime phase. Added a narrow phase judgment, delegated-evidence
+  recovery plan, `R1-H1 ~ R1-H4` packet briefs, a single-file execution pack,
+  and `.runtime/delegation` entrypoints for coding/review/testing/evolution.
+- 2026-04-07: Executed `R1-H1` as a narrow controller-facing evidence support
+  slice. Added `runtime/phase_evidence.py` plus
+  `test_runtime_v0_phase_evidence.py` so recent runtime phases can now be
+  classified truthfully as delegated/fallback/missing based on durable
+  delegated result artifacts, without introducing new runtime truth objects.
+- 2026-04-07: Fixed the first durable `R1-H` recovery order after the new
+  phase-evidence helper made the gap explicit. Recovery priority is now:
+  - `R1-G` review/evolution
+  - `R1-F` review/testing/evolution
+  - `R1-E` review/testing/evolution
+  - `R1-D` review/testing
+  This keeps the next mainline work on independent delegated evidence recovery,
+  not on reopening runtime semantics.
+- 2026-04-07: Recorded `R1-H` as `in_progress` and fixed the immediate next
+  concrete recovery target at `R1-G2` + `R1-G4`. Updated fallback result
+  payloads for `R1-H2 ~ R1-H4` so the phase no longer depends on pending
+  shells, and added durable status/next-target notes for controller handoff.
+- 2026-04-08: Recovered the first `R1-H` target wave for `R1-G` using local
+  Claude delegated artifacts. `R1-G2` now has a real delegated review run and
+  `R1-G4` now has a real delegated evolution artifact. The refreshed phase
+  evidence snapshot shows `R1-G` is fully delegated across coding/review/
+  testing/evolution, and the next recovery target moves forward to `R1-F`.
+- 2026-04-08: Recovered `R1-F2` and `R1-F4` using local Claude delegated
+  artifacts. `R1-F` is no longer fallback-heavy; only `R1-F3` testing remains
+  fallback-backed. The immediate `R1-H` next target is now narrowed to
+  `R1-F3`.
+- 2026-04-08: Recovered `R1-F3` using a local Claude delegated testing
+  artifact. The refreshed phase evidence snapshot now shows `R1-F` is fully
+  delegated across coding/review/testing/evolution, and the next `R1-H`
+  recovery target moves forward to `R1-E`.
+- 2026-04-08: Recorded R2-B1 lifecycle proof controller comparison and focused validation; kept scope bounded to `services/api/tests/test_runtime_v0_lifecycle_proof.py`.
+- 2026-04-08: Restored the local runtime surface so controller work can continue against a live system again: web is reachable on `3000` and API health is back on `8000`.
+- 2026-04-08: Added a durable `R2-B1` controller-recovered coding result plus a separate coding comparison note, preserving the distinction between a good bounded Claude diff and a completed delegated artifact.
+- 2026-04-08: Added durable `R2-B3` focused test evidence (`214 passed, 1 warning`) and a dedicated `R2-B` status milestone so the phase can be tracked truthfully while review/evolution are still pending.
+- 2026-04-08: Closed the `R2-B` lifecycle-proof subtrack with durable coding/review/testing/evolution records; kept `R2-B` itself open and explicitly shifted the next remaining gate item to the kernel-to-benchmark bridge proof.
+- 2026-04-08: Materialized the remaining `R2-B` kernel-to-benchmark bridge target into controller-ready briefs, `.runtime/delegation` entrypoints, and a single execution pack.
+- 2026-04-08: Executed `R2-B5` bridge proof and added a narrow DB-backed benchmark bridge helper plus tests. Reviewed benchmark candidates can now be imported into runtime as `pending_review` memory packets without auto-promotion to trusted recall, and the combined closure/project-surface/memory slice remains green (`87 passed, 1 warning`).
+- 2026-04-08: Added durable `R2-B7` validation evidence for the bridge proof (`7 passed, 1 warning`; combined slice `87 passed, 1 warning`).
+- 2026-04-08: Added durable `R2-B8` evolution guidance for the bridge proof, keeping broader integration closed while preserving the new narrow bridge rule.
+- 2026-04-08: Added durable `R2-B6` review evidence and closed `R2-B` as a consolidated runtime milestone. Opened `R2-C` as the next narrow integration phase.
+- 2026-04-09: Hardened `R2-G` service-preflight truth with a strict preferred-owner gate. Added optional `strict_preferred_owner` handling to `runtime/service_preflight.py`, routed it through `/api/ike/v0/runtime/service-preflight/inspect`, and proved the current `8000` surface truthfully downgrades to `ambiguous` when the live listener is the non-preferred system Python owner.
+- 2026-04-09: Surfaced strict runtime service preflight on the existing settings runtime panel. `services/web/app/settings/ike/page.tsx` now loads strict preflight server-side and `ike-workspace-manager.tsx` displays the narrow machine-readable service status, preferred-owner state, and mismatch warning without widening into a broad runtime operations UI.
+- 2026-04-09: Recorded that `8000` health was recovered but ownership still reclaims to system `Python312` even after an explicit clear-and-restart attempt. This is now tracked as an environment/process-discipline issue, not misreported as runtime service normalization.
+- 2026-04-09: Added machine-readable owner-chain diagnosis to `runtime/service_preflight.py`. Strict live snapshots can now distinguish plain preferred-owner mismatch from the more specific `parent_preferred_child_mismatch` case seen on `8000`.
+- 2026-04-09: Added machine-readable code-fingerprint and code-freshness surfacing to `runtime/service_preflight.py`, extended the preflight inspect route to carry the new fields, and surfaced `Code Freshness` on the settings runtime panel. Strict freshness mismatch can now be treated as a truthful `ambiguous` live-proof gate when an expected fingerprint is provided.
+- 2026-04-09: Added explicit `host/port` targeting to the runtime service-preflight inspect route so controller live proof is no longer hardcoded to `8000`. The route capability is now real, but fresh alternate-port live proof is still blocked by launch-path and served-code drift.
+- 2026-04-09: Fixed the next narrow `R2-G` target at launch-path discipline. The remaining blocker is now proving one controller-acceptable fresh launch path with current-code live route behavior, not adding more preflight fields.
+- 2026-04-09: Completed a fresh alternate-port live proof on `8013`. The live route now returns the latest `owner_chain`, `code_fingerprint`, and `code_freshness` fields; with the current fingerprint supplied, code freshness closes cleanly. Remaining `R2-G` ambiguity is now isolated to launch-path / interpreter ownership drift.
+- 2026-04-09: Added machine-readable `repo_launcher` evidence to `service_preflight`, exposed it through the inspect route, and surfaced it on the settings runtime panel. The remaining `R2-G` question is now controller acceptability, not missing launch-path observability.
+- 2026-04-09: Added machine-readable `controller_acceptability` to `service_preflight`, exposed it through the inspect route and runtime panel, and fixed the next `R2-G` target at an explicit controller rule for `bounded_live_proof_ready`.

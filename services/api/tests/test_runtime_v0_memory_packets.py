@@ -204,8 +204,35 @@ class TestTransitionToReview:
         )
         assert updates["status"] == PacketStatus.PENDING_REVIEW
         assert updates["metadata"]["review_submitted_by"] == "delegate"
+        assert updates["metadata"]["review_submitted_by_id"] == "del-001"
         assert "review_submitted_at" in updates["metadata"]
         assert updates["metadata"]["review_reason"] == "Study complete"
+        submission = updates["metadata"]["review_submission"]
+        assert submission["submitted_by"] == "delegate"
+        assert submission["submitted_by_id"] == "del-001"
+        assert submission["reason"] == "Study complete"
+        assert "submitted_at" in submission
+
+    def test_review_submission_records_truthful_actor_for_non_delegate(self):
+        pkt = create_packet(
+            project_id="proj-1",
+            packet_type="study_result",
+            title="Controller packet",
+            summary="Summary",
+            created_by_kind=OwnerKind.CONTROLLER,
+            created_by_id="ctrl-001",
+        )
+        updates = transition_to_review(
+            pkt,
+            triggered_by_kind=OwnerKind.CONTROLLER,
+            triggered_by_id="ctrl-001",
+            trigger_reason="Controller submitted for review",
+        )
+        submission = updates["metadata"]["review_submission"]
+        assert updates["metadata"]["review_submitted_by"] == "controller"
+        assert updates["metadata"]["review_submitted_by_id"] == "ctrl-001"
+        assert submission["submitted_by"] == "controller"
+        assert submission["submitted_by_id"] == "ctrl-001"
 
     def test_review_submitted_does_not_mutate_packet(self):
         pkt = create_packet(
@@ -260,6 +287,18 @@ class TestTransitionToReview:
         )
         with pytest.raises(PacketTransitionError):
             transition_to_review(accepted_pkt, OwnerKind.CONTROLLER, "ctrl-001")
+
+    def test_cannot_transition_to_review_without_actor_id(self):
+        pkt = create_packet(
+            project_id="proj-1",
+            packet_type="study_result",
+            title="Test",
+            summary="Summary",
+            created_by_kind=OwnerKind.DELEGATE,
+            created_by_id="del-001",
+        )
+        with pytest.raises(PacketTransitionError, match="non-empty triggered_by_id"):
+            transition_to_review(pkt, OwnerKind.DELEGATE, "")
 
 
 # ──────────────────────────────────────────────────────────────

@@ -224,8 +224,20 @@ def transition_to_review(
             f"Packet {packet.memory_packet_id} cannot transition to review: "
             f"current status is '{packet.status}', expected 'draft'."
         )
+    if not triggered_by_id:
+        raise PacketTransitionError(
+            f"Packet {packet.memory_packet_id} cannot transition to review without "
+            f"a non-empty triggered_by_id. Review submission provenance must record "
+            f"the submitting actor id."
+        )
 
     now = datetime.now(timezone.utc).isoformat()
+    review_submission = {
+        "submitted_by": triggered_by_kind.value,
+        "submitted_by_id": triggered_by_id,
+        "submitted_at": now,
+        "reason": trigger_reason,
+    }
     return {
         "memory_packet_id": packet.memory_packet_id,
         "status": PacketStatus.PENDING_REVIEW,
@@ -233,8 +245,10 @@ def transition_to_review(
         "metadata": {
             **packet.metadata,
             "review_submitted_by": triggered_by_kind.value,
+            "review_submitted_by_id": triggered_by_id,
             "review_submitted_at": now,
             "review_reason": trigger_reason,
+            "review_submission": review_submission,
         },
     }
 

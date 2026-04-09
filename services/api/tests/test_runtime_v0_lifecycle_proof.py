@@ -9,6 +9,11 @@ This is a truth-constrained proof:
 - Review boundary must stay explicit (delegate cannot move review_pending -> done)
 - Only controller can accept review_pending work to done
 
+R1-C1 Hardening:
+- The lifecycle proof path no longer relies on legacy allow_claim=True.
+- Delegate ready->active transitions use ClaimContext with runtime-owned
+  verification (InMemoryClaimVerifier for tests).
+
 This test validates the narrowest possible lifecycle proof using the
 existing runtime kernel without adding new first-class objects.
 """
@@ -48,6 +53,7 @@ from runtime.events import (
 from runtime.leases import (
     claim_lease,
     TASK_TYPE_RECOVERY,
+    InMemoryClaimVerifier,
 )
 
 
@@ -93,7 +99,10 @@ class TestLifecycleProof:
                 f"{actor.value} not permitted for {from_status.value} -> {to_status.value}"
 
     def test_full_lifecycle_execution(self):
-        """Execute the complete lifecycle path with proper actors."""
+        """Execute the complete lifecycle path with proper actors.
+
+        R1-C1: delegate ready->active uses ClaimContext, not allow_claim=True.
+        """
         task_id = str(uuid4())
         project_id = str(uuid4())
         event_log = EventSequence()
@@ -110,7 +119,7 @@ class TestLifecycleProof:
         )
         result1 = execute_transition(req1)
         assert result1.success is True, f"Step 1 failed: {result1.error}"
-        
+
         event1 = build_event_record(
             result1,
             project_id=project_id,
@@ -120,6 +129,7 @@ class TestLifecycleProof:
         event_log.append(TaskEvent(**event1))
 
         # Step 2: ready -> active (delegate claim with structured claim context)
+        # R1-C1: Use ClaimContext directly in TransitionRequest
         claim_ctx = ClaimContext(
             claim_type=ClaimType.ACTIVE_LEASE,
             claim_ref="lease-001",
@@ -134,28 +144,9 @@ class TestLifecycleProof:
             role=OwnerKind.DELEGATE,
             role_id="del-001",
             reason="Work started",
-        )
-        # Validate with structured claim context
-        validate_transition(
-            TaskStatus.READY,
-            TaskStatus.ACTIVE,
-            OwnerKind.DELEGATE,
             claim_context=claim_ctx,
         )
         result2 = execute_transition(req2)
-        # Note: execute_transition doesn't pass claim_context, so we validated separately
-        # For the proof, we use allow_claim=True to simulate verified claim
-        req2_allow = TransitionRequest(
-            task_id=task_id,
-            project_id=project_id,
-            from_status=TaskStatus.READY,
-            to_status=TaskStatus.ACTIVE,
-            role=OwnerKind.DELEGATE,
-            role_id="del-001",
-            reason="Work started",
-            allow_claim=True,
-        )
-        result2 = execute_transition(req2_allow)
         assert result2.success is True, f"Step 2 failed: {result2.error}"
 
         event2 = build_event_record(
@@ -222,13 +213,11 @@ class TestLifecycleProof:
 
     def test_review_boundary_is_enforced(self):
         """Delegate cannot bypass review by moving review_pending -> done."""
-        # This is the critical guardrail
         level = get_transition_permission(
             TaskStatus.REVIEW_PENDING, TaskStatus.DONE, OwnerKind.DELEGATE
         )
         assert level == PermissionLevel.DENIED
 
-        # validate_transition must raise GuardrailViolationError
         with pytest.raises(GuardrailViolationError):
             validate_transition(
                 TaskStatus.REVIEW_PENDING,
@@ -236,7 +225,6 @@ class TestLifecycleProof:
                 OwnerKind.DELEGATE,
             )
 
-        # execute_transition must fail
         req = TransitionRequest(
             task_id=str(uuid4()),
             project_id=str(uuid4()),
@@ -256,14 +244,12 @@ class TestLifecycleProof:
         )
         assert level == PermissionLevel.ALLOWED
 
-        # validate_transition succeeds
         validate_transition(
             TaskStatus.REVIEW_PENDING,
             TaskStatus.DONE,
             OwnerKind.CONTROLLER,
         )
 
-        # execute_transition succeeds
         req = TransitionRequest(
             task_id=str(uuid4()),
             project_id=str(uuid4()),
@@ -277,7 +263,10 @@ class TestLifecycleProof:
         assert result.success is True
 
     def test_delegate_claim_requires_proof(self):
-        """Delegate ready -> active requires explicit claim proof."""
+        """Delegate ready -> active requires explicit claim proof (ClaimContext).
+
+        R1-C1: allow_claim=True is removed. Only ClaimContext works.
+        """
         # Without claim, must fail
         with pytest.raises(ClaimRequiredError):
             validate_transition(
@@ -319,7 +308,6 @@ class TestLifecycleProof:
         task_id = str(uuid4())
         project_id = str(uuid4())
 
-        # Single transition
         req = TransitionRequest(
             task_id=task_id,
             project_id=project_id,
@@ -338,7 +326,6 @@ class TestLifecycleProof:
             triggered_by_id="ctrl-001",
         )
 
-        # Event must match the transition
         assert event["from_status"] == "inbox"
         assert event["to_status"] == "ready"
         assert event["task_id"] == task_id
@@ -376,7 +363,7 @@ class TestLifecycleProof:
             describe_transition(TaskStatus.REVIEW_PENDING, TaskStatus.DONE),
         ]
         for desc in descriptions:
-            assert len(desc) > 10  # Non-trivial description
+            assert len(desc) > 10
             assert "transition" not in desc.lower() or len(desc) > 30
 
 
@@ -393,12 +380,7 @@ class TestOrderedEventHistory:
         task_id = str(uuid4())
         project_id = str(uuid4())
 
-        # Simulate lifecycle events in order
         for i, ((from_s, to_s), actor) in enumerate(zip(LIFECYCLE_PATH, LIFECYCLE_ACTORS)):
-            if i == 1 and actor == OwnerKind.DELEGATE:
-                # Skip claim validation for event ordering test
-                pass
-            
             event = make_state_transition_event(
                 project_id=project_id,
                 task_id=task_id,
@@ -410,7 +392,6 @@ class TestOrderedEventHistory:
             )
             seq.append(event)
 
-        # Verify order matches lifecycle
         assert seq.count == 4
         assert seq.events[0].from_status == "inbox"
         assert seq.events[0].to_status == "ready"
@@ -434,15 +415,14 @@ class TestOrderedEventHistory:
             reason="Triage",
         )
         seq.append(event)
-        
-        # Event is frozen
+
         with pytest.raises(AttributeError):
             seq.events[0].task_id = "tampered"
 
     def test_event_sequence_produces_persistable_dicts(self):
         """EventSequence.to_dicts() produces valid persistence dicts."""
         seq = EventSequence()
-        for from_s, to_s in LIFECYCLE_PATH[:2]:  # Just first two for brevity
+        for from_s, to_s in LIFECYCLE_PATH[:2]:
             event = make_state_transition_event(
                 project_id="proj-1",
                 task_id="task-1",
@@ -467,14 +447,18 @@ class TestOrderedEventHistory:
 
 
 # ──────────────────────────────────────────────────────────────
-# Integration with Lease System
+# Integration with Lease System (R1-C1)
 # ──────────────────────────────────────────────────────────────
 
 class TestLifecycleWithLeases:
-    """Prove lifecycle works with lease-based claim system."""
+    """Prove lifecycle works with runtime-owned claim verification."""
 
     def test_lease_claim_aligns_with_active_transition(self):
-        """Lease claim should align with ready -> active transition."""
+        """Lease claim + ClaimContext should enable ready -> active.
+
+        R1-C1: Use InMemoryClaimVerifier to verify the claim, then
+        pass the resulting ClaimContext to execute_transition.
+        """
         task_id = str(uuid4())
         project_id = str(uuid4())
 
@@ -489,7 +473,20 @@ class TestLifecycleWithLeases:
         assert lease_result.success is True
         lease_id = lease_result.lease.lease_id
 
-        # Transition to active (simulating with allow_claim)
+        # Use InMemoryClaimVerifier to verify the claim
+        verifier = InMemoryClaimVerifier()
+        verifier.register_lease(lease_id, "del-001", task_id)
+
+        verification = verifier.verify_and_build_context(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref=lease_id,
+            delegate_id="del-001",
+            task_id=task_id,
+        )
+        assert verification.valid is True
+        assert verification.claim_context is not None
+
+        # Transition to active with verified claim context
         req = TransitionRequest(
             task_id=task_id,
             project_id=project_id,
@@ -497,7 +494,7 @@ class TestLifecycleWithLeases:
             to_status=TaskStatus.ACTIVE,
             role=OwnerKind.DELEGATE,
             role_id="del-001",
-            allow_claim=True,
+            claim_context=verification.claim_context,
         )
         result = execute_transition(req)
         assert result.success is True
@@ -506,6 +503,41 @@ class TestLifecycleWithLeases:
         assert lease_result.event is not None
         assert lease_result.event.event_type == "lease_claimed"
         assert lease_result.event.payload["lease_id"] == lease_id
+
+    def test_illegal_delegate_claim_is_rejected(self):
+        """A delegate claiming without a valid lease/assignment must fail.
+
+        R1-C1: The InMemoryClaimVerifier rejects unregistered claims,
+        and execute_transition fails without a valid ClaimContext.
+        """
+        task_id = str(uuid4())
+        project_id = str(uuid4())
+
+        verifier = InMemoryClaimVerifier()
+        # No lease or assignment registered
+
+        verification = verifier.verify_and_build_context(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref="fake-lease",
+            delegate_id="del-001",
+            task_id=task_id,
+        )
+        assert verification.valid is False
+        assert verification.claim_context is None
+
+        # Attempting transition without valid claim_context must fail
+        req = TransitionRequest(
+            task_id=task_id,
+            project_id=project_id,
+            from_status=TaskStatus.READY,
+            to_status=TaskStatus.ACTIVE,
+            role=OwnerKind.DELEGATE,
+            role_id="del-001",
+            # No claim_context – delegate has no verified claim
+        )
+        result = execute_transition(req)
+        assert result.success is False
+        assert "claim" in result.error.lower()
 
     def test_recovery_never_produces_done(self):
         """Lease expiry recovery must never produce done status."""
@@ -530,7 +562,6 @@ class TestTruthConstraints:
         task_id = str(uuid4())
         project_id = str(uuid4())
 
-        # Perform transition
         req = TransitionRequest(
             task_id=task_id,
             project_id=project_id,
@@ -542,7 +573,6 @@ class TestTruthConstraints:
         result = execute_transition(req)
         assert result.success is True
 
-        # Build event
         event = build_event_record(
             result,
             project_id=project_id,
@@ -550,25 +580,21 @@ class TestTruthConstraints:
             triggered_by_id="del-001",
         )
 
-        # Verify alignment
         assert event["from_status"] == result.from_status.value
         assert event["to_status"] == result.to_status.value
         assert event["task_id"] == result.task_id
 
     def test_review_boundary_is_explicit(self):
         """review_pending state must exist and be distinct."""
-        # review_pending is a canonical state
         assert TaskStatus.REVIEW_PENDING in TaskStatus
 
-        # review_pending has different transitions than done
         review_next = {TaskStatus.DONE, TaskStatus.ACTIVE}
         done_next = set()
-        
+
         from runtime.state_machine import get_valid_next_states
         assert get_valid_next_states(TaskStatus.REVIEW_PENDING) == review_next
         assert get_valid_next_states(TaskStatus.DONE) == done_next
 
-        # review_pending is not equivalent to done
         assert TaskStatus.REVIEW_PENDING.value != TaskStatus.DONE.value
 
     def test_done_is_terminal_state(self):
@@ -578,17 +604,14 @@ class TestTruthConstraints:
 
     def test_no_silent_promotion_to_done(self):
         """No automatic process can promote work to done."""
-        # Recovery cannot produce done
         for task_type in TASK_TYPE_RECOVERY:
             assert TASK_TYPE_RECOVERY[task_type] != TaskStatus.DONE
 
-        # Only explicit controller action can reach done
         level = get_transition_permission(
             TaskStatus.REVIEW_PENDING, TaskStatus.DONE, OwnerKind.CONTROLLER
         )
         assert level == PermissionLevel.ALLOWED
 
-        # All other roles are denied
         for role in [OwnerKind.DELEGATE, OwnerKind.REVIEWER, OwnerKind.RUNTIME,
                      OwnerKind.SCHEDULER, OwnerKind.USER]:
             level = get_transition_permission(

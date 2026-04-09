@@ -4,10 +4,16 @@ IKE Runtime v0 – Worker Lease Semantics
 Durable worker-lease claim, heartbeat, expiry, and recovery helpers.
 No DB access. Callers persist returned dicts into runtime_worker_leases
 and runtime_task_events.
+
+R1-C1: This module also owns the ClaimVerifier adapter – the runtime-owned
+truth rule for whether a delegate may claim or continue work on a task.
+The ClaimVerifier is a protocol that the service layer implements to
+perform Postgres-backed verification of delegate assignment and lease linkage.
 """
 
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -16,6 +22,8 @@ from uuid import uuid4
 from .state_machine import (
     TaskStatus,
     OwnerKind,
+    ClaimContext,
+    ClaimType,
 )
 from .events import (
     EventType,
@@ -55,6 +63,150 @@ def get_recovery_status(task_type: str) -> TaskStatus | None:
 def get_all_task_types_with_recovery() -> set[str]:
     """Return all task types that have a recovery policy."""
     return set(TASK_TYPE_RECOVERY.keys())
+
+
+# ──────────────────────────────────────────────────────────────
+# R1-C1: ClaimVerifier – Runtime-Owned Truth Adapter
+# ──────────────────────────────────────────────────────────────
+
+@dataclass(frozen=True)
+class ClaimVerificationResult:
+    """Result of a runtime-owned claim verification.
+
+    Fields:
+        valid: Whether the claim is verified.
+        claim_context: The structured claim context if valid.
+        error: Error message if invalid.
+    """
+    valid: bool
+    claim_context: ClaimContext | None = None
+    error: str | None = None
+
+
+class ClaimVerifier(ABC):
+    """Abstract adapter for runtime-owned claim verification.
+
+    The service layer implements this to verify delegate claims against
+    Postgres-backed truth (assignment records, active leases).
+
+    This is the runtime's truth rule for whether a delegate may claim
+    or continue work on a task. It replaces the legacy pattern where
+    the caller simply asserted `allow_claim=True`.
+
+    Implementations must verify:
+    1. The delegate_id matches the actual calling delegate's identity.
+    2. For EXPLICIT_ASSIGNMENT: an assignment record exists linking
+       the delegate to the task.
+    3. For ACTIVE_LEASE: an active lease exists on the task owned by
+       the delegate, and the claim_ref matches the lease_id.
+    """
+
+    @abstractmethod
+    def verify_claim(
+        self,
+        claim_type: ClaimType,
+        claim_ref: str,
+        delegate_id: str,
+        task_id: str,
+    ) -> ClaimVerificationResult:
+        """Verify a delegate's claim to work on a task.
+
+        Args:
+            claim_type: How the claim was made (assignment or lease).
+            claim_ref: ID of the verifying object (assignment ID or lease ID).
+            delegate_id: The delegate attempting the claim.
+            task_id: The task being claimed.
+
+        Returns:
+            ClaimVerificationResult with validity status.
+        """
+        ...
+
+    def verify_and_build_context(
+        self,
+        claim_type: ClaimType,
+        claim_ref: str,
+        delegate_id: str,
+        task_id: str,
+    ) -> ClaimVerificationResult:
+        """Verify a claim and return a ready-to-use ClaimContext.
+
+        Convenience method that calls verify_claim and, if valid,
+        returns a ClaimContext suitable for validate_transition.
+        """
+        result = self.verify_claim(claim_type, claim_ref, delegate_id, task_id)
+        if result.valid:
+            return ClaimVerificationResult(
+                valid=True,
+                claim_context=ClaimContext(
+                    claim_type=claim_type,
+                    claim_ref=claim_ref,
+                    delegate_id=delegate_id,
+                    task_id=task_id,
+                ),
+            )
+        return result
+
+
+# ──────────────────────────────────────────────────────────────
+# In-Memory ClaimVerifier for Testing
+# ──────────────────────────────────────────────────────────────
+
+class InMemoryClaimVerifier(ClaimVerifier):
+    """In-memory ClaimVerifier for unit tests.
+
+    Pre-register known-good delegate→task assignments and leases.
+    Any unregistered claim fails.
+    """
+
+    def __init__(self) -> None:
+        # {(delegate_id, task_id): set of claim_refs}
+        self._assignments: dict[tuple[str, str], set[str]] = {}
+        # {lease_id: (delegate_id, task_id)}
+        self._leases: dict[str, tuple[str, str]] = {}
+
+    def register_assignment(
+        self, delegate_id: str, task_id: str, assignment_id: str
+    ) -> None:
+        """Register a known delegate→task assignment."""
+        key = (delegate_id, task_id)
+        self._assignments.setdefault(key, set()).add(assignment_id)
+
+    def register_lease(
+        self, lease_id: str, delegate_id: str, task_id: str
+    ) -> None:
+        """Register a known active lease."""
+        self._leases[lease_id] = (delegate_id, task_id)
+
+    def verify_claim(
+        self,
+        claim_type: ClaimType,
+        claim_ref: str,
+        delegate_id: str,
+        task_id: str,
+    ) -> ClaimVerificationResult:
+        if claim_type == ClaimType.EXPLICIT_ASSIGNMENT:
+            key = (delegate_id, task_id)
+            if claim_ref in self._assignments.get(key, set()):
+                return ClaimVerificationResult(valid=True)
+            return ClaimVerificationResult(
+                valid=False,
+                error=f"No assignment record found for delegate={delegate_id}, "
+                f"task={task_id}, assignment_id={claim_ref}",
+            )
+        elif claim_type == ClaimType.ACTIVE_LEASE:
+            owner = self._leases.get(claim_ref)
+            if owner == (delegate_id, task_id):
+                return ClaimVerificationResult(valid=True)
+            return ClaimVerificationResult(
+                valid=False,
+                error=f"No active lease found for lease_id={claim_ref}, "
+                f"delegate={delegate_id}, task={task_id}",
+            )
+        return ClaimVerificationResult(
+            valid=False,
+            error=f"Unknown claim type: {claim_type}",
+        )
 
 
 # ──────────────────────────────────────────────────────────────

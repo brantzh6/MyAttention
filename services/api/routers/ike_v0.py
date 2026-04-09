@@ -7,6 +7,7 @@ These endpoints expose provisional/experimental objects without implying durable
 See: docs/IKE_API_TRANSITION_PRINCIPLES.md
 """
 
+from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
 
@@ -21,6 +22,15 @@ from ike_v0.mappers.decision import create_experiment_evaluation_decision
 from ike_v0.mappers.harness_case import create_loop_completeness_harness_case
 from ike_v0.mappers.observation import map_feed_item_to_observation
 from ike_v0.runtime.chain_artifact import ChainArtifact, assemble_chain_artifact, ARTIFACT_TYPE_IKE_CHAIN
+from runtime.project_surface import (
+    bootstrap_runtime_project_surface,
+    build_latest_project_runtime_read_surface,
+)
+from runtime.benchmark_bridge import (
+    BenchmarkBridgeError,
+    import_benchmark_candidate_into_runtime_project,
+)
+from runtime.service_preflight import run_preflight
 
 
 def _parse_iso_datetime(value):
@@ -105,6 +115,34 @@ class ChainInspectRequest(BaseModel):
     This is a transitional inspect-style endpoint, not durable GET retrieval.
     """
     artifact_id: str
+
+
+class RuntimeProjectSurfaceInspectRequest(BaseModel):
+    """Request model for narrow runtime project surface inspection."""
+    project_key: Optional[str] = None
+
+
+class RuntimeProjectSurfaceBootstrapRequest(BaseModel):
+    """Request model for explicit runtime project bootstrap."""
+    project_key: str
+    title: str
+    current_phase: Optional[str] = None
+    priority: int = 1
+
+
+class RuntimeBenchmarkCandidateImportRequest(BaseModel):
+    """Request model for explicit visible-surface to runtime review bridge."""
+    project_key: str
+    candidate_payload: Dict[str, Any]
+
+
+class RuntimeServicePreflightInspectRequest(BaseModel):
+    """Request model for runtime service preflight inspection."""
+    host: Optional[str] = None
+    port: Optional[int] = None
+    strict_preferred_owner: bool = False
+    expected_code_fingerprint: Optional[str] = None
+    strict_code_freshness: bool = False
 
 
 # =============================================================================
@@ -275,6 +313,24 @@ class ChainInspectResponse(BaseModel):
     completeness: Dict[str, Any]
 
 
+class RuntimeProjectSurfaceInspectResponse(BaseModel):
+    """Response model for runtime project surface inspection."""
+    ref: ObjectRef
+    data: Dict[str, Any]
+
+
+class RuntimeBenchmarkCandidateImportResponse(BaseModel):
+    """Response model for benchmark candidate bridge import."""
+    ref: ObjectRef
+    data: Dict[str, Any]
+
+
+class RuntimeServicePreflightInspectResponse(BaseModel):
+    """Response model for runtime service preflight inspection."""
+    ref: ObjectRef
+    data: Dict[str, Any]
+
+
 async def _lookup_chain_artifact_from_substrate(db: AsyncSession, artifact_id: str) -> Optional[Dict[str, Any]]:
     """
     Lookup a chain artifact from the TaskArtifact substrate.
@@ -352,3 +408,193 @@ async def inspect_chain(
             "object_count": len([v for v in chain_payload.get("objects", {}).values() if v]),
         },
     )
+
+
+@router.post("/runtime/project-surface/inspect", response_model=RuntimeProjectSurfaceInspectResponse)
+async def inspect_runtime_project_surface(
+    request: RuntimeProjectSurfaceInspectRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Inspect one narrow runtime-backed project surface for visible integration.
+
+    This remains inspect-style and experimental. It does not imply a broad
+    runtime API or durable public retrieval contract.
+    """
+    surface = await db.run_sync(
+        lambda sync_session: build_latest_project_runtime_read_surface(
+            sync_session,
+            project_key=request.project_key,
+        )
+    )
+    if surface is None:
+        raise HTTPException(
+            status_code=404,
+            detail=(
+                "Runtime project surface not available. "
+                "No runtime project currently exists for the requested key."
+            ),
+        )
+
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    return RuntimeProjectSurfaceInspectResponse(
+        ref=ObjectRef(
+            id=f"runtime_project_surface:{surface.project_id}",
+            kind="runtime_project_surface",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data=asdict(surface),
+    )
+
+
+@router.post("/runtime/project-surface/bootstrap", response_model=RuntimeProjectSurfaceInspectResponse)
+async def bootstrap_runtime_project_surface_endpoint(
+    request: RuntimeProjectSurfaceBootstrapRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Explicitly bootstrap one runtime project presence path for the visible surface.
+    """
+    surface = await db.run_sync(
+        lambda sync_session: bootstrap_runtime_project_surface(
+            sync_session,
+            project_key=request.project_key,
+            title=request.title,
+            current_phase=request.current_phase,
+            priority=request.priority,
+        )
+    )
+
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    return RuntimeProjectSurfaceInspectResponse(
+        ref=ObjectRef(
+            id=f"runtime_project_surface:{surface.project_id}",
+            kind="runtime_project_surface",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data=asdict(surface),
+    )
+
+
+@router.post(
+    "/runtime/benchmark-candidate/import",
+    response_model=RuntimeBenchmarkCandidateImportResponse,
+)
+async def import_runtime_benchmark_candidate_endpoint(
+    request: RuntimeBenchmarkCandidateImportRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Explicitly import one reviewed benchmark candidate into runtime pending_review.
+
+    This endpoint remains narrow:
+    - requires an existing runtime project
+    - imports only reviewed benchmark candidate payloads
+    - does not promote the packet to accepted/trusted memory
+    """
+    try:
+        packet = await db.run_sync(
+            lambda sync_session: import_benchmark_candidate_into_runtime_project(
+                sync_session,
+                request.project_key,
+                request.candidate_payload,
+            )
+        )
+    except BenchmarkBridgeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    return RuntimeBenchmarkCandidateImportResponse(
+        ref=ObjectRef(
+            id=f"runtime_memory_packet:{packet.memory_packet_id}",
+            kind="runtime_memory_packet",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data={
+            "memory_packet_id": str(packet.memory_packet_id),
+            "project_id": str(packet.project_id),
+            "packet_type": packet.packet_type,
+            "status": packet.status.value if hasattr(packet.status, "value") else str(packet.status),
+            "title": packet.title,
+            "summary": packet.summary,
+            "created_by_kind": packet.created_by_kind.value if hasattr(packet.created_by_kind, "value") else str(packet.created_by_kind),
+            "created_by_id": packet.created_by_id,
+            "storage_ref": packet.storage_ref,
+        },
+    )
+
+
+@router.post(
+    "/runtime/service-preflight/inspect",
+    response_model=RuntimeServicePreflightInspectResponse,
+)
+async def inspect_runtime_service_preflight(
+    response: Response,
+    request: RuntimeServicePreflightInspectRequest | None = None,
+):
+    """
+    Inspect one narrow runtime service preflight result for live-proof discipline.
+
+    This endpoint is operational and inspect-style only.
+    It does not imply a broad service-management API.
+    """
+    result = await run_preflight(
+        host=request.host if request and request.host else "127.0.0.1",
+        port=request.port if request and request.port else 8000,
+        strict_preferred_owner=request.strict_preferred_owner if request else False,
+        expected_code_fingerprint=request.expected_code_fingerprint if request else None,
+        strict_code_freshness=request.strict_code_freshness if request else False,
+    )
+
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    return RuntimeServicePreflightInspectResponse(
+        ref=ObjectRef(
+            id=f"runtime_service_preflight:{result.timestamp}",
+            kind="runtime_service_preflight",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data={
+            "status": result.status.value if hasattr(result.status, "value") else str(result.status),
+            "timestamp": result.timestamp,
+            "api_health": {
+                "endpoint": result.api_health.endpoint,
+                "is_healthy": result.api_health.is_healthy,
+                "response_status": result.api_health.response_status,
+                "response_body": result.api_health.response_body,
+                "response_time_ms": result.api_health.response_time_ms,
+                "error_message": result.api_health.error_message,
+            },
+            "port_ownership": {
+                "port": result.port_ownership.port,
+                "listening_processes": result.port_ownership.listening_processes,
+                "unique_count": result.port_ownership.unique_count,
+                "is_clear": result.port_ownership.is_clear,
+                "inspection_method": result.port_ownership.inspection_method,
+                "inspection_error": result.port_ownership.inspection_error,
+            },
+              "summary": result.summary,
+              "details": result.details,
+              "owner_chain": result.details.get("owner_chain"),
+              "repo_launcher": result.details.get("repo_launcher"),
+              "controller_acceptability": result.details.get("controller_acceptability"),
+          },
+      )

@@ -1,15 +1,15 @@
 """
-Tests for IKE Runtime v0 state machine hardening (R1-A1 + R1-A5-FIX).
+Tests for IKE Runtime v0 state machine hardening.
 
 Validates:
 - Legal claim path: delegate with ClaimContext can transition ready->active
 - Illegal claim path: delegate without claim proof cannot transition ready->active
 - Restricted force-path: force=True denied for delegates, allowed for controller/runtime
 - ClaimContext validation: structured proof replaces loose allow_claim
-- R1-A5-FIX Enforcement:
+- R1-C1 Hardening:
+  - allow_claim=True no longer satisfies CLAIM_REQUIRED transitions
   - role=None with force=True is REJECTED (legacy bypass closed)
-  - ClaimContext fields validated (claim_ref, task_id non-empty)
-  - ClaimContext.delegate_id NOT validated in pure-logic layer (service layer responsibility)
+  - ClaimContext fields validated (claim_ref, delegate_id, task_id non-empty)
 - Regression: first-wave corrected semantics still hold
 """
 
@@ -95,14 +95,15 @@ class TestClaimContextLegalPath:
             allow_runtime_policy=True,
         )
 
-    def test_legacy_allow_claim_still_works(self):
-        """Legacy allow_claim=True still works for backward compatibility."""
-        validate_transition(
-            TaskStatus.READY,
-            TaskStatus.ACTIVE,
-            OwnerKind.DELEGATE,
-            allow_claim=True,
-        )
+    def test_allow_claim_keyword_is_removed(self):
+        """R1-C7: allow_claim compatibility keyword no longer exists."""
+        with pytest.raises(TypeError, match="allow_claim"):
+            validate_transition(
+                TaskStatus.READY,
+                TaskStatus.ACTIVE,
+                OwnerKind.DELEGATE,
+                allow_claim=True,
+            )
 
 
 # ──────────────────────────────────────────────────────────────
@@ -113,8 +114,8 @@ class TestClaimContextIllegalPath:
     """Prove that delegates without proper claim proof are blocked."""
 
     def test_delegate_without_claim_blocked(self):
-        """Delegate with no claim context or allow_claim is blocked."""
-        with pytest.raises(ClaimRequiredError, match="explicit assignment or an active lease"):
+        """Delegate with no claim context is blocked."""
+        with pytest.raises(ClaimRequiredError, match="verified claim"):
             validate_transition(
                 TaskStatus.READY,
                 TaskStatus.ACTIVE,
@@ -311,7 +312,6 @@ class TestGuardrailRegression:
                 TaskStatus.REVIEW_PENDING,
                 TaskStatus.DONE,
                 OwnerKind.DELEGATE,
-                allow_claim=True,  # even with a claim, guardrail holds
             )
 
     def test_controller_can_move_review_to_done(self):

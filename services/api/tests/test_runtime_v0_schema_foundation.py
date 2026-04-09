@@ -183,13 +183,18 @@ class TestRuntimeTaskCRUD:
     def test_valid_task_states(self, db_session):
         valid_states = ["inbox", "ready", "active", "waiting", "review_pending", "done", "failed"]
         for s in valid_states:
-            key = f"task-state-{s}-{uuid4().hex[:6]}"
-            db_session.add(RuntimeTask(
+            task_kwargs = dict(
                 project_id=self.project.project_id,
                 task_type=RuntimeTaskType.IMPLEMENTATION,
                 title=f"State {s}",
                 status=s,
-            ))
+            )
+            if s == "waiting":
+                task_kwargs["waiting_reason"] = "test_wait"
+                task_kwargs["waiting_detail"] = "Valid waiting state fixture"
+            elif s == "done":
+                task_kwargs["result_summary"] = "Valid done state fixture"
+            db_session.add(RuntimeTask(**task_kwargs))
         db_session.commit()
 
     def test_invalid_task_state_rejected(self, db_session):
@@ -688,7 +693,7 @@ class TestIndexes:
             """
         ).fetchone()
         assert idx is not None
-        assert "WHERE" in idx[1].lower(), "Unique active lease index must be partial"
+        assert "where" in idx[1].lower(), "Unique active lease index must be partial"
 
     def test_work_context_unique_active_index(self, db_session):
         idx = db_session.execute(
@@ -698,7 +703,7 @@ class TestIndexes:
             """
         ).fetchone()
         assert idx is not None
-        assert "WHERE" in idx[1].lower(), "Unique active context index must be partial"
+        assert "where" in idx[1].lower(), "Unique active context index must be partial"
 
     def test_outbox_status_index(self, db_session):
         idx = db_session.execute(

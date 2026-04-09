@@ -697,3 +697,138 @@ class TestLeaseUpdateHelpers:
     def test_expired_update(self):
         update = build_lease_expired_update()
         assert update["lease_status"] == "expired"
+
+
+# ──────────────────────────────────────────────────────────────
+# R1-C1: ClaimVerifier Tests
+# ──────────────────────────────────────────────────────────────
+
+class TestClaimVerifier:
+    """Tests for the runtime-owned ClaimVerifier adapter (R1-C1)."""
+
+    def test_import_from_leases(self):
+        """ClaimVerifier and InMemoryClaimVerifier should be importable."""
+        from runtime.leases import (
+            ClaimVerifier,
+            InMemoryClaimVerifier,
+            ClaimVerificationResult,
+        )
+        assert ClaimVerifier is not None
+        assert InMemoryClaimVerifier is not None
+
+    def test_in_memory_verifier_accepts_registered_lease(self):
+        """InMemoryClaimVerifier accepts a registered active lease."""
+        from runtime.leases import InMemoryClaimVerifier
+        from runtime.state_machine import ClaimType
+
+        verifier = InMemoryClaimVerifier()
+        verifier.register_lease('lease-001', 'del-001', 'task-001')
+
+        result = verifier.verify_claim(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref='lease-001',
+            delegate_id='del-001',
+            task_id='task-001',
+        )
+        assert result.valid is True
+
+    def test_in_memory_verifier_accepts_registered_assignment(self):
+        """InMemoryClaimVerifier accepts a registered assignment."""
+        from runtime.leases import InMemoryClaimVerifier
+        from runtime.state_machine import ClaimType
+
+        verifier = InMemoryClaimVerifier()
+        verifier.register_assignment('del-001', 'task-001', 'assign-001')
+
+        result = verifier.verify_claim(
+            claim_type=ClaimType.EXPLICIT_ASSIGNMENT,
+            claim_ref='assign-001',
+            delegate_id='del-001',
+            task_id='task-001',
+        )
+        assert result.valid is True
+
+    def test_in_memory_verifier_rejects_unregistered_lease(self):
+        """InMemoryClaimVerifier rejects an unregistered lease."""
+        from runtime.leases import InMemoryClaimVerifier
+        from runtime.state_machine import ClaimType
+
+        verifier = InMemoryClaimVerifier()
+
+        result = verifier.verify_claim(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref='fake-lease',
+            delegate_id='del-001',
+            task_id='task-001',
+        )
+        assert result.valid is False
+        assert result.error is not None
+
+    def test_in_memory_verifier_rejects_wrong_delegate(self):
+        """InMemoryClaimVerifier rejects a lease owned by a different delegate."""
+        from runtime.leases import InMemoryClaimVerifier
+        from runtime.state_machine import ClaimType
+
+        verifier = InMemoryClaimVerifier()
+        verifier.register_lease('lease-001', 'del-001', 'task-001')
+
+        result = verifier.verify_claim(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref='lease-001',
+            delegate_id='del-999',
+            task_id='task-001',
+        )
+        assert result.valid is False
+
+    def test_in_memory_verifier_rejects_wrong_task(self):
+        """InMemoryClaimVerifier rejects a lease on a different task."""
+        from runtime.leases import InMemoryClaimVerifier
+        from runtime.state_machine import ClaimType
+
+        verifier = InMemoryClaimVerifier()
+        verifier.register_lease('lease-001', 'del-001', 'task-001')
+
+        result = verifier.verify_claim(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref='lease-001',
+            delegate_id='del-001',
+            task_id='task-999',
+        )
+        assert result.valid is False
+
+    def test_verify_and_build_context_returns_context_on_success(self):
+        """verify_and_build_context returns ClaimContext when verified."""
+        from runtime.leases import InMemoryClaimVerifier
+        from runtime.state_machine import ClaimType
+
+        verifier = InMemoryClaimVerifier()
+        verifier.register_lease('lease-001', 'del-001', 'task-001')
+
+        result = verifier.verify_and_build_context(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref='lease-001',
+            delegate_id='del-001',
+            task_id='task-001',
+        )
+        assert result.valid is True
+        assert result.claim_context is not None
+        assert result.claim_context.claim_ref == 'lease-001'
+        assert result.claim_context.delegate_id == 'del-001'
+        assert result.claim_context.task_id == 'task-001'
+
+    def test_verify_and_build_context_returns_no_context_on_failure(self):
+        """verify_and_build_context returns no ClaimContext when verification fails."""
+        from runtime.leases import InMemoryClaimVerifier
+        from runtime.state_machine import ClaimType
+
+        verifier = InMemoryClaimVerifier()
+
+        result = verifier.verify_and_build_context(
+            claim_type=ClaimType.ACTIVE_LEASE,
+            claim_ref='fake-lease',
+            delegate_id='del-001',
+            task_id='task-001',
+        )
+        assert result.valid is False
+        assert result.claim_context is None
+        assert result.error is not None

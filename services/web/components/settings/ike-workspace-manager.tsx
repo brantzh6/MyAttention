@@ -8,6 +8,10 @@ interface IKEWorkspaceManagerProps {
   report: any | null
   closure: any | null
   proceduralMemoryCandidate: any | null
+  runtimeSurface: any | null
+  runtimeError: string | null
+  runtimePreflight: any | null
+  runtimePreflightError: string | null
   loadError: string | null
   isB4?: boolean
 }
@@ -191,6 +195,36 @@ const labels = {
     candidateSource: 'Source Artifact',
     candidateStatus: 'Status',
     candidateNotes: 'Notes',
+    sendToRuntimeReview: 'Send To Runtime Review',
+    sendingToRuntimeReview: 'Sending To Runtime Review...',
+    runtimeReviewQueued: 'Queued for runtime review',
+    runtimeReviewDesc: 'This sends the reviewed benchmark candidate into runtime as a pending_review packet only.',
+    runtimeSurface: 'Runtime Surface',
+    runtimeSurfaceDesc: 'Narrow runtime-backed visible surface derived from runtime truth only.',
+    runtimeUnavailable: 'Runtime surface not available yet',
+    runtimePreflight: 'Service Preflight',
+    runtimePreflightDesc: 'Strict machine-readable live-proof status using the preferred repo-owned service baseline.',
+    runtimePreflightStatus: 'Preflight Status',
+    runtimePreflightOwner: 'Preferred Owner',
+    runtimePreflightOwnerChain: 'Owner Chain',
+    runtimePreflightRepoLauncher: 'Repo Launcher',
+    runtimePreflightControllerAcceptability: 'Controller Acceptability',
+    runtimePreflightCodeFreshness: 'Code Freshness',
+    runtimePreflightCanonicalLaunch: 'Canonical Launch',
+    runtimePreflightSummary: 'Service Summary',
+    runtimePreflightMismatch: 'Preferred owner mismatch detected',
+    runtimePreflightUnavailable: 'Service preflight not available',
+    runtimeActivationDesc: 'Create or recover the explicit runtime project surface for this workspace.',
+    activateRuntime: 'Activate Runtime Surface',
+    activatingRuntime: 'Activating Runtime Surface...',
+    project: 'Project',
+    phase: 'Phase',
+    activeTasks: 'Active Tasks',
+    waitingTasks: 'Waiting Tasks',
+    trustedPackets: 'Trusted Packets',
+    currentFocus: 'Current Focus',
+    blockersSummary: 'Blockers',
+    nextStepsSummary: 'Next Steps',
   },
   zh: {
     pageTitle: 'IKE 基准故事',
@@ -266,6 +300,24 @@ const labels = {
     candidateSource: '源工件',
     candidateStatus: '状态',
     candidateNotes: '备注',
+    sendToRuntimeReview: '发送到 Runtime 审查队列',
+    sendingToRuntimeReview: '正在发送到 Runtime 审查队列...',
+    runtimeReviewQueued: '已进入 Runtime 审查队列',
+    runtimeReviewDesc: '这只会把已审查的 benchmark 候选送入 runtime 的 pending_review packet，不会直接变成可信记忆。',
+    runtimeSurface: 'Runtime 表面',
+    runtimeSurfaceDesc: '仅由 runtime 真相推导出的窄可见表面。',
+    runtimeUnavailable: 'Runtime 表面暂不可用',
+    runtimeActivationDesc: '为当前工作区创建或恢复显式的 runtime 项目表面。',
+    activateRuntime: '激活 Runtime 表面',
+    activatingRuntime: '正在激活 Runtime 表面...',
+    project: '项目',
+    phase: '阶段',
+    activeTasks: '活跃任务',
+    waitingTasks: '等待任务',
+    trustedPackets: '可信记忆包',
+    currentFocus: '当前焦点',
+    blockersSummary: '阻塞摘要',
+    nextStepsSummary: '下一步摘要',
   },
 }
 
@@ -294,7 +346,17 @@ function BilingualBlock({
   )
 }
 
-export default function IKEWorkspaceManager({ report, closure, proceduralMemoryCandidate, loadError, isB4 = false }: IKEWorkspaceManagerProps) {
+export default function IKEWorkspaceManager({
+  report,
+  closure,
+  proceduralMemoryCandidate,
+  runtimeSurface,
+  runtimeError,
+  runtimePreflight,
+  runtimePreflightError,
+  loadError,
+  isB4 = false,
+}: IKEWorkspaceManagerProps) {
   const [observationJson, setObservationJson] = useState(`{
   "source_id": "source-example",
   "title": "Example Observation",
@@ -311,6 +373,11 @@ export default function IKEWorkspaceManager({ report, closure, proceduralMemoryC
   const [isLoadingChain, setIsLoadingChain] = useState(false)
   const [showInspectTools, setShowInspectTools] = useState(false)
   const [languageMode, setLanguageMode] = useState<LanguageMode>('bilingual')
+  const [isBootstrappingRuntime, setIsBootstrappingRuntime] = useState(false)
+  const [runtimeActivationError, setRuntimeActivationError] = useState<string | null>(null)
+  const [isImportingBenchmarkCandidate, setIsImportingBenchmarkCandidate] = useState(false)
+  const [benchmarkImportError, setBenchmarkImportError] = useState<string | null>(null)
+  const [benchmarkImportResult, setBenchmarkImportResult] = useState<any>(null)
 
   const handleInspectObservation = async () => {
     setIsLoadingObservation(true)
@@ -346,11 +413,58 @@ export default function IKEWorkspaceManager({ report, closure, proceduralMemoryC
     }
   }
 
+  const handleActivateRuntimeSurface = async () => {
+    setIsBootstrappingRuntime(true)
+    setRuntimeActivationError(null)
+
+    try {
+      await apiClient.bootstrapRuntimeProjectSurface({
+        project_key: 'myattention-runtime-mainline',
+        title: 'MyAttention Runtime Mainline',
+        current_phase: 'R2-E',
+        priority: 1,
+      })
+      window.location.reload()
+    } catch (err: any) {
+      setRuntimeActivationError(err.message || 'Failed to activate runtime surface')
+    } finally {
+      setIsBootstrappingRuntime(false)
+    }
+  }
+
+  const handleImportBenchmarkCandidate = async () => {
+    if (!proceduralMemoryCandidate) return
+    setIsImportingBenchmarkCandidate(true)
+    setBenchmarkImportError(null)
+    setBenchmarkImportResult(null)
+
+    try {
+      const result = await apiClient.importRuntimeBenchmarkCandidate({
+        project_key: runtimeSurface?.project_key || 'myattention-runtime-mainline',
+        candidate_payload: proceduralMemoryCandidate,
+      })
+      setBenchmarkImportResult(result?.data ?? result)
+    } catch (err: any) {
+      setBenchmarkImportError(err.message || 'Failed to import benchmark candidate')
+    } finally {
+      setIsImportingBenchmarkCandidate(false)
+    }
+  }
+
   const getRecommendationColor = (level: string) => {
     switch (level) {
       case 'prototype': return 'bg-green-100 text-green-800 border-green-300'
       case 'study': return 'bg-blue-100 text-blue-800 border-blue-300'
       case 'observe': return 'bg-gray-100 text-gray-800 border-gray-300'
+      default: return 'bg-gray-100 text-gray-800 border-gray-300'
+    }
+  }
+
+  const getPreflightBadgeClass = (status: string | undefined) => {
+    switch (status) {
+      case 'ready': return 'bg-green-100 text-green-800 border-green-300'
+      case 'ambiguous': return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+      case 'down': return 'bg-red-100 text-red-800 border-red-300'
       default: return 'bg-gray-100 text-gray-800 border-gray-300'
     }
   }
@@ -462,6 +576,235 @@ export default function IKEWorkspaceManager({ report, closure, proceduralMemoryC
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Runtime Surface Panel */}
+      <div className="rounded-lg border bg-card p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h3 className="font-semibold text-lg">
+              <BilingualBlock
+                en={labels.en.runtimeSurface}
+                zh={labels.zh.runtimeSurface}
+                mode={languageMode}
+              />
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              <BilingualBlock
+                en={labels.en.runtimeSurfaceDesc}
+                zh={labels.zh.runtimeSurfaceDesc}
+                mode={languageMode}
+              />
+            </p>
+          </div>
+          <span className="inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium bg-primary/10 text-primary">
+            R2-E1
+          </span>
+        </div>
+
+          {runtimeSurface ? (
+            <div className="mt-4 space-y-4">
+              <div className="rounded-md border p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium">
+                      <BilingualBlock
+                        en={labels.en.runtimePreflight}
+                        zh={(labels.zh as any).runtimePreflight || labels.en.runtimePreflight}
+                        mode={languageMode}
+                      />
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      <BilingualBlock
+                        en={labels.en.runtimePreflightDesc}
+                        zh={(labels.zh as any).runtimePreflightDesc || labels.en.runtimePreflightDesc}
+                        mode={languageMode}
+                      />
+                    </p>
+                  </div>
+                  <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${getPreflightBadgeClass(runtimePreflight?.status)}`}>
+                    {runtimePreflight?.status || 'unavailable'}
+                  </span>
+                </div>
+                {runtimePreflight ? (
+                  <div className="mt-3 space-y-2 text-sm">
+                    <p>
+                      <span className="font-medium">
+                        <BilingualBlock
+                          en={`${labels.en.runtimePreflightOwner}: `}
+                          zh={`${((labels.zh as any).runtimePreflightOwner || labels.en.runtimePreflightOwner)}: `}
+                          mode={languageMode}
+                        />
+                      </span>
+                      {runtimePreflight?.details?.preferred_owner?.status || 'N/A'}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <BilingualBlock
+                          en={`${labels.en.runtimePreflightOwnerChain}: `}
+                          zh={`${((labels.zh as any).runtimePreflightOwnerChain || labels.en.runtimePreflightOwnerChain)}: `}
+                          mode={languageMode}
+                        />
+                      </span>
+                      {runtimePreflight?.owner_chain?.status || runtimePreflight?.details?.owner_chain?.status || 'N/A'}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <BilingualBlock
+                          en={`${labels.en.runtimePreflightRepoLauncher}: `}
+                          zh={`${((labels.zh as any).runtimePreflightRepoLauncher || labels.en.runtimePreflightRepoLauncher)}: `}
+                          mode={languageMode}
+                        />
+                      </span>
+                      {runtimePreflight?.repo_launcher?.status || runtimePreflight?.details?.repo_launcher?.status || 'N/A'}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <BilingualBlock
+                          en={`${labels.en.runtimePreflightControllerAcceptability}: `}
+                          zh={`${((labels.zh as any).runtimePreflightControllerAcceptability || labels.en.runtimePreflightControllerAcceptability)}: `}
+                          mode={languageMode}
+                        />
+                      </span>
+                      {runtimePreflight?.controller_acceptability?.status || runtimePreflight?.details?.controller_acceptability?.status || 'N/A'}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <BilingualBlock
+                          en={`${labels.en.runtimePreflightCodeFreshness}: `}
+                          zh={`${((labels.zh as any).runtimePreflightCodeFreshness || labels.en.runtimePreflightCodeFreshness)}: `}
+                          mode={languageMode}
+                        />
+                      </span>
+                      {runtimePreflight?.details?.code_freshness?.status || 'N/A'}
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <BilingualBlock
+                          en={`${labels.en.runtimePreflightCanonicalLaunch}: `}
+                          zh={`${((labels.zh as any).runtimePreflightCanonicalLaunch || labels.en.runtimePreflightCanonicalLaunch)}: `}
+                          mode={languageMode}
+                        />
+                      </span>
+                      <span className="break-all">{runtimePreflight?.details?.canonical_launch?.command_line || 'N/A'}</span>
+                    </p>
+                    <p>
+                      <span className="font-medium">
+                        <BilingualBlock
+                          en={`${labels.en.runtimePreflightSummary}: `}
+                          zh={`${((labels.zh as any).runtimePreflightSummary || labels.en.runtimePreflightSummary)}: `}
+                          mode={languageMode}
+                        />
+                      </span>
+                      {runtimePreflight?.summary || 'N/A'}
+                    </p>
+                    {runtimePreflight?.details?.preferred_owner?.status === 'preferred_mismatch' && (
+                      <p className="text-xs text-yellow-700">
+                        <BilingualBlock
+                          en={labels.en.runtimePreflightMismatch}
+                          zh={(labels.zh as any).runtimePreflightMismatch || labels.en.runtimePreflightMismatch}
+                          mode={languageMode}
+                        />
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {runtimePreflightError || ((languageMode === 'chinese' ? (labels.zh as any).runtimePreflightUnavailable : labels.en.runtimePreflightUnavailable) || labels.en.runtimePreflightUnavailable)}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-md bg-muted p-4">
+                <p className="text-xs font-medium mb-2">
+                  <BilingualBlock en={labels.en.project} zh={labels.zh.project} mode={languageMode} />
+                </p>
+                <p className="text-sm font-semibold">{runtimeSurface.title}</p>
+                <p className="text-xs text-muted-foreground mt-1">{runtimeSurface.project_key}</p>
+              </div>
+              <div className="rounded-md bg-muted p-4">
+                <p className="text-xs font-medium mb-2">
+                  <BilingualBlock en={labels.en.phase} zh={labels.zh.phase} mode={languageMode} />
+                </p>
+                <p className="text-sm font-semibold">{runtimeSurface.current_phase || 'N/A'}</p>
+                <p className="text-xs text-muted-foreground mt-1">{runtimeSurface.status || 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-md border p-3">
+                <p className="text-xs text-muted-foreground">
+                  <BilingualBlock en={labels.en.activeTasks} zh={labels.zh.activeTasks} mode={languageMode} />
+                </p>
+                <p className="text-lg font-semibold">{runtimeSurface.active_tasks?.length || 0}</p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-xs text-muted-foreground">
+                  <BilingualBlock en={labels.en.waitingTasks} zh={labels.zh.waitingTasks} mode={languageMode} />
+                </p>
+                <p className="text-lg font-semibold">{runtimeSurface.waiting_tasks?.length || 0}</p>
+              </div>
+              <div className="rounded-md border p-3">
+                <p className="text-xs text-muted-foreground">
+                  <BilingualBlock en={labels.en.trustedPackets} zh={labels.zh.trustedPackets} mode={languageMode} />
+                </p>
+                <p className="text-lg font-semibold">{runtimeSurface.trusted_packets?.length || 0}</p>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-md border p-4">
+                <p className="text-xs font-medium mb-2">
+                  <BilingualBlock en={labels.en.currentFocus} zh={labels.zh.currentFocus} mode={languageMode} />
+                </p>
+                <p className="text-sm text-muted-foreground">{runtimeSurface.current_focus || 'N/A'}</p>
+              </div>
+              <div className="rounded-md border p-4">
+                <p className="text-xs font-medium mb-2">
+                  <BilingualBlock en={labels.en.blockersSummary} zh={labels.zh.blockersSummary} mode={languageMode} />
+                </p>
+                <p className="text-sm text-muted-foreground">{runtimeSurface.blockers_summary || 'N/A'}</p>
+              </div>
+            </div>
+
+            <div className="rounded-md border p-4">
+              <p className="text-xs font-medium mb-2">
+                <BilingualBlock en={labels.en.nextStepsSummary} zh={labels.zh.nextStepsSummary} mode={languageMode} />
+              </p>
+              <p className="text-sm text-muted-foreground">{runtimeSurface.next_steps_summary || 'N/A'}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 rounded-md border border-yellow-300 bg-yellow-50 p-4">
+            <p className="text-sm font-medium text-yellow-800">
+              <BilingualBlock
+                en={labels.en.runtimeUnavailable}
+                zh={labels.zh.runtimeUnavailable}
+                mode={languageMode}
+              />
+            </p>
+            <p className="mt-1 text-xs text-yellow-700">
+              <BilingualBlock
+                en={labels.en.runtimeActivationDesc}
+                zh={labels.zh.runtimeActivationDesc}
+                mode={languageMode}
+              />
+            </p>
+            {(runtimeError || runtimeActivationError) && (
+              <p className="mt-2 text-xs text-yellow-700">{runtimeActivationError || runtimeError}</p>
+            )}
+            <button
+              onClick={handleActivateRuntimeSurface}
+              disabled={isBootstrappingRuntime}
+              className="mt-3 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {isBootstrappingRuntime
+                ? (languageMode === 'chinese' ? labels.zh.activatingRuntime : labels.en.activatingRuntime)
+                : (languageMode === 'chinese' ? labels.zh.activateRuntime : labels.en.activateRuntime)}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Summary Status Panel */}
@@ -774,6 +1117,36 @@ export default function IKEWorkspaceManager({ report, closure, proceduralMemoryC
               mode={languageMode}
             />
           </p>
+          <div className="mb-4 rounded-md border border-blue-200 bg-blue-50 p-4">
+            <p className="text-xs text-blue-800">
+              <BilingualBlock
+                en={labels.en.runtimeReviewDesc}
+                zh={labels.zh.runtimeReviewDesc}
+                mode={languageMode}
+              />
+            </p>
+            {benchmarkImportError && (
+              <p className="mt-2 text-xs text-red-700">{benchmarkImportError}</p>
+            )}
+            {benchmarkImportResult && (
+              <p className="mt-2 text-xs text-green-700">
+                <BilingualBlock
+                  en={`${labels.en.runtimeReviewQueued}: ${benchmarkImportResult.memory_packet_id}`}
+                  zh={`${labels.zh.runtimeReviewQueued}：${benchmarkImportResult.memory_packet_id}`}
+                  mode={languageMode}
+                />
+              </p>
+            )}
+            <button
+              onClick={handleImportBenchmarkCandidate}
+              disabled={isImportingBenchmarkCandidate}
+              className="mt-3 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {isImportingBenchmarkCandidate
+                ? (languageMode === 'chinese' ? labels.zh.sendingToRuntimeReview : labels.en.sendingToRuntimeReview)
+                : (languageMode === 'chinese' ? labels.zh.sendToRuntimeReview : labels.en.sendToRuntimeReview)}
+            </button>
+          </div>
           <div className="space-y-4">
             <div className="rounded-md bg-muted p-4">
               <p className="text-xs font-medium mb-2">

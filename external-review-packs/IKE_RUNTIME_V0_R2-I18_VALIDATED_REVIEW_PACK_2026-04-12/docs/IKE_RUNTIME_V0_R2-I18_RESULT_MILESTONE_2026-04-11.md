@@ -20,15 +20,15 @@ This packet is still narrow:
 ## Implemented
 
 - added a new narrow helper:
-  - [D:\code\MyAttention\services\api\runtime\controller_acceptance.py](/D:/code/MyAttention/services/api/runtime/controller_acceptance.py)
+  - [controller_acceptance.py](../services/api/runtime/controller_acceptance.py)
 - extended the IKE v0 router:
-  - [D:\code\MyAttention\services\api\routers\ike_v0.py](/D:/code/MyAttention/services/api/routers/ike_v0.py)
+  - [ike_v0.py](../services/api/routers/ike_v0.py)
 - added focused router coverage:
-  - [D:\code\MyAttention\services\api\tests\test_routers_ike_v0.py](/D:/code/MyAttention/services/api/tests/test_routers_ike_v0.py)
+  - [test_routers_ike_v0.py](../services/api/tests/test_routers_ike_v0.py)
 - added focused DB-backed helper coverage:
-  - [D:\code\MyAttention\services\api\tests\test_runtime_v0_controller_acceptance.py](/D:/code/MyAttention/services/api/tests/test_runtime_v0_controller_acceptance.py)
+  - [test_runtime_v0_controller_acceptance.py](../services/api/tests/test_runtime_v0_controller_acceptance.py)
 - extended runtime DB-backed test cleanup registration:
-  - [D:\code\MyAttention\services\api\tests\conftest.py](/D:/code/MyAttention/services/api/tests/conftest.py)
+  - [conftest.py](../services/api/tests/conftest.py)
 
 ## What Changed
 
@@ -149,7 +149,7 @@ python -m pytest tests/test_runtime_v0_controller_acceptance.py tests/test_route
 
 Validation note:
 
-- [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I18_VALIDATION_BLOCKER_NOTE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I18_VALIDATION_BLOCKER_NOTE_2026-04-11.md)
+- [IKE_RUNTIME_V0_R2-I18_VALIDATION_BLOCKER_NOTE_2026-04-11.md](./IKE_RUNTIME_V0_R2-I18_VALIDATION_BLOCKER_NOTE_2026-04-11.md)
 
 ## Mainline Meaning
 

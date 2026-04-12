@@ -5,7 +5,7 @@ controller-acceptance change review.
 
 Primary entry:
 
-- [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_PACK_2026-04-12.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_PACK_2026-04-12.md)
+- [IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_PACK_2026-04-12.md](./IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_PACK_2026-04-12.md)
 
 Please focus on:
 

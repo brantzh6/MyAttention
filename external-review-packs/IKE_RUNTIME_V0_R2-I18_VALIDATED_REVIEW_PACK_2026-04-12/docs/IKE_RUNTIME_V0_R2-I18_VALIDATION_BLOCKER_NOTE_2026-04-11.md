@@ -33,7 +33,7 @@ The import chain issue was narrower:
 
 However, the focused `R2-I18` router test file already avoids that broad
 package path by loading
-[D:\code\MyAttention\services\api\routers\ike_v0.py](/D:/code/MyAttention/services/api/routers/ike_v0.py)
+[ike_v0.py](../services/api/routers/ike_v0.py)
 directly.
 
 ### 2. Pytest false-trigger on DB fixture was fixed
@@ -49,7 +49,7 @@ only for the small set of runtime DB-backed test files.
 
 Affected file:
 
-- [D:\code\MyAttention\services\api\tests\conftest.py](/D:/code/MyAttention/services/api/tests/conftest.py)
+- [conftest.py](../services/api/tests/conftest.py)
 
 ## What Now Passes
 

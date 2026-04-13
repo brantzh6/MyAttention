@@ -153,7 +153,7 @@ Validation note:
 
 - D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I18_VALIDATION_BLOCKER_NOTE_2026-04-11.md
 - review absorption:
-  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md](./IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md)
+  - [IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md](./IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md)
 
 ## Mainline Meaning
 
@@ -181,4 +181,5 @@ This still does not prove:
 4. detached execution or supervision semantics
 5. any claim that a recorded acceptance automatically means the whole runtime
    has generic controller-governed promotion workflows
+
 

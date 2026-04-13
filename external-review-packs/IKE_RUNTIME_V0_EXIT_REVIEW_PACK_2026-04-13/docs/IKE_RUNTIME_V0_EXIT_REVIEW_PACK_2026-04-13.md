@@ -15,7 +15,7 @@ hiding remaining incompleteness?
 
 ## Exit Baseline
 
-- [D:\code\MyAttention\docs\IKE_RUNTIME_V0_EXIT_CRITERIA_2026-04-11.md](./IKE_RUNTIME_V0_EXIT_CRITERIA_2026-04-11.md)
+- [IKE_RUNTIME_V0_EXIT_CRITERIA_2026-04-11.md](./IKE_RUNTIME_V0_EXIT_CRITERIA_2026-04-11.md)
 
 Current controller reading:
 
@@ -30,8 +30,8 @@ Current controller reading:
 
 ### 1. Controller acceptance record lane
 
-- [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I18_RESULT_MILESTONE_2026-04-11.md](./IKE_RUNTIME_V0_R2-I18_RESULT_MILESTONE_2026-04-11.md)
-- [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md](./IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md)
+- [IKE_RUNTIME_V0_R2-I18_RESULT_MILESTONE_2026-04-11.md](./IKE_RUNTIME_V0_R2-I18_RESULT_MILESTONE_2026-04-11.md)
+- [IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md](./IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md)
 
 Bounded claim:
 
@@ -41,7 +41,7 @@ Bounded claim:
 
 ### 2. Operator substrate proof
 
-- [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I19_OPERATOR_SUBSTRATE_RESULT_2026-04-13.md](./IKE_RUNTIME_V0_R2-I19_OPERATOR_SUBSTRATE_RESULT_2026-04-13.md)
+- [IKE_RUNTIME_V0_R2-I19_OPERATOR_SUBSTRATE_RESULT_2026-04-13.md](./IKE_RUNTIME_V0_R2-I19_OPERATOR_SUBSTRATE_RESULT_2026-04-13.md)
 
 Bounded claim:
 
@@ -49,7 +49,7 @@ Bounded claim:
 
 ### 3. Restart-recovery closure
 
-- [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I20_RESTART_RECOVERY_RESULT_2026-04-13.md](./IKE_RUNTIME_V0_R2-I20_RESTART_RECOVERY_RESULT_2026-04-13.md)
+- [IKE_RUNTIME_V0_R2-I20_RESTART_RECOVERY_RESULT_2026-04-13.md](./IKE_RUNTIME_V0_R2-I20_RESTART_RECOVERY_RESULT_2026-04-13.md)
 
 Bounded claim:
 
@@ -91,4 +91,5 @@ Please judge only:
 1. whether the exit claim is truthful
 2. whether any still-open item is incorrectly being treated as out of scope
 3. whether Runtime v0 should stop here rather than continue packet growth
+
 

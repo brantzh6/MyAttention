@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import select
 
 from db.models import (
     RuntimeDecision,
+    RuntimeDecisionStatus,
     RuntimeProject,
     RuntimeTask,
     RuntimeTaskEvent,
@@ -209,17 +211,54 @@ class TestRuntimeControllerAcceptance:
         assert len(decision_count) == 1
         assert len(event_count) == 1
 
+    def test_record_controller_acceptance_supersedes_changed_basis(self, db_session):
+        project = self._make_project(db_session, "supersede")
+        self._make_task(db_session, project, "Supersede anchor task")
+
+        first = record_controller_acceptance(
+            db_session,
+            preflight_data=_make_preflight_data(basis="windows_venv_redirector_v1"),
+            controller_id="controller-001",
+            project_key=project.project_key,
+        )
+        second = record_controller_acceptance(
+            db_session,
+            preflight_data=_make_preflight_data(basis="windows_venv_redirector_v2"),
+            controller_id="controller-001",
+            project_key=project.project_key,
+        )
+
+        assert first["recorded"] is True
+        assert second["recorded"] is True
+        assert second["superseded"] is True
+        assert second["supersedes_decision_id"] == first["decision_id"]
+
+        decision_rows = (
+            db_session.execute(
+                select(RuntimeDecision)
+                .where(
+                    RuntimeDecision.project_id == project.project_id,
+                    RuntimeDecision.decision_scope == "canonical_service_acceptance",
+                )
+                .order_by(RuntimeDecision.created_at.asc())
+            )
+            .scalars()
+            .all()
+        )
+        assert len(decision_rows) == 2
+        assert decision_rows[0].status == RuntimeDecisionStatus.SUPERSEDED
+        assert decision_rows[0].extra["basis"] == "windows_venv_redirector_v1"
+        assert decision_rows[1].status == RuntimeDecisionStatus.FINAL
+        assert decision_rows[1].extra["basis"] == "windows_venv_redirector_v2"
+        assert str(decision_rows[1].supersedes_decision_id) == str(decision_rows[0].decision_id)
+
     def test_record_controller_acceptance_rejects_project_without_task_anchor(self, db_session):
         project = self._make_project(db_session, "no-task")
 
-        try:
+        with pytest.raises(ControllerAcceptanceError, match="no task anchor"):
             record_controller_acceptance(
                 db_session,
                 preflight_data=_make_preflight_data(),
                 controller_id="controller-001",
                 project_key=project.project_key,
             )
-        except ControllerAcceptanceError as exc:
-            assert "no task anchor" in str(exc)
-        else:
-            raise AssertionError("Expected ControllerAcceptanceError for missing task anchor")

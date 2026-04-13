@@ -14,6 +14,7 @@ Please focus on:
 3. inspect-vs-record separation
 4. acceptability of the task-anchor audit rule
 5. whether the focused validation evidence is now sufficient for this packet
+6. whether the changed-basis supersession behavior is now sufficiently proven
 
 Please return:
 

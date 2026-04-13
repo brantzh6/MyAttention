@@ -54,7 +54,7 @@ python -m compileall runtime tests
 Observed results:
 
 - DB-backed slice:
-  - `4 passed, 1 warning`
+  - `5 passed, 1 warning`
 - combined focused packet:
   - `44 passed, 28 warnings, 9 subtests passed`
 - compile:
@@ -66,11 +66,13 @@ Observed results:
 2. Is the persistence boundary correct:
    - `runtime_decisions`
    - `runtime_task_events`
-   - `runtime_work_contexts.latest_decision_id`
+   - standard reconstructed work-context closure via existing
+     `operational_closure` helpers
 3. Is the inspect-vs-record separation still clean?
 4. Is the current task-anchor rule acceptable for this packet?
 5. Are there hidden generalization risks?
 6. Does the local validation evidence materially close this packet?
+7. Is the changed-basis supersession path now sufficiently proven?
 
 ## Requested Return Format
 

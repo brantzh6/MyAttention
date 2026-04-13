@@ -43,7 +43,8 @@ The helper reuses existing runtime truth only:
 
 - `runtime_decisions`
 - `runtime_task_events`
-- `runtime_work_contexts.latest_decision_id`
+- standard reconstructed work-context closure via existing
+  `operational_closure` helpers
 
 ### New inspect route
 
@@ -86,6 +87,7 @@ The helper also implements:
 - idempotent reuse when current live basis matches the latest finalized record
 - explicit supersession when the same narrow scope changes materially
 - rejection when current live truth is not confirmation-eligible
+- focused DB-backed supersession proof for changed basis
 
 ## Explicit Audit Constraint
 
@@ -135,7 +137,7 @@ python -m pytest tests/test_runtime_v0_controller_acceptance.py -q
 ```
 
 - observed result:
-  - `4 passed, 1 warning`
+  - `5 passed, 1 warning`
 
 Combined focused validation is also closed:
 
@@ -150,6 +152,8 @@ python -m pytest tests/test_runtime_v0_controller_acceptance.py tests/test_route
 Validation note:
 
 - [IKE_RUNTIME_V0_R2-I18_VALIDATION_BLOCKER_NOTE_2026-04-11.md](./IKE_RUNTIME_V0_R2-I18_VALIDATION_BLOCKER_NOTE_2026-04-11.md)
+- review absorption:
+  - [IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md](./IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md)
 
 ## Mainline Meaning
 

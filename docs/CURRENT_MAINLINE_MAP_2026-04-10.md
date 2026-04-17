@@ -291,6 +291,23 @@ Entry:
 - [D:\code\MyAttention\docs\IKE_EXECUTION_REVIEW_PACKAGE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_EXECUTION_REVIEW_PACKAGE_2026-04-11.md)
 
 Use this map first, then go to the relevant index, then open the detailed handoff only if needed.
+- stable framing:
+  - the project vision has not changed: IKE is still being built as an
+    AI-driven evolution system
+  - the current design expression is layered, not flat:
+    - information brain
+    - knowledge brain
+    - evolution brain
+    - world model as a cross-cutting layer
+    - thinking tools / scientific methodology as a cross-cutting layer
+  - the current architecture is staged:
+    - `Runtime v0` is accepted substrate
+    - `Source Intelligence V1` is the active capability line above that
+      substrate
+  - the implementation path may change when needed, but it must not be
+    narrated as a change in project objective
+- alignment reference:
+  - [D:\code\MyAttention\docs\IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md](/D:/code/MyAttention/docs/IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md)
 - `Source Intelligence V1 M9`: Claude-delegated panel-insight slice landed. Current bounded claim: dual-model inspect now exposes consensus-worthy and disagreement-worthy candidates plus divergence-aware follow-up hints; still inspect-only and non-canonical.
 - `Source Intelligence V1 M10`: bounded internal extraction landed. Generic judgment kernel now has a dedicated internal module (`feeds/ai_judgment.py`), while route contracts remain unchanged.
 - `M10` review absorbed: treat this as the first reusable internal judgment substrate step, not complete capability modularization. Substrate-level focused tests now exist in addition to route-level proofs.

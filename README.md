@@ -1,6 +1,6 @@
 # MyAttention
 
-**Build world knowledge. Discover patterns. Support decisions.**
+**An AI-driven evolution system for information, knowledge, and decision support.**
 
 [中文文档](docs/README_zh.md)
 
@@ -8,31 +8,76 @@
 
 ## What is this?
 
-Most information tools help you manage information. MyAttention goes deeper: **continuously distilling structured world knowledge from the vast internet — especially cross-disciplinary insights — to provide reliable cognitive support for important decisions.**
+Most information tools help you manage information. MyAttention is being built
+as an **AI-driven evolution system**: a system that continuously improves how
+it discovers signals, organizes knowledge, evaluates meaning, and supports
+important decisions.
 
-Existing LLMs have static, cutoff, and impersonal knowledge. MyAttention builds a continuously growing private knowledge system around your domain of interest. It doesn't just retrieve — it understands. It doesn't just answer — it reasons.
+Existing LLMs have static, cutoff, and impersonal knowledge. MyAttention aims
+to build a continuously growing cognitive system around your domain of interest.
+It should not only retrieve. It should judge, synthesize, and evolve.
+
+Important current reading:
+
+- the project vision has not changed
+- the implementation path has changed over time
+- `Runtime v0` is an enabling substrate, not the final product identity
+- the current active capability line is `Source Intelligence V1`
+
+Alignment reference:
+
+- [docs/IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md](docs/IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md)
 
 ---
 
-## Three Brains
+## Layered Brains And Cross-Cutting Layers
 
 ### Information Brain
 
 Continuously perceive the world.
 
-Automatically aggregates information from RSS feeds, web monitoring, and APIs. Sources are graded by authority, and content is ranked by time, topic, and importance. Information is not just accumulated — it flows as raw material into the knowledge layer.
+Automatically aggregates information from RSS feeds, web monitoring, and APIs.
+Sources are graded by authority, and content is ranked by time, topic, and
+importance. Information is not just accumulated. It flows as raw material into
+the knowledge layer.
 
 ### Knowledge Brain
 
 Distill information into structured knowledge.
 
-Performs entity extraction, relation mining, cross-disciplinary association, and knowledge reasoning on ingested content to build a multi-domain knowledge graph. The goal is not to store text fragments, but to construct **a cognitive model of how the world works**.
+Performs entity extraction, relation mining, cross-disciplinary association,
+and knowledge reasoning on ingested content to build a multi-domain knowledge
+graph. The goal is not to store text fragments, but to construct **a cognitive
+model of how the world works**.
 
 ### Evolution Brain
 
 Self-observe. Self-correct.
 
-Continuously monitors logs and test results, automatically identifies issues, merges duplicate tasks, and generates optimization suggestions — making the system more reliable and accurate over time.
+Continuously monitors logs and test results, identifies issues, generates
+optimization suggestions, and helps the system improve what it should do next.
+
+### World Model
+
+Provide the cross-domain explanatory structure.
+
+The system is not meant to stop at isolated source ranking. It should build a
+working model of objects, systems, context, and relations across domains.
+
+### Thinking Tools / Scientific Methodology
+
+Provide the cross-cutting method layer.
+
+Hypothesis formation, comparison, experiment design, error analysis, and method
+iteration should remain first-class parts of the system rather than being
+forgotten behind local implementation packets.
+
+The three brains are not a flat list. They are layered:
+
+- information brain feeds knowledge formation
+- knowledge brain stabilizes reviewed structure
+- evolution brain improves what the system should do next
+- world model and methodology cut across all three
 
 ---
 
@@ -40,13 +85,13 @@ Continuously monitors logs and test results, automatically identifies issues, me
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| Feed Aggregation | ✅ | Subscribe to RSS / monitor pages / connect APIs, auto-fetch with importance ranking |
-| Knowledge Base | ✅ | Upload docs or index web pages, build private vector knowledge bases |
-| Multi-model Chat | ✅ | LLM chat with web search, deep thinking, RAG retrieval, and multi-model voting |
-| Memory | ✅ | Auto-extracts preferences, facts, and decisions from conversations |
-| Knowledge Graph | 🔄 | Entity extraction, relation mining, cross-disciplinary reasoning |
-| Evolution Engine | 🔄 | Log monitoring, auto-testing, issue tracking, self-optimization |
-| Notifications | ✅ | Push important updates to Feishu / DingTalk groups |
+| Feed Aggregation | Yes | Subscribe to RSS, monitor pages, connect APIs, and fetch signals with ranking |
+| Knowledge Base | Yes | Upload docs or index pages and build private vector knowledge bases |
+| Multi-model Chat | Yes | Chat with web search, deep reasoning, RAG retrieval, and multi-model judgment |
+| Memory | Yes | Extract preferences, facts, and decisions from conversations |
+| Knowledge Graph | In progress | Entity extraction, relation mining, cross-disciplinary reasoning |
+| Evolution Engine | In progress | Monitoring, diagnosis, issue tracking, self-improvement |
+| Notifications | Yes | Push important updates to Feishu or DingTalk |
 
 ---
 
@@ -78,7 +123,7 @@ source venv/bin/activate        # Linux/Mac
 pip install -r requirements.txt
 
 cp .env.example .env
-# Edit .env — at minimum, set QWEN_API_KEY (or any supported LLM key)
+# Edit .env at minimum set one supported LLM key such as QWEN_API_KEY
 
 alembic upgrade head
 
@@ -111,16 +156,16 @@ npm run dev
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | ✅ | PostgreSQL connection string |
-| `REDIS_URL` | ✅ | Redis connection string |
-| `QDRANT_URL` | ✅ | Qdrant endpoint |
-| `QWEN_API_KEY` | ✅ | Primary LLM API key (Alibaba Cloud Bailian) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `REDIS_URL` | Yes | Redis connection string |
+| `QDRANT_URL` | Yes | Qdrant endpoint |
+| `QWEN_API_KEY` | Yes | Primary LLM API key |
 | `ANTHROPIC_API_KEY` | optional | Claude support |
 | `OPENAI_API_KEY` | optional | GPT support |
 | `FEISHU_APP_ID` / `FEISHU_APP_SECRET` | optional | Feishu app push |
-| `FEISHU_WEBHOOK_URL` | optional | Feishu Webhook (alternative to app mode) |
+| `FEISHU_WEBHOOK_URL` | optional | Feishu webhook |
 | `DINGTALK_WEBHOOK_URL` | optional | DingTalk push |
-| `DEBUG` | optional | Development mode, default `true` |
+| `DEBUG` | optional | Development mode |
 
 ### `services/web/.env.local`
 
@@ -140,7 +185,7 @@ python manage.py status
 python manage.py start
 python manage.py stop
 
-# Run database migrations (after version updates)
+# Run database migrations
 cd services/api && alembic upgrade head
 
 # View logs

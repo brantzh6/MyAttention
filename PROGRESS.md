@@ -3016,3 +3016,24 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - 2026-04-15: absorbed `M10` review. Tightened claim to "first reusable internal judgment substrate step" and added focused substrate-level tests for parsing, normalization, overlap honesty, review/review consensus behavior, and provider-aware defaults.
 - 2026-04-15: `Source Intelligence V1 M13` landed as a bounded selective-absorption advisory slice. Existing discovery-panel and version-panel routes now expose controller-facing advisory buckets (`ready_to_follow`, `ready_to_suppress`, `needs_manual_review`, `watch_candidates`) derived from the reusable judgment substrate, without adding workflow or persistence. Validation: `51 tests OK`, `99 tests OK`.
 - 2026-04-17: added `IKE_MILESTONE_POLICY_2026-04-17.md` to distinguish checkpoints, milestones, and archive points so GitHub snapshots do not get overstated.
+# 2026-04-17 - Vision / Architecture / Path Alignment Baseline
+
+- added `IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md`
+- clarified one stable reading:
+  - project objective unchanged: AI-driven evolution system
+  - current design expression: layered brains plus cross-cutting world model
+    and thinking tools
+  - current architecture: `Runtime v0` as accepted substrate, not final
+    product identity
+  - implementation path may change without redefining the project
+- synced this framing into:
+  - `CURRENT_MAINLINE_MAP_2026-04-10.md`
+  - `CURRENT_MAINLINE_HANDOFF.md`
+  - `IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md`
+  - `IKE_SCOPE_CONTROL_AND_BUILD_STRATEGY_2026-04-11.md`
+- synced the same framing into reviewer and public-entry surfaces:
+  - `README.md`
+  - `IKE_EXECUTION_REVIEW_PACKAGE_2026-04-11.md`
+  - `review-for IKE_PROJECT_SCOPE_AND_STRATEGY_REVIEW_PACK_2026-04-11.md`
+  - `services/web/app/chat/page.tsx`
+  - `services/web/app/evolution/page.tsx`

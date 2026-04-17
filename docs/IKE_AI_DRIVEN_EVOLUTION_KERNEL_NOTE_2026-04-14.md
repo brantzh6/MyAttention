@@ -21,7 +21,21 @@ whose core remains centered on:
 1. information brain
 2. knowledge brain
 3. evolution brain
-4. a scientific methodology layer that cuts across all three
+4. a world-model layer that cuts across all three
+5. a thinking-tools / scientific-methodology layer that cuts across all three
+
+The three brains are not a flat list.
+
+They are a layered system:
+
+- information brain feeds knowledge formation
+- knowledge brain stabilizes reviewed structure for evolution
+- evolution brain improves what the other two should do next
+
+The cross-cutting layers are not optional decoration.
+
+They are method and structure carriers that must remain present while the
+system evolves.
 
 ## Non-Forget Rule
 
@@ -63,7 +77,14 @@ The long-term kernel must preserve AI-driven evolution in at least these areas:
 - adaptation of heuristics and policies
 - migration from rule-heavy watchdog logic toward model-assisted reasoning
 
-### 4. Scientific Methodology Layer
+### 4. World Model Layer
+
+- object/system/context framing
+- cross-domain structural linking
+- relation shaping across information, knowledge, and evolution work
+- preservation of larger explanatory structure beyond local source ranking
+
+### 5. Scientific Methodology Layer
 
 - hypothesis formation
 - experiment packet design
@@ -110,4 +131,6 @@ Neither side is sufficient alone.
 hard-coded patches.
 
 A later slice must explicitly open an **AI-assisted judgment lane** above the
-current cleanup foundation.
+current cleanup foundation while keeping world-model and methodology concerns
+inside the long-term kernel rather than letting them disappear behind local
+heuristics.

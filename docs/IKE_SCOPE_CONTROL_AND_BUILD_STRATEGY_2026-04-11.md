@@ -230,9 +230,21 @@ line.
 
 IKE should be treated as:
 
-- a controller and runtime kernel project
-- with external execution substrates
-- plus a future knowledge and source-intelligence expansion path
+- an AI-driven evolution-system project
+- with a staged controller/runtime substrate architecture
+- with external execution substrates where practical
+- and with layered-brain growth above that substrate:
+  - information brain
+  - knowledge brain
+  - evolution brain
+  - world model and thinking tools as cross-cutting layers
+
+Important reading:
+
+- runtime is part of the enabling architecture
+- runtime is not the project's final identity
+- implementation path changes are allowed when they better serve the unchanged
+  objective
 
 IKE should **not** currently be treated as:
 

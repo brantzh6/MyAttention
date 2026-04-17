@@ -8,6 +8,25 @@ Status: controller package
 Provide one compact package entry for the current post-strategic-review
 execution wave.
 
+Stable framing before reviewing any local packet:
+
+- project objective remains unchanged:
+  - build IKE as an AI-driven evolution system
+- current design expression is layered:
+  - information brain
+  - knowledge brain
+  - evolution brain
+  - world model as a cross-cutting layer
+  - thinking tools / scientific methodology as a cross-cutting layer
+- current architecture is staged:
+  - `Runtime v0` is accepted substrate
+  - active capability work happens above that substrate
+- implementation path may change without redefining the project
+
+Reference:
+
+- [D:\code\MyAttention\docs\IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md](/D:/code/MyAttention/docs/IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md)
+
 This package currently covers:
 
 1. `Source Intelligence V1 M1`
@@ -65,9 +84,11 @@ A truthfulness packet for what the current delegated harness actually proves.
 
 ## Relation To Mainline
 
-- `Runtime v0` remains the true active mainline
-- this package contains the strongest current next product-capability start line
-  and one key support-track truthfulness proof
+- this package should be read as bounded execution material beneath the stable
+  project objective
+- `Runtime v0` is now accepted substrate, not the final product identity
+- local packets inside this package are path-level work, not a redefinition of
+  IKE itself
 
 ## Recommended Use
 

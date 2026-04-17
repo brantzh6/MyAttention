@@ -1765,3 +1765,23 @@
 - 2026-04-15: followed `M10` review by tightening the extraction claim and adding direct substrate tests for `feeds.ai_judgment`. This makes the reuse claim depend on explicit module-level proof, not only route-level regression coverage.
 - 2026-04-15: added a bounded selective-absorption advisory layer on top of the existing panel outputs. The reusable judgment substrate now derives controller-facing advisory buckets for both discovery-panel and version-panel surfaces, but remains inspect-only and explicitly non-canonical.
 - 2026-04-17: added a milestone policy so the project can distinguish checkpoint snapshots from reviewable milestones and archive-worthy boundaries before promoting a snapshot.
+# 2026-04-17
+
+## Added
+
+- `docs/IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md` to
+  stabilize the relationship between unchanged project vision, current design
+  expression, staged architecture, and adjustable implementation path
+
+## Changed
+
+- clarified in active-surface docs that:
+  - IKE's objective remains an AI-driven evolution system
+  - the brains are layered rather than flat
+  - `world model` and `thinking tools / scientific methodology` are
+    cross-cutting layers
+  - `Runtime v0` is accepted substrate and dependency component, not the final
+    product identity
+- synced the same framing into README, review-entry docs, and the web
+  knowledge/evolution pages so external reviewers and operators see the same
+  objective/path distinction

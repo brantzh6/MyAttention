@@ -6,6 +6,23 @@ This document is the shortest reliable handoff for another agent or engineer to 
 
 It is intentionally operational, not visionary.
 
+Operational continuation still depends on one stable framing:
+
+- project vision remains an AI-driven evolution system
+- current design expression is layered:
+  - information brain
+  - knowledge brain
+  - evolution brain
+  - world model as a cross-cutting layer
+  - thinking tools / scientific methodology as a cross-cutting layer
+- current architecture uses `Runtime v0` as accepted substrate
+- current implementation path is allowed to change and is now centered on
+  `Source Intelligence V1`
+
+Reference:
+
+- [D:\code\MyAttention\docs\IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md](/D:/code/MyAttention/docs/IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md)
+
 ## First Read
 
 Before scanning this long handoff, start with:
@@ -42,7 +59,8 @@ This section overrides older runtime phase notes below when they conflict.
   - transition note:
     - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_ACTIVE_MAINLINE_TRANSITION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_ACTIVE_MAINLINE_TRANSITION_2026-04-13.md)
   - current controller interpretation:
-    - `Runtime v0` is accepted substrate
+    - project objective has not changed; only the implementation path has moved
+    - `Runtime v0` is accepted substrate and dependency component, not the final product identity
     - the next active edge is one real bounded discovery loop through the
       existing M1 path
 - that loop proof is now materially landed:
@@ -152,10 +170,13 @@ This section overrides older runtime phase notes below when they conflict.
     - the next action should not be workflow expansion
 - project-level reminder:
   - [D:\code\MyAttention\docs\IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md](/D:/code/MyAttention/docs/IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md)
+  - [D:\code\MyAttention\docs\IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md](/D:/code/MyAttention/docs/IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md)
   - current controller interpretation:
     - recent hard-coded slices are cleanup / normalization scaffolds
     - they must not redefine IKE as a static rules system
     - a later slice must explicitly reopen AI-assisted judgment above the current cleaned input layer
+    - world-model and methodology concerns must remain visible even while the
+      active path is narrowed into bounded packets
 
 - `R2-I18` should now be treated as a closed bounded packet:
   - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I18_RESULT_MILESTONE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I18_RESULT_MILESTONE_2026-04-11.md)

@@ -1,7 +1,13 @@
 import asyncio
+import sys
+from pathlib import Path
 
 import pytest
 from sqlalchemy import text
+
+API_DIR = Path(__file__).resolve().parent.parent
+if str(API_DIR) not in sys.path:
+    sys.path.insert(0, str(API_DIR))
 
 from db.session import async_session_maker, engine
 
@@ -74,7 +80,7 @@ def db_session(async_runner):
 
 
 @pytest.fixture(autouse=True)
-def clean_runtime_tables(db_session, request):
+def clean_runtime_tables(request):
     """Keep runtime DB-backed tests isolated across function/class boundaries."""
     runtime_db_backed_files = {
         "test_runtime_v0_schema_foundation.py",
@@ -82,9 +88,11 @@ def clean_runtime_tables(db_session, request):
         "test_runtime_v0_operational_closure.py",
         "test_runtime_v0_project_surface.py",
         "test_runtime_v0_benchmark_bridge.py",
+        "test_runtime_v0_controller_acceptance.py",
     }
     if request.fspath.basename not in runtime_db_backed_files:
         return
+    db_session = request.getfixturevalue("db_session")
     for table in RUNTIME_TABLES:
         db_session.execute(f"DELETE FROM {table}")
     db_session.commit()

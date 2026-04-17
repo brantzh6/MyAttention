@@ -333,7 +333,7 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
                     sources = []
             
             # Build system prompt with context
-            system_prompt = "你是 MyAttention 智能助手，帮助用户获取、整理和分析信息，支持重大决策。"
+            system_prompt = "你是 IKE 智能助手，帮助用户获取、整理和分析信息，支持重大决策。"
             if context:
                 system_prompt += f"\n\n以下是相关的知识库内容，请基于这些信息回答用户问题:\n\n{context}"
             

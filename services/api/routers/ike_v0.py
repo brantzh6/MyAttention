@@ -10,6 +10,7 @@ See: docs/IKE_API_TRANSITION_PRINCIPLES.md
 from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Literal, Optional
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel, field_validator
@@ -30,7 +31,19 @@ from runtime.benchmark_bridge import (
     BenchmarkBridgeError,
     import_benchmark_candidate_into_runtime_project,
 )
+from runtime.controller_acceptance import (
+    ControllerAcceptanceError,
+    inspect_controller_acceptance_record,
+    record_controller_acceptance,
+)
+from runtime.db_backed_lifecycle_proof import execute_db_backed_lifecycle_proof
 from runtime.service_preflight import run_preflight
+from runtime.task_lifecycle import (
+    derive_work_context_from_proof,
+    execute_lifecycle_proof,
+    is_proof_auditable,
+    validate_lifecycle_proof_integrity,
+)
 
 
 def _parse_iso_datetime(value):
@@ -143,6 +156,51 @@ class RuntimeServicePreflightInspectRequest(BaseModel):
     strict_preferred_owner: bool = False
     expected_code_fingerprint: Optional[str] = None
     strict_code_freshness: bool = False
+    self_check_current_code: bool = False
+
+
+class RuntimeServicePreflightControllerAcceptanceInspectRequest(
+    RuntimeServicePreflightInspectRequest
+):
+    """Request model for controller acceptance record inspection."""
+
+    project_key: Optional[str] = None
+
+
+class RuntimeServicePreflightControllerAcceptanceRecordRequest(
+    RuntimeServicePreflightControllerAcceptanceInspectRequest
+):
+    """Request model for controller acceptance record write."""
+
+    controller_id: str
+    summary: Optional[str] = None
+    rationale: Optional[str] = None
+
+    @field_validator("controller_id")
+    @classmethod
+    def validate_controller_id(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("controller_id must not be empty")
+        return value
+
+
+class RuntimeTaskLifecycleProofInspectRequest(BaseModel):
+    """Request model for one narrow runtime lifecycle proof inspection."""
+    project_id: Optional[str] = None
+    task_id: Optional[str] = None
+    task_type: str = "implementation"
+    task_title: str = "Runtime lifecycle proof task"
+    delegate_id: str = "delegate-001"
+    controller_id: str = "controller-001"
+
+
+class RuntimeDBBackedLifecycleProofInspectRequest(BaseModel):
+    """Request model for one narrow DB-backed lifecycle proof inspection."""
+    project_key: Optional[str] = None
+    task_title: str = "DB-backed lifecycle proof task"
+    delegate_id: str = "delegate-001"
+    controller_id: str = "controller-001"
 
 
 # =============================================================================
@@ -327,6 +385,36 @@ class RuntimeBenchmarkCandidateImportResponse(BaseModel):
 
 class RuntimeServicePreflightInspectResponse(BaseModel):
     """Response model for runtime service preflight inspection."""
+    ref: ObjectRef
+    data: Dict[str, Any]
+
+
+class RuntimeServicePreflightControllerDecisionInspectResponse(BaseModel):
+    """Response model for controller-facing service preflight decision inspection."""
+    ref: ObjectRef
+    data: Dict[str, Any]
+
+
+class RuntimeServicePreflightControllerAcceptanceRecordInspectResponse(BaseModel):
+    """Response model for controller acceptance record inspection."""
+    ref: ObjectRef
+    data: Dict[str, Any]
+
+
+class RuntimeServicePreflightControllerAcceptanceRecordResponse(BaseModel):
+    """Response model for controller acceptance record write."""
+    ref: ObjectRef
+    data: Dict[str, Any]
+
+
+class RuntimeTaskLifecycleProofInspectResponse(BaseModel):
+    """Response model for one narrow runtime lifecycle proof inspection."""
+    ref: ObjectRef
+    data: Dict[str, Any]
+
+
+class RuntimeDBBackedLifecycleProofInspectResponse(BaseModel):
+    """Response model for one narrow DB-backed lifecycle proof inspection."""
     ref: ObjectRef
     data: Dict[str, Any]
 
@@ -559,6 +647,7 @@ async def inspect_runtime_service_preflight(
         strict_preferred_owner=request.strict_preferred_owner if request else False,
         expected_code_fingerprint=request.expected_code_fingerprint if request else None,
         strict_code_freshness=request.strict_code_freshness if request else False,
+        self_check_current_code=request.self_check_current_code if request else False,
     )
 
     response.headers["X-IKE-Version"] = "v0-experimental"
@@ -596,5 +685,337 @@ async def inspect_runtime_service_preflight(
               "owner_chain": result.details.get("owner_chain"),
               "repo_launcher": result.details.get("repo_launcher"),
               "controller_acceptability": result.details.get("controller_acceptability"),
+              "controller_promotion": result.details.get("controller_promotion"),
           },
       )
+
+
+@router.post(
+    "/runtime/service-preflight/controller-decision/inspect",
+    response_model=RuntimeServicePreflightControllerDecisionInspectResponse,
+)
+async def inspect_runtime_service_preflight_controller_decision(
+    response: Response,
+    request: RuntimeServicePreflightInspectRequest | None = None,
+):
+    """
+    Inspect the controller-facing decision shape above runtime service preflight.
+
+    This endpoint is inspect-only.
+    It summarizes promotion-readiness semantics but does not mutate acceptance
+    or promote the service.
+    """
+    result = await run_preflight(
+        host=request.host if request and request.host else "127.0.0.1",
+        port=request.port if request and request.port else 8000,
+        strict_preferred_owner=request.strict_preferred_owner if request else False,
+        expected_code_fingerprint=request.expected_code_fingerprint if request else None,
+        strict_code_freshness=request.strict_code_freshness if request else False,
+        self_check_current_code=request.self_check_current_code if request else False,
+    )
+
+    controller_acceptability = result.details.get("controller_acceptability") or {}
+    controller_promotion = result.details.get("controller_promotion") or {}
+    promotion_status = controller_promotion.get("status")
+
+    if promotion_status == "controller_can_promote_now":
+        recommended_action = "controller_may_accept_now"
+    elif promotion_status == "controller_confirmation_required":
+        recommended_action = "controller_confirmation_required"
+    else:
+        recommended_action = "not_ready_for_controller_acceptance"
+
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    return RuntimeServicePreflightControllerDecisionInspectResponse(
+        ref=ObjectRef(
+            id=f"runtime_service_preflight_controller_decision:{result.timestamp}",
+            kind="runtime_service_preflight_controller_decision",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data={
+            "status": result.status.value if hasattr(result.status, "value") else str(result.status),
+            "timestamp": result.timestamp,
+            "controller_acceptability": controller_acceptability,
+            "controller_promotion": controller_promotion,
+            "decision": {
+                "recommended_action": recommended_action,
+                "target_status": controller_promotion.get("target_status"),
+                "basis": controller_promotion.get("basis"),
+                "eligible": bool(controller_promotion.get("eligible")),
+            },
+            "truth_boundary": {
+                "inspect_only": True,
+                "mutates_acceptance": False,
+                "records_controller_decision": False,
+                "implies_canonical_accepted": False,
+            },
+        },
+    )
+
+
+@router.post(
+    "/runtime/service-preflight/controller-decision/record/inspect",
+    response_model=RuntimeServicePreflightControllerAcceptanceRecordInspectResponse,
+)
+async def inspect_runtime_service_preflight_controller_acceptance_record(
+    response: Response,
+    request: RuntimeServicePreflightControllerAcceptanceInspectRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Inspect the current durable controller acceptance record for the narrow
+    canonical service acceptance scope.
+    """
+    result = await run_preflight(
+        host=request.host if request and request.host else "127.0.0.1",
+        port=request.port if request and request.port else 8000,
+        strict_preferred_owner=request.strict_preferred_owner if request else False,
+        expected_code_fingerprint=request.expected_code_fingerprint if request else None,
+        strict_code_freshness=request.strict_code_freshness if request else False,
+        self_check_current_code=request.self_check_current_code if request else False,
+    )
+
+    preflight_data = {
+        "status": result.status.value if hasattr(result.status, "value") else str(result.status),
+        "timestamp": result.timestamp,
+        "api_health": asdict(result.api_health),
+        "port_ownership": asdict(result.port_ownership),
+        "summary": result.summary,
+        "details": result.details,
+    }
+
+    try:
+        payload = await db.run_sync(
+            lambda sync_session: inspect_controller_acceptance_record(
+                sync_session,
+                preflight_data=preflight_data,
+                project_key=request.project_key if request else None,
+            )
+        )
+    except ControllerAcceptanceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    return RuntimeServicePreflightControllerAcceptanceRecordInspectResponse(
+        ref=ObjectRef(
+            id=f"runtime_controller_acceptance_record_inspect:{result.timestamp}",
+            kind="runtime_controller_acceptance_record_inspect",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data=payload,
+    )
+
+
+@router.post(
+    "/runtime/service-preflight/controller-decision/record",
+    response_model=RuntimeServicePreflightControllerAcceptanceRecordResponse,
+)
+async def record_runtime_service_preflight_controller_acceptance(
+    request: RuntimeServicePreflightControllerAcceptanceRecordRequest,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Record one explicit controller acceptance decision above the current
+    controller_confirmation_required runtime service proof state.
+    """
+    result = await run_preflight(
+        host=request.host if request.host else "127.0.0.1",
+        port=request.port if request.port else 8000,
+        strict_preferred_owner=request.strict_preferred_owner,
+        expected_code_fingerprint=request.expected_code_fingerprint,
+        strict_code_freshness=request.strict_code_freshness,
+        self_check_current_code=request.self_check_current_code,
+    )
+    preflight_data = {
+        "status": result.status.value if hasattr(result.status, "value") else str(result.status),
+        "timestamp": result.timestamp,
+        "api_health": asdict(result.api_health),
+        "port_ownership": asdict(result.port_ownership),
+        "summary": result.summary,
+        "details": result.details,
+    }
+
+    try:
+        payload = await db.run_sync(
+            lambda sync_session: record_controller_acceptance(
+                sync_session,
+                preflight_data=preflight_data,
+                controller_id=request.controller_id,
+                project_key=request.project_key,
+                summary=request.summary,
+                rationale=request.rationale,
+            )
+        )
+    except ControllerAcceptanceError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    return RuntimeServicePreflightControllerAcceptanceRecordResponse(
+        ref=ObjectRef(
+            id=f"runtime_controller_acceptance_record:{payload['decision_id']}",
+            kind="runtime_controller_acceptance_record",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data=payload,
+    )
+
+
+@router.post(
+    "/runtime/task-lifecycle/proof/inspect",
+    response_model=RuntimeTaskLifecycleProofInspectResponse,
+)
+async def inspect_runtime_task_lifecycle_proof(
+    response: Response,
+    request: RuntimeTaskLifecycleProofInspectRequest | None = None,
+):
+    """
+    Run one narrow inspect-style runtime lifecycle proof.
+
+    This endpoint is provisional and audit-oriented only.
+    It does not imply broad task execution or scheduler semantics.
+    """
+    project_id = request.project_id if request and request.project_id else str(uuid4())
+    task_id = request.task_id if request and request.task_id else str(uuid4())
+
+    proof = execute_lifecycle_proof(
+        task_id=task_id,
+        project_id=project_id,
+        task_type=request.task_type if request else "implementation",
+        delegate_id=request.delegate_id if request else "delegate-001",
+        controller_id=request.controller_id if request else "controller-001",
+        task_title=request.task_title if request else "Runtime lifecycle proof task",
+    )
+    integrity_ok, integrity_reason = validate_lifecycle_proof_integrity(proof)
+    derived_context = derive_work_context_from_proof(
+        proof=proof,
+        project_id=project_id,
+    )
+
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    return RuntimeTaskLifecycleProofInspectResponse(
+        ref=ObjectRef(
+            id=f"runtime_task_lifecycle_proof:{proof.task_id}",
+            kind="runtime_task_lifecycle_proof",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data={
+            "success": proof.success,
+            "task_id": proof.task_id,
+            "project_id": proof.project_id,
+            "final_status": proof.final_status.value,
+            "summary": proof.to_audit_dict(),
+            "integrity": {
+                "valid": integrity_ok,
+                "reason": integrity_reason,
+                "auditable": is_proof_auditable(proof),
+            },
+            "transitions": [
+                {
+                    "success": item.success,
+                    "task_id": item.task_id,
+                    "from_status": item.from_status.value,
+                    "to_status": item.to_status.value,
+                    "event_type": item.event_type,
+                    "event_reason": item.event_reason,
+                    "error": item.error,
+                }
+                for item in proof.transitions
+            ],
+            "events": proof.events,
+            "lease": {
+                "lease_id": proof.lease.lease_id,
+                "task_id": proof.lease.task_id,
+                "owner_kind": proof.lease.owner_kind,
+                "owner_id": proof.lease.owner_id,
+                "lease_status": proof.lease.lease_status,
+                "heartbeat_at": proof.lease.heartbeat_at,
+                "created_at": proof.lease.created_at,
+                "expires_at": proof.lease.expires_at,
+                "metadata": proof.lease.metadata,
+            } if proof.lease else None,
+            "derived_work_context": (
+                derived_context.to_dict() if derived_context is not None else None
+            ),
+            "truth_boundary": {
+                "inspect_only": True,
+                "persists_runtime_state": False,
+                "implies_general_task_runner": False,
+            },
+        },
+    )
+
+
+@router.post(
+    "/runtime/task-lifecycle/db-proof/inspect",
+    response_model=RuntimeDBBackedLifecycleProofInspectResponse,
+)
+async def inspect_runtime_db_backed_lifecycle_proof(
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+    request: RuntimeDBBackedLifecycleProofInspectRequest | None = None,
+):
+    """
+    Run one narrow DB-backed lifecycle proof for controller inspection.
+
+    This endpoint is inspect-oriented and bounded.
+    It persists one proof-shaped lifecycle path, but does not imply a general
+    task runner, detached execution, or scheduler semantics.
+    """
+    proof = await db.run_sync(
+        lambda sync_session: execute_db_backed_lifecycle_proof(
+            sync_session,
+            project_key=request.project_key if request else None,
+            title=request.task_title if request else "DB-backed lifecycle proof task",
+            delegate_id=request.delegate_id if request else "delegate-001",
+            controller_id=request.controller_id if request else "controller-001",
+        )
+    )
+
+    response.headers["X-IKE-Version"] = "v0-experimental"
+    response.headers["Cache-Control"] = "no-store"
+
+    return RuntimeDBBackedLifecycleProofInspectResponse(
+        ref=ObjectRef(
+            id=f"runtime_db_backed_lifecycle_proof:{proof.task_id}",
+            kind="runtime_db_backed_lifecycle_proof",
+            id_scope="provisional",
+            stability="experimental",
+            permalink=None,
+        ),
+        data={
+            "project_id": proof.project_id,
+            "task_id": proof.task_id,
+            "summary": {
+                "success": proof.success,
+                "final_status": proof.final_status,
+                "persisted_event_count": proof.persisted_event_count,
+                "lease_id": proof.lease_id,
+                "error": proof.error,
+            },
+            "audit": asdict(proof),
+            "truth_boundary": {
+                "inspect_only": True,
+                "bounded_db_proof": True,
+                "persists_runtime_state": True,
+                "implies_general_task_runner": False,
+                "detached_execution": False,
+            },
+        },
+    )

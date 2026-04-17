@@ -39,15 +39,28 @@ def build_prompt(
     done_path: Path,
     task_id: str,
     role: str,
+    lane: str | None,
+    reasoning_mode: str | None,
+    sandbox_identity: str | None,
+    sandbox_kind: str | None,
+    capability_profile: str | None,
+    network_policy: str | None,
 ) -> str:
+    project_name = brief_path.resolve().parents[3].name
     return "\n".join(
         [
-            "You are executing a bounded coding task for MyAttention.",
+            f"You are executing a bounded coding task for {project_name}.",
             "Do not broaden scope.",
             "Read only the provided brief and context files as your task definition.",
             f"Operate according to the role contract: {role}",
             "",
             f"Task ID: {task_id}",
+            *( [f"Lane: {lane}"] if lane else [] ),
+            *( [f"Reasoning Mode: {reasoning_mode}"] if reasoning_mode else [] ),
+            *( [f"Sandbox Identity: {sandbox_identity}"] if sandbox_identity else [] ),
+            *( [f"Sandbox Kind: {sandbox_kind}"] if sandbox_kind else [] ),
+            *( [f"Capability Profile: {capability_profile}"] if capability_profile else [] ),
+            *( [f"Network Policy: {network_policy}"] if network_policy else [] ),
             f"Brief file: {brief_path}",
             f"Context file: {context_path}",
             f"Required result file: {result_path}",
@@ -87,6 +100,13 @@ def main() -> int:
     parser.add_argument("--context", required=True, help="Path to the context packet.")
     parser.add_argument("--result", required=True, help="Path where qoder must write the result file.")
     parser.add_argument("--done", required=True, help="Path where qoder must write the done JSON signal.")
+    parser.add_argument("--lane", default=None, help="Machine-readable lane label.")
+    parser.add_argument("--reasoning-mode", default="high", help="Requested reasoning / thinking depth.")
+    parser.add_argument("--sandbox-identity", default=None, help="Machine-readable sandbox identity.")
+    parser.add_argument("--sandbox-kind", default="qoder_workspace", help="Machine-readable sandbox kind.")
+    parser.add_argument("--capability-profile", default=None, help="Explicit capability profile override.")
+    parser.add_argument("--write-scope", action="append", default=[], help="Machine-readable write scope item. Repeat for multiple values.")
+    parser.add_argument("--network-policy", default=None, help="Machine-readable network policy intent.")
     parser.add_argument(
         "--role",
         default="coding-agent",
@@ -107,7 +127,7 @@ def main() -> int:
     result_path.parent.mkdir(parents=True, exist_ok=True)
     done_path.parent.mkdir(parents=True, exist_ok=True)
 
-    prompt = build_prompt(brief_path, context_path, result_path, done_path, args.task_id, args.role)
+    prompt = build_prompt(brief_path, context_path, result_path, done_path, args.task_id, args.role, args.lane, args.reasoning_mode, args.sandbox_identity, args.sandbox_kind, args.capability_profile, args.network_policy)
     cmd = [
         resolve_qoder(),
         "chat",
@@ -144,6 +164,13 @@ def main() -> int:
             "brief": str(brief_path),
             "context": str(context_path),
             "role": args.role,
+            "lane": args.lane,
+            "reasoning_mode": args.reasoning_mode,
+            "sandbox_identity": args.sandbox_identity,
+            "sandbox_kind": args.sandbox_kind,
+            "capability_profile": args.capability_profile,
+            "write_scope": args.write_scope,
+            "network_policy": args.network_policy,
             "role_file": str(role_path),
             "result": str(result_path),
             "done": str(done_path),

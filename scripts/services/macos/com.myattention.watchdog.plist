@@ -3,23 +3,23 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.myattention.watchdog</string>
+  <string>com.ike.watchdog</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/opt/myattention/.venv/bin/python</string>
-    <string>/opt/myattention/runtime_watchdog.py</string>
+    <string>/opt/ike/.venv/bin/python</string>
+    <string>/opt/ike/runtime_watchdog.py</string>
     <string>--mode</string>
     <string>distributed</string>
   </array>
   <key>WorkingDirectory</key>
-  <string>/opt/myattention</string>
+  <string>/opt/ike</string>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>
   <true/>
   <key>StandardOutPath</key>
-  <string>/opt/myattention/.runtime/logs/watchdog.log</string>
+  <string>/opt/ike/.runtime/logs/watchdog.log</string>
   <key>StandardErrorPath</key>
-  <string>/opt/myattention/.runtime/logs/watchdog.log</string>
+  <string>/opt/ike/.runtime/logs/watchdog.log</string>
 </dict>
 </plist>

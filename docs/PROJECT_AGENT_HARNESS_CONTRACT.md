@@ -15,6 +15,13 @@ It is the shortest operational contract for:
 
 Use this when another developer or agent needs to contribute directly to this project without drifting from the established working method.
 
+Governance references:
+
+- [D:\code\MyAttention\docs\IKE_DELIVERY_GOVERNANCE_INDEX_2026-04-11.md](/D:/code/MyAttention/docs/IKE_DELIVERY_GOVERNANCE_INDEX_2026-04-11.md)
+- [D:\code\MyAttention\docs\IKE_ENVIRONMENT_STRATEGY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_ENVIRONMENT_STRATEGY_2026-04-11.md)
+- [D:\code\MyAttention\docs\IKE_CHANGE_PROMOTION_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_CHANGE_PROMOTION_POLICY_2026-04-11.md)
+- [D:\code\MyAttention\docs\IKE_RELEASE_AND_ROLLBACK_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_RELEASE_AND_ROLLBACK_POLICY_2026-04-11.md)
+
 ## 1. First Principle
 
 This project uses a **controller + delegates** model.
@@ -74,9 +81,47 @@ Default practical chain:
   - local bounded coding lane
   - local bounded review lane
   - long-task execution candidate
+  - default routine model preference should now be latest `qwen3.6`
+  - higher-difficulty backend/business-logic packets may explicitly prefer
+    `glm-5.1` after manual provider switch
 - `OpenClaw`
   - automatable model-backed coding/review lane
   - preferred for routine repeatable delivery where API-backed models are available
+  - latest `Qwen3.6 Plus` is the default routine coding/review preference when a Qwen-backed lane is used
+
+### Reasoning / Thinking-Depth Baseline
+
+Automated routine lanes should not silently fall back to low-thinking defaults.
+
+Current baseline:
+
+- OpenClaw:
+  - `thinkingDefault = high`
+  - current config already marks `qwen3.6-plus`, `glm-5`, and `kimi-k2.5` as reasoning-capable
+- Claude Code worker:
+  - default routine model should now be latest `qwen3.6`
+  - worker packet default `reasoning_mode` should now be `high`
+  - use explicit model override when a packet specifically prefers `glm-5`,
+    `glm-5.1`, `kimi`, or another approved lane
+
+Operational note:
+
+- Claude Code provider switching and current provider guidance are recorded in:
+  - [D:\code\MyAttention\docs\CLAUDE_CODE_PROVIDER_SWITCHING_NOTE_2026-04-10.md](/D:/code/MyAttention/docs/CLAUDE_CODE_PROVIDER_SWITCHING_NOTE_2026-04-10.md)
+
+Controller rule:
+
+- default to highest available automated reasoning / thinking depth for routine delegated packets
+- only lower reasoning intentionally for:
+  - very mechanical probes
+  - narrow smoke checks
+  - explicit cost-saving experiments that are marked as such
+
+Do not leave reasoning mode implicit for important delegated packets.
+
+Durable reference:
+
+- [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_REASONING_POLICY_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_REASONING_POLICY_2026-04-09.md)
 
 Important constraint:
 
@@ -93,6 +138,73 @@ Use them for:
 - high-risk final cross-checks
 
 Do not design the daily workflow to depend on manual models.
+
+### Workspace Isolation Rule
+
+Routine delegated agents must not share the controller project root as a mutable workspace.
+
+Current isolation baseline:
+
+- controller root:
+  - `D:\code\MyAttention`
+- clean parallel project root:
+  - `D:\code\IKE`
+- OpenClaw isolated workspaces:
+  - `D:\code\_agent-runtimes\openclaw-workspaces\myattention-coder`
+  - `D:\code\_agent-runtimes\openclaw-workspaces\myattention-reviewer`
+  - `D:\code\_agent-runtimes\openclaw-workspaces\myattention-kimi-review`
+- Claude worker run root:
+  - `D:\code\_agent-runtimes\claude-worker\runs`
+
+Do not point routine OpenClaw or Claude worker execution back at the shared project root unless the controller explicitly overrides that boundary for a narrow reason.
+
+### Sandbox Enforcement Baseline
+
+Workspace isolation is necessary but not sufficient.
+
+The next harness baseline should treat these as first-class execution rules:
+
+- `sandbox_identity`
+  - each delegated run should have a machine-readable sandbox/workspace identity
+- `capability_policy`
+  - each lane should have explicit allowed/disallowed tool boundaries
+- `environment_lifecycle`
+  - execution sandbox, reusable environment snapshot, and runtime truth should not be silently conflated
+
+Current P2 baseline now also explicitly carries:
+
+- `sandbox_kind`
+- `capability_profile`
+
+Current P4 metadata baseline now also explicitly carries:
+
+- `write_scope`
+- `network_policy`
+
+Current P5 metadata baseline now also materially covers:
+
+- `sandbox_identity`
+
+Current truthful state:
+
+- path isolation is materially in place
+- full sandbox enforcement is not yet fully implemented
+- current OpenClaw routine lanes already run with:
+  - isolated external workspaces
+  - `thinkingDefault = high`
+  - reasoning-capable `qwen3.6-plus`, `glm-5`, and `kimi-k2.5`
+- current Claude local permission baseline is still broader than a hardened
+  sandbox policy and must not be mistaken for final enforcement quality
+
+Do not describe current isolated paths as if they already guarantee complete
+per-run sandbox enforcement.
+
+Current truthful boundary:
+
+- `write_scope` and `network_policy` are now durable machine-readable metadata
+- `sandbox_identity` is now durably carried across the main automated lanes
+- they improve auditability and later enforcement readiness
+- they do not yet prove hard blocking by themselves
 
 ### `openclaw-glm`
 

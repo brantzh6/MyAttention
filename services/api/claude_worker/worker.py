@@ -15,11 +15,17 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Literal, Sequence
 
 
-DEFAULT_MODEL = "glm-5"
+DEFAULT_MODEL = "qwen3.6-plus"
 DEFAULT_PERMISSION_MODE = "bypassPermissions"
+DEFAULT_REASONING_MODE = "high"
+DEFAULT_SANDBOX_KIND = "claude_worker_run_root"
 DEFAULT_WAIT_TIMEOUT_SECONDS = 600
 DEFAULT_DETACHED_WAIT_TIMEOUT_SECONDS = 5
 DEFAULT_DETACHED_POLL_INTERVAL_SECONDS = 0.25
+PROMPT_FILENAME = "prompt.txt"
+STDOUT_FILENAME = "stdout.txt"
+STDERR_FILENAME = "stderr.txt"
+EXITCODE_FILENAME = "exitcode.txt"
 
 
 def _utc_now() -> datetime:
@@ -32,6 +38,13 @@ def _utc_stamp() -> str:
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
+
+
+def _default_claude_worker_root() -> Path:
+    override = os.environ.get("IKE_CLAUDE_WORKER_ROOT")
+    if override:
+        return Path(override).expanduser().resolve()
+    return (_repo_root().parent / "_agent-runtimes" / "claude-worker").resolve()
 
 
 def _resolve_claude_binary(preferred: str) -> str:
@@ -64,6 +77,12 @@ def _write_json(path: Path, payload: Any) -> None:
 
 def _read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _read_text_if_exists(path: Path) -> str:
+    if not path.exists():
+        return ""
+    return path.read_text(encoding="utf-8")
 
 
 def _append_event(path: Path, event: dict[str, Any]) -> None:
@@ -109,7 +128,38 @@ def _load_packet_from_meta(meta: Any, default_model: str, default_permission_mod
         permission_mode=packet_meta.get("permission_mode", meta.get("permission_mode", default_permission_mode)),
         task_id=packet_meta.get("task_id", meta.get("task_id")),
         title=packet_meta.get("title", meta.get("title")),
+        lane=packet_meta.get("lane", meta.get("lane")),
+        reasoning_mode=packet_meta.get("reasoning_mode", meta.get("reasoning_mode")),
+        sandbox_identity=packet_meta.get("sandbox_identity", meta.get("sandbox_identity")),
+        sandbox_kind=packet_meta.get("sandbox_kind", meta.get("sandbox_kind")),
+        capability_profile=packet_meta.get("capability_profile", meta.get("capability_profile")),
+        write_scope=packet_meta.get("write_scope", meta.get("write_scope")),
+        network_policy=packet_meta.get("network_policy", meta.get("network_policy")),
+        workspace_root=packet_meta.get("workspace_root", meta.get("workspace_root")),
+        runtime_root=packet_meta.get("runtime_root", meta.get("runtime_root")),
+        environment_mode=packet_meta.get("environment_mode", meta.get("environment_mode")),
     )
+
+
+def _default_capability_profile(kind: str, reasoning_mode: str | None) -> str | None:
+    if reasoning_mode == "high":
+        if kind == "coding":
+            return "coding_high_reasoning"
+        if kind == "review":
+            return "review_high_reasoning"
+    return None
+
+
+def _default_network_policy(kind: str, capability_profile: str | None) -> str | None:
+    if capability_profile == "review_high_reasoning":
+        return "disabled"
+    if capability_profile == "coding_high_reasoning":
+        return "restricted"
+    if kind == "review":
+        return "disabled"
+    if kind == "coding":
+        return "restricted"
+    return None
 
 
 def _schema_for_kind(kind: str) -> dict[str, Any]:
@@ -239,6 +289,16 @@ class WorkerPacket:
     permission_mode: str = DEFAULT_PERMISSION_MODE
     task_id: str | None = None
     title: str | None = None
+    lane: str | None = None
+    reasoning_mode: str | None = DEFAULT_REASONING_MODE
+    sandbox_identity: str | None = None
+    sandbox_kind: str | None = DEFAULT_SANDBOX_KIND
+    capability_profile: str | None = None
+    write_scope: list[str] | None = None
+    network_policy: str | None = None
+    workspace_root: str | None = None
+    runtime_root: str | None = None
+    environment_mode: str | None = None
 
 
 @dataclass
@@ -263,7 +323,8 @@ class ClaudeWorkerRuntime:
         detached_poll_interval_seconds: float = DEFAULT_DETACHED_POLL_INTERVAL_SECONDS,
         launcher: Callable[..., Any] = subprocess.Popen,
     ) -> None:
-        self.run_root = Path(run_root or _repo_root() / ".runtime" / "claude-worker" / "runs").resolve()
+        default_root = _default_claude_worker_root()
+        self.run_root = Path(run_root or default_root / "runs").resolve()
         self.run_root.mkdir(parents=True, exist_ok=True)
         self.result_root = Path(result_root or _repo_root() / ".runtime" / "delegation" / "results").resolve()
         self.result_root.mkdir(parents=True, exist_ok=True)
@@ -283,6 +344,10 @@ class ClaudeWorkerRuntime:
 
         model = packet.model or self.default_model
         permission_mode = packet.permission_mode or self.default_permission_mode
+        reasoning_mode = packet.reasoning_mode or DEFAULT_REASONING_MODE
+        sandbox_kind = packet.sandbox_kind or DEFAULT_SANDBOX_KIND
+        capability_profile = packet.capability_profile or _default_capability_profile(packet.kind, reasoning_mode)
+        network_policy = packet.network_policy or _default_network_policy(packet.kind, capability_profile)
         schema = _schema_for_kind(packet.kind)
         schema_json = json.dumps(schema, ensure_ascii=False)
         command = [
@@ -304,6 +369,16 @@ class ClaudeWorkerRuntime:
             "kind": packet.kind,
             "task_id": packet.task_id,
             "title": packet.title,
+            "lane": packet.lane,
+            "reasoning_mode": reasoning_mode,
+            "sandbox_identity": packet.sandbox_identity,
+            "sandbox_kind": sandbox_kind,
+            "capability_profile": capability_profile,
+            "write_scope": packet.write_scope or [],
+            "network_policy": network_policy,
+            "workspace_root": packet.workspace_root,
+            "runtime_root": packet.runtime_root,
+            "environment_mode": packet.environment_mode,
             "model": model,
             "permission_mode": permission_mode,
             "claude_binary": self.claude_binary,
@@ -326,21 +401,23 @@ class ClaudeWorkerRuntime:
                 "permission_mode": permission_mode,
                 "task_id": packet.task_id,
                 "title": packet.title,
+                "lane": packet.lane,
+                "reasoning_mode": reasoning_mode,
+                "sandbox_identity": packet.sandbox_identity,
+                "sandbox_kind": sandbox_kind,
+                "capability_profile": capability_profile,
+                "write_scope": packet.write_scope or [],
+                "network_policy": network_policy,
+                "workspace_root": packet.workspace_root,
+                "runtime_root": packet.runtime_root,
+                "environment_mode": packet.environment_mode,
             },
         }
         _write_json(run_dir / "meta.json", meta)
         _append_event(run_dir / "events.ndjson", {"event": "started", "run_id": run_id, "created_at": meta["created_at"]})
         _write_text(run_dir / "summary.md", f"Run {run_id} started for {packet.kind}.\n")
         _write_text(run_dir / "patch.diff", "")
-
-        process = self.launcher(
-            command,
-            cwd=packet.cwd or None,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
+        process = self._start_process(run_dir, command, packet)
         meta["child_pid"] = getattr(process, "pid", None)
         _write_json(run_dir / "meta.json", meta)
         record = RunRecord(run_id=run_id, run_dir=run_dir, command=command, packet=packet, process=process)
@@ -476,6 +553,7 @@ class ClaudeWorkerRuntime:
 
     def fetch(self, run_id: str) -> dict[str, Any]:
         record = self._get_record(run_id)
+        self._maybe_finalize_detached(record)
         meta_path = record.run_dir / "meta.json"
         final_path = record.run_dir / "final.json"
         summary_path = record.run_dir / "summary.md"
@@ -491,10 +569,131 @@ class ClaudeWorkerRuntime:
             "events": events_path.read_text(encoding="utf-8") if events_path.exists() else None,
         }
 
+    def _start_process(self, run_dir: Path, command: list[str], packet: WorkerPacket) -> Any:
+        if self.launcher is not subprocess.Popen:
+            return self.launcher(
+                command,
+                cwd=packet.cwd or None,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+
+        prompt_path = run_dir / PROMPT_FILENAME
+        stdout_path = run_dir / STDOUT_FILENAME
+        stderr_path = run_dir / STDERR_FILENAME
+        exitcode_path = run_dir / EXITCODE_FILENAME
+        _write_text(prompt_path, packet.prompt)
+        launcher_code = (
+            "import json, pathlib, subprocess, sys\n"
+            "command = json.loads(sys.argv[1])\n"
+            "cwd = None if sys.argv[2] == '-' else sys.argv[2]\n"
+            "prompt_path = pathlib.Path(sys.argv[3])\n"
+            "stdout_path = pathlib.Path(sys.argv[4])\n"
+            "stderr_path = pathlib.Path(sys.argv[5])\n"
+            "exitcode_path = pathlib.Path(sys.argv[6])\n"
+            "prompt = prompt_path.read_text(encoding='utf-8')\n"
+            "returncode = 1\n"
+            "try:\n"
+            "    with stdout_path.open('w', encoding='utf-8', newline='\\n') as out, stderr_path.open('w', encoding='utf-8', newline='\\n') as err:\n"
+            "        proc = subprocess.Popen(command, cwd=cwd, stdin=subprocess.PIPE, stdout=out, stderr=err, text=True)\n"
+            "        if proc.stdin is not None:\n"
+            "            proc.stdin.write(prompt)\n"
+            "            proc.stdin.close()\n"
+            "        returncode = proc.wait()\n"
+            "except Exception as exc:\n"
+            "    stderr_path.write_text(str(exc), encoding='utf-8')\n"
+            "finally:\n"
+            "    exitcode_path.write_text(str(returncode), encoding='utf-8')\n"
+            "sys.exit(returncode)\n"
+        )
+        wrapper_command = [
+            sys.executable,
+            "-c",
+            launcher_code,
+            json.dumps(command, ensure_ascii=False),
+            packet.cwd or "-",
+            str(prompt_path),
+            str(stdout_path),
+            str(stderr_path),
+            str(exitcode_path),
+        ]
+        return self.launcher(
+            wrapper_command,
+            cwd=packet.cwd or None,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        )
+
+    def _detached_artifact_paths(self, run_dir: Path) -> dict[str, Path]:
+        return {
+            "stdout": run_dir / STDOUT_FILENAME,
+            "stderr": run_dir / STDERR_FILENAME,
+            "exitcode": run_dir / EXITCODE_FILENAME,
+        }
+
+    def _read_exitcode(self, path: Path) -> int | None:
+        if not path.exists():
+            return None
+        try:
+            return int(path.read_text(encoding="utf-8").strip())
+        except (TypeError, ValueError):
+            return None
+
+    def _process_exists(self, pid: Any) -> bool:
+        if not isinstance(pid, int) or pid <= 0:
+            return False
+        try:
+            if os.name == "nt":
+                result = subprocess.run(
+                    ["tasklist", "/FI", f"PID eq {pid}"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                output = (result.stdout or "") + "\n" + (result.stderr or "")
+                return str(pid) in output
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+
+    def _maybe_finalize_detached(self, record: RunRecord) -> dict[str, Any] | None:
+        if record.process is not None:
+            return None
+        final_path = record.run_dir / "final.json"
+        if final_path.exists():
+            return _read_json(final_path)
+        meta_path = record.run_dir / "meta.json"
+        if not meta_path.exists():
+            return None
+        meta = _read_json(meta_path)
+        artifact_paths = self._detached_artifact_paths(record.run_dir)
+        exitcode = self._read_exitcode(artifact_paths["exitcode"])
+        child_pid = meta.get("child_pid")
+        if exitcode is None and self._process_exists(child_pid):
+            return None
+
+        stdout = _read_text_if_exists(artifact_paths["stdout"])
+        stderr = _read_text_if_exists(artifact_paths["stderr"])
+        if exitcode is None:
+            exitcode = 1
+            if not stderr.strip():
+                stderr = "Detached run exited without a durable exitcode record."
+        status = "succeeded" if exitcode == 0 else "failed"
+        lifecycle = {"detached_finalize": True, "child_pid": child_pid}
+        return self._finalize(record, stdout, stderr, status=status, returncode=exitcode, lifecycle=lifecycle)
+
     def _detached_wait(self, record: RunRecord) -> dict[str, Any]:
         final_path = record.run_dir / "final.json"
         deadline = _utc_now().timestamp() + max(0.0, self.detached_wait_timeout_seconds)
         while _utc_now().timestamp() < deadline:
+            finalized = self._maybe_finalize_detached(record)
+            if finalized is not None:
+                return finalized
             if final_path.exists():
                 return _read_json(final_path)
             sleep_seconds = max(0.01, self.detached_poll_interval_seconds)
@@ -630,6 +829,19 @@ class ClaudeWorkerRuntime:
             "kind": record.packet.kind,
             "task_id": record.packet.task_id,
             "title": record.packet.title,
+            "lane": record.packet.lane,
+            "reasoning_mode": record.packet.reasoning_mode or DEFAULT_REASONING_MODE,
+            "sandbox_identity": record.packet.sandbox_identity,
+            "sandbox_kind": record.packet.sandbox_kind or DEFAULT_SANDBOX_KIND,
+            "capability_profile": record.packet.capability_profile or _default_capability_profile(record.packet.kind, record.packet.reasoning_mode or DEFAULT_REASONING_MODE),
+            "write_scope": record.packet.write_scope or [],
+            "network_policy": record.packet.network_policy or _default_network_policy(
+                record.packet.kind,
+                record.packet.capability_profile or _default_capability_profile(record.packet.kind, record.packet.reasoning_mode or DEFAULT_REASONING_MODE),
+            ),
+            "workspace_root": record.packet.workspace_root,
+            "runtime_root": record.packet.runtime_root,
+            "environment_mode": record.packet.environment_mode,
             "model": record.packet.model,
             "permission_mode": record.packet.permission_mode,
             "status": "failed" if normalization_error is not None else status,
@@ -695,6 +907,16 @@ class ClaudeWorkerRuntime:
             "worker": "claude-worker",
             "run_id": record.run_id,
             "task_id": record.packet.task_id,
+            "lane": record.packet.lane,
+            "reasoning_mode": record.packet.reasoning_mode or DEFAULT_REASONING_MODE,
+            "sandbox_identity": record.packet.sandbox_identity,
+            "sandbox_kind": record.packet.sandbox_kind or DEFAULT_SANDBOX_KIND,
+            "capability_profile": record.packet.capability_profile or _default_capability_profile(record.packet.kind, record.packet.reasoning_mode or DEFAULT_REASONING_MODE),
+            "write_scope": record.packet.write_scope or [],
+            "network_policy": record.packet.network_policy or _default_network_policy(
+                record.packet.kind,
+                record.packet.capability_profile or _default_capability_profile(record.packet.kind, record.packet.reasoning_mode or DEFAULT_REASONING_MODE),
+            ),
             "kind": final_payload.get("kind"),
             "status": final_payload.get("status"),
             "recommendation": final_payload.get("recommendation"),
@@ -740,6 +962,16 @@ def build_parser() -> argparse.ArgumentParser:
     start.add_argument("--permission-mode", default=None)
     start.add_argument("--task-id", default=None)
     start.add_argument("--title", default=None)
+    start.add_argument("--lane", default=None)
+    start.add_argument("--reasoning-mode", default=DEFAULT_REASONING_MODE)
+    start.add_argument("--sandbox-identity", default=None)
+    start.add_argument("--sandbox-kind", default=DEFAULT_SANDBOX_KIND)
+    start.add_argument("--capability-profile", default=None)
+    start.add_argument("--write-scope", action="append", default=[])
+    start.add_argument("--network-policy", default=None)
+    start.add_argument("--workspace-root", default=None)
+    start.add_argument("--runtime-root", default=None)
+    start.add_argument("--environment-mode", default=None)
 
     for name in ("wait", "fetch", "abort"):
         cmd = subparsers.add_parser(name)
@@ -771,6 +1003,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             permission_mode=args.permission_mode or args.default_permission_mode,
             task_id=args.task_id,
             title=args.title,
+            lane=args.lane,
+            reasoning_mode=args.reasoning_mode,
+            sandbox_identity=args.sandbox_identity,
+            sandbox_kind=args.sandbox_kind,
+            capability_profile=args.capability_profile,
+            write_scope=args.write_scope or [],
+            network_policy=args.network_policy,
+            workspace_root=args.workspace_root,
+            runtime_root=args.runtime_root,
+            environment_mode=args.environment_mode,
         )
         record = runtime.start(packet)
         print(json.dumps({"run_id": record.run_id, "run_dir": str(record.run_dir)}, ensure_ascii=False))

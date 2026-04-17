@@ -19,6 +19,13 @@ API_ROOT = Path(__file__).resolve().parents[1]
 if str(API_ROOT) not in sys.path:
     sys.path.insert(0, str(API_ROOT))
 
+REPO_ROOT = API_ROOT.parents[1]
+VENV_PYTHON = REPO_ROOT / ".venv" / "Scripts" / "python.exe"
+VENV_UVICORN = REPO_ROOT / ".venv" / "Scripts" / "uvicorn.exe"
+RUN_SERVICE = REPO_ROOT / "services" / "api" / "run_service.py"
+PREFERRED_VENV_HINT = str(VENV_PYTHON).replace("/", "\\").lower()
+REPO_UVICORN_HINT = str(VENV_UVICORN).replace("/", "\\").lower()
+
 import httpx
 
 from runtime.service_preflight import (
@@ -27,6 +34,7 @@ from runtime.service_preflight import (
     ApiHealthInfo,
     PortOwnershipInfo,
     _build_canonical_launch,
+    _evaluate_controller_promotion,
     _evaluate_owner_chain,
     _evaluate_preferred_owner,
     _evaluate_windows_venv_redirector_candidate,
@@ -236,7 +244,7 @@ class TestDeterminePreflightStatus(unittest.TestCase):
         preferred_owner = {
             "status": "preferred_match",
             "matched": True,
-            "matched_hint": r"d:\code\myattention\.venv\scripts\python.exe",
+            "matched_hint": PREFERRED_VENV_HINT,
         }
         self.assertEqual(
             determine_preflight_status(
@@ -302,6 +310,18 @@ class TestCanonicalLaunch(unittest.TestCase):
         self.assertEqual(result["port"], 8000)
         self.assertIn("run_service.py", result["service_entry_path"])
         self.assertIn("--host 127.0.0.1 --port 8000", result["command_line"])
+        self.assertEqual(result["interpreter_path"], str(VENV_PYTHON))
+        self.assertTrue(result["launcher_path"])
+        self.assertIn(result["launch_mode"], {"repo_uvicorn_entry", "repo_python_service_entry"})
+        if platform.system() == "Windows" and VENV_UVICORN.exists():
+            self.assertEqual(result["launch_mode"], "repo_uvicorn_entry")
+            self.assertEqual(result["launcher_path"], str(VENV_UVICORN))
+            self.assertIn("uvicorn.exe", result["command_line"].lower())
+            self.assertTrue(result["launcher_exists"])
+        else:
+            self.assertEqual(result["launch_mode"], "repo_python_service_entry")
+            self.assertEqual(result["launcher_path"], str(VENV_PYTHON))
+            self.assertIn("run_service.py", result["command_line"])
 
 
 class TestWindowsVenvRedirectorCandidate(unittest.TestCase):
@@ -312,7 +332,7 @@ class TestWindowsVenvRedirectorCandidate(unittest.TestCase):
                 {
                     "pid": 41536,
                     "name": "python.exe",
-                    "command_line": r'"C:\Users\jiuyou\AppData\Local\Programs\Python\Python312\python.exe" D:\code\MyAttention\services\api\run_service.py --host 127.0.0.1 --port 8000',
+                    "command_line": f'"C:\\Users\\jiuyou\\AppData\\Local\\Programs\\Python\\Python312\\python.exe" {RUN_SERVICE} --host 127.0.0.1 --port 8000',
                 }
             ],
             unique_count=1,
@@ -347,13 +367,13 @@ class TestPreferredOwnerEvaluation(unittest.TestCase):
                 {
                     "pid": 1234,
                     "name": "python.exe",
-                    "command_line": r'"D:\code\MyAttention\.venv\Scripts\python.exe" run_service.py --host 127.0.0.1 --port 8000',
+                    "command_line": f'"{VENV_PYTHON}" run_service.py --host 127.0.0.1 --port 8000',
                 }
             ],
             unique_count=1,
             is_clear=True,
         )
-        result = _evaluate_preferred_owner(info, [r"d:\code\myattention\.venv\scripts\python.exe"])
+        result = _evaluate_preferred_owner(info, [PREFERRED_VENV_HINT])
         self.assertEqual(result["status"], "preferred_match")
         self.assertTrue(result["matched"])
 
@@ -370,7 +390,7 @@ class TestPreferredOwnerEvaluation(unittest.TestCase):
             unique_count=1,
             is_clear=True,
         )
-        result = _evaluate_preferred_owner(info, [r"d:\code\myattention\.venv\scripts\python.exe"])
+        result = _evaluate_preferred_owner(info, [PREFERRED_VENV_HINT])
         self.assertEqual(result["status"], "preferred_mismatch")
         self.assertFalse(result["matched"])
 
@@ -384,13 +404,13 @@ class TestPreferredOwnerEvaluation(unittest.TestCase):
                     "command_line": r'"C:\Python312\python.exe" run_service.py --host 127.0.0.1 --port 8000',
                     "parent_pid": 1233,
                     "parent_name": "python.exe",
-                    "parent_command_line": r'"D:\code\MyAttention\.venv\Scripts\python.exe" run_service.py --host 127.0.0.1 --port 8000',
+                    "parent_command_line": f'"{VENV_PYTHON}" run_service.py --host 127.0.0.1 --port 8000',
                 }
             ],
             unique_count=1,
             is_clear=True,
         )
-        result = _evaluate_owner_chain(info, [r"d:\code\myattention\.venv\scripts\python.exe"])
+        result = _evaluate_owner_chain(info, [PREFERRED_VENV_HINT])
         self.assertEqual(result["status"], "parent_preferred_child_mismatch")
         self.assertTrue(result["parent_matches_preferred"])
 
@@ -401,16 +421,16 @@ class TestPreferredOwnerEvaluation(unittest.TestCase):
                 {
                     "pid": 1234,
                     "name": "python.exe",
-                    "command_line": r'"D:\code\MyAttention\.venv\Scripts\python.exe" run_service.py --host 127.0.0.1 --port 8000',
+                    "command_line": f'"{VENV_PYTHON}" run_service.py --host 127.0.0.1 --port 8000',
                     "parent_pid": 1233,
                     "parent_name": "python.exe",
-                    "parent_command_line": r'"D:\code\MyAttention\.venv\Scripts\python.exe" powershell-helper',
+                    "parent_command_line": f'"{VENV_PYTHON}" powershell-helper',
                 }
             ],
             unique_count=1,
             is_clear=True,
         )
-        result = _evaluate_owner_chain(info, [r"d:\code\myattention\.venv\scripts\python.exe"])
+        result = _evaluate_owner_chain(info, [PREFERRED_VENV_HINT])
         self.assertEqual(result["status"], "parent_and_child_preferred")
 
 
@@ -792,7 +812,7 @@ TCP    0.0.0.0:8000           0.0.0.0:0              LISTENING       1234
                         host="127.0.0.1",
                         port=8000,
                         strict_preferred_owner=True,
-                        preferred_owner_hints=[r"d:\code\myattention\.venv\scripts\python.exe"],
+                        preferred_owner_hints=[PREFERRED_VENV_HINT],
                     )
 
         self.assertEqual(result.status, PreflightStatus.AMBIGUOUS)
@@ -818,7 +838,7 @@ TCP    0.0.0.0:8000           0.0.0.0:0              LISTENING       1234
             {
                 "ProcessId": 1234,
                 "Name": "python.exe",
-                "CommandLine": r'"D:\code\MyAttention\.venv\Scripts\python.exe" run_service.py --host 127.0.0.1 --port 8000',
+                "CommandLine": f'"{VENV_PYTHON}" run_service.py --host 127.0.0.1 --port 8000',
             }
         )
 
@@ -874,7 +894,7 @@ TCP    127.0.0.1:8013         0.0.0.0:0              LISTENING       41800
             {
                 "ProcessId": 41800,
                 "Name": "python.exe",
-                "CommandLine": r'"C:\Users\jiuyou\AppData\Local\Programs\Python\Python312\python.exe" "D:\code\MyAttention\.venv\Scripts\uvicorn.exe" main:app --host 127.0.0.1 --port 8013',
+                "CommandLine": f'"C:\\Users\\jiuyou\\AppData\\Local\\Programs\\Python\\Python312\\python.exe" "{VENV_UVICORN}" main:app --host 127.0.0.1 --port 8013',
                 "ParentProcessId": 35368,
             }
         )
@@ -885,7 +905,7 @@ TCP    127.0.0.1:8013         0.0.0.0:0              LISTENING       41800
             {
                 "ProcessId": 35368,
                 "Name": "python.exe",
-                "CommandLine": r'"D:\code\MyAttention\.venv\Scripts\python.exe" "D:\code\MyAttention\.venv\Scripts\uvicorn.exe" main:app --host 127.0.0.1 --port 8013',
+                "CommandLine": f'"{VENV_PYTHON}" "{VENV_UVICORN}" main:app --host 127.0.0.1 --port 8013',
             }
         )
 
@@ -914,8 +934,8 @@ TCP    127.0.0.1:8013         0.0.0.0:0              LISTENING       41800
             "blocked_owner_mismatch",
         )
 
-    async def test_preflight_controller_acceptability_bounded_live_proof_ready(self):
-        """Repo-launcher match plus fresh code can be controller-acceptable for bounded live proof."""
+    async def test_preflight_controller_acceptability_windows_redirector_requires_confirmation(self):
+        """Windows venv redirector shape can be narrowly acceptable with controller confirmation."""
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"status": "healthy"}
@@ -933,7 +953,7 @@ TCP    127.0.0.1:8013         0.0.0.0:0              LISTENING       41800
             {
                 "ProcessId": 41800,
                 "Name": "python.exe",
-                "CommandLine": r'"C:\Users\jiuyou\AppData\Local\Programs\Python\Python312\python.exe" "D:\code\MyAttention\.venv\Scripts\uvicorn.exe" main:app --host 127.0.0.1 --port 8013',
+                "CommandLine": f'"C:\\Users\\jiuyou\\AppData\\Local\\Programs\\Python\\Python312\\python.exe" "{VENV_UVICORN}" main:app --host 127.0.0.1 --port 8013',
                 "ParentProcessId": 35368,
             }
         )
@@ -944,7 +964,7 @@ TCP    127.0.0.1:8013         0.0.0.0:0              LISTENING       41800
             {
                 "ProcessId": 35368,
                 "Name": "python.exe",
-                "CommandLine": r'"D:\code\MyAttention\.venv\Scripts\python.exe" "D:\code\MyAttention\.venv\Scripts\uvicorn.exe" main:app --host 127.0.0.1 --port 8013',
+                "CommandLine": f'"{VENV_PYTHON}" "{RUN_SERVICE}" --host 127.0.0.1 --port 8013',
             }
         )
 
@@ -981,10 +1001,239 @@ TCP    127.0.0.1:8013         0.0.0.0:0              LISTENING       41800
         self.assertEqual(result.status, PreflightStatus.AMBIGUOUS)
         self.assertEqual(result.details["code_freshness"]["status"], "match")
         self.assertEqual(
+            result.details["windows_venv_redirector"]["status"],
+            "windows_venv_redirector_candidate",
+        )
+        self.assertEqual(
             result.details["controller_acceptability"]["status"],
-            "bounded_live_proof_ready",
+            "acceptable_windows_venv_redirector",
         )
         self.assertTrue(result.details["controller_acceptability"]["acceptable"])
+        self.assertTrue(
+            result.details["controller_acceptability"]["controller_confirmation_required"]
+        )
+        self.assertEqual(
+            result.details["controller_acceptability"]["rule"],
+            "windows_venv_redirector_v1",
+        )
+        self.assertEqual(
+            result.details["controller_acceptability"]["promotion_path"],
+            "controller_confirmation_required",
+        )
+        self.assertEqual(
+            result.details["controller_promotion"]["status"],
+            "controller_confirmation_required",
+        )
+        self.assertTrue(result.details["controller_promotion"]["eligible"])
+        self.assertEqual(
+            result.details["controller_promotion"]["target_status"],
+            "canonical_accepted",
+        )
+        self.assertEqual(
+            result.details["controller_promotion"]["basis"],
+            "windows_venv_redirector_v1",
+        )
+
+    async def test_preflight_controller_acceptability_blocks_non_redirector_owner_mismatch(self):
+        """Generic owner mismatch stays blocked when the redirector guardrails are not all met."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": "healthy"}
+
+        mock_netstat_result = MagicMock()
+        mock_netstat_result.returncode = 0
+        mock_netstat_result.stdout = """
+Proto  Local Address          Foreign Address        State           PID
+TCP    127.0.0.1:8013         0.0.0.0:0              LISTENING       41800
+"""
+
+        mock_proc_result = MagicMock()
+        mock_proc_result.returncode = 0
+        mock_proc_result.stdout = json.dumps(
+            {
+                "ProcessId": 41800,
+                "Name": "python.exe",
+                "CommandLine": f'"C:\\Users\\jiuyou\\AppData\\Local\\Programs\\Python\\Python312\\python.exe" "{RUN_SERVICE}" --host 127.0.0.1 --port 8013',
+                "ParentProcessId": 35368,
+            }
+        )
+
+        mock_parent_proc_result = MagicMock()
+        mock_parent_proc_result.returncode = 0
+        mock_parent_proc_result.stdout = json.dumps(
+            {
+                "ProcessId": 35368,
+                "Name": "python.exe",
+                "CommandLine": f'"{VENV_PYTHON}" "{RUN_SERVICE}" --host 127.0.0.1 --port 8013',
+            }
+        )
+
+        mock_http_client = AsyncMock()
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client_instance = MagicMock()
+            mock_client_instance.__aenter__ = AsyncMock(return_value=mock_http_client)
+            mock_client_instance.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client_instance
+
+            with patch.object(platform, "system", return_value="Windows"):
+                with patch("subprocess.run") as mock_run:
+                    mock_run.side_effect = [mock_netstat_result, mock_proc_result, mock_parent_proc_result]
+                    with patch(
+                        "runtime.service_preflight._evaluate_windows_venv_redirector_candidate",
+                        return_value={"status": "not_candidate", "candidate": False},
+                    ):
+                        with patch(
+                            "runtime.service_preflight._build_code_fingerprint",
+                            return_value={
+                                "status": "available",
+                                "scope": "runtime_service_preflight_surface_v1",
+                                "fingerprint": "fresh-8013",
+                                "sources": ["service_preflight.py", "ike_v0.py"],
+                                "source_count": 2,
+                            },
+                        ):
+                            result = await run_preflight(
+                                host="127.0.0.1",
+                                port=8013,
+                                expected_code_fingerprint="fresh-8013",
+                                strict_preferred_owner=True,
+                                strict_code_freshness=True,
+                            )
+
+        self.assertEqual(result.status, PreflightStatus.AMBIGUOUS)
+        self.assertEqual(
+            result.details["controller_acceptability"]["status"],
+            "blocked_owner_mismatch",
+        )
+        self.assertFalse(result.details["controller_acceptability"]["acceptable"])
+        self.assertEqual(
+            result.details["controller_promotion"]["status"],
+            "not_promotable",
+        )
+        self.assertFalse(result.details["controller_promotion"]["eligible"])
+
+    async def test_preflight_self_check_current_code_closes_redirector_freshness_gap(self):
+        """Self-check mode can derive the current fingerprint for local confirmation-gated acceptability."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"status": "healthy"}
+
+        mock_netstat_result = MagicMock()
+        mock_netstat_result.returncode = 0
+        mock_netstat_result.stdout = """
+Proto  Local Address          Foreign Address        State           PID
+TCP    127.0.0.1:8013         0.0.0.0:0              LISTENING       41800
+"""
+
+        mock_proc_result = MagicMock()
+        mock_proc_result.returncode = 0
+        mock_proc_result.stdout = json.dumps(
+            {
+                "ProcessId": 41800,
+                "Name": "python.exe",
+                "CommandLine": f'"C:\\Users\\jiuyou\\AppData\\Local\\Programs\\Python\\Python312\\python.exe" "{RUN_SERVICE}" --host 127.0.0.1 --port 8013',
+                "ParentProcessId": 35368,
+            }
+        )
+
+        mock_parent_proc_result = MagicMock()
+        mock_parent_proc_result.returncode = 0
+        mock_parent_proc_result.stdout = json.dumps(
+            {
+                "ProcessId": 35368,
+                "Name": "python.exe",
+                "CommandLine": f'"{VENV_PYTHON}" "{RUN_SERVICE}" --host 127.0.0.1 --port 8013',
+            }
+        )
+
+        mock_http_client = AsyncMock()
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        with patch("httpx.AsyncClient") as mock_client_class:
+            mock_client_instance = MagicMock()
+            mock_client_instance.__aenter__ = AsyncMock(return_value=mock_http_client)
+            mock_client_instance.__aexit__ = AsyncMock(return_value=None)
+            mock_client_class.return_value = mock_client_instance
+
+            with patch.object(platform, "system", return_value="Windows"):
+                with patch("subprocess.run") as mock_run:
+                    mock_run.side_effect = [mock_netstat_result, mock_proc_result, mock_parent_proc_result]
+                    with patch(
+                        "runtime.service_preflight._build_code_fingerprint",
+                        return_value={
+                            "status": "available",
+                            "scope": "runtime_service_preflight_surface_v1",
+                            "fingerprint": "fresh-8013",
+                            "sources": ["service_preflight.py", "ike_v0.py"],
+                            "source_count": 2,
+                        },
+                    ):
+                        result = await run_preflight(
+                            host="127.0.0.1",
+                            port=8013,
+                            self_check_current_code=True,
+                            strict_code_freshness=True,
+                        )
+
+        self.assertEqual(result.details["code_freshness"]["status"], "match")
+        self.assertEqual(
+            result.details["code_freshness"]["expected_fingerprint"],
+            "fresh-8013",
+        )
+        self.assertEqual(
+            result.details["controller_acceptability"]["status"],
+            "acceptable_windows_venv_redirector",
+        )
+        self.assertEqual(
+            result.details["controller_promotion"]["status"],
+            "controller_confirmation_required",
+        )
+
+
+class TestControllerPromotion(unittest.TestCase):
+    """Tests for controller promotion readiness evaluation."""
+
+    def test_controller_promotion_allows_direct_canonical_ready(self):
+        """Canonical-ready preflight can be promoted without extra confirmation."""
+        promotion = _evaluate_controller_promotion(
+            {"status": "canonical_ready", "acceptable": True}
+        )
+
+        self.assertEqual(promotion["status"], "controller_can_promote_now")
+        self.assertTrue(promotion["eligible"])
+        self.assertEqual(promotion["target_status"], "canonical_accepted")
+        self.assertFalse(promotion["controller_confirmation_required"])
+        self.assertEqual(promotion["basis"], "direct_canonical_owner_match")
+
+    def test_controller_promotion_requires_confirmation_for_windows_redirector(self):
+        """Windows redirector exception stays promotion-eligible but confirmation-gated."""
+        promotion = _evaluate_controller_promotion(
+            {
+                "status": "acceptable_windows_venv_redirector",
+                "acceptable": True,
+                "controller_confirmation_required": True,
+            }
+        )
+
+        self.assertEqual(promotion["status"], "controller_confirmation_required")
+        self.assertTrue(promotion["eligible"])
+        self.assertEqual(promotion["target_status"], "canonical_accepted")
+        self.assertTrue(promotion["controller_confirmation_required"])
+        self.assertEqual(promotion["basis"], "windows_venv_redirector_v1")
+
+    def test_controller_promotion_blocks_non_acceptable_status(self):
+        """Blocked controller acceptability stays non-promotable."""
+        promotion = _evaluate_controller_promotion(
+            {"status": "blocked_owner_mismatch", "acceptable": False}
+        )
+
+        self.assertEqual(promotion["status"], "not_promotable")
+        self.assertFalse(promotion["eligible"])
+        self.assertIsNone(promotion["target_status"])
+        self.assertFalse(promotion["controller_confirmation_required"])
+        self.assertEqual(promotion["basis"], "blocked_owner_mismatch")
 
 
 class TestRunPreflightSync(unittest.TestCase):

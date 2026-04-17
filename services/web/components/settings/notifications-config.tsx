@@ -136,7 +136,7 @@ export function NotificationsConfig({ showSystemStatus = true }: NotificationsCo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: '🔔 测试通知',
-          message: '这是一条来自 MyAttention 的测试消息',
+          message: '这是一条来自 IKE 的测试消息',
         }),
       })
 

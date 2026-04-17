@@ -16,6 +16,7 @@ if str(API_ROOT) not in sys.path:
 from claude_worker.worker import (
     ClaudeWorkerRuntime,
     WorkerPacket,
+    _default_claude_worker_root,
     build_parser,
     _resolve_claude_binary,
     normalize_coding_result,
@@ -53,6 +54,10 @@ class FakeProcess:
 
 
 class ClaudeWorkerRuntimeTest(unittest.TestCase):
+    def test_default_run_root_is_externalized(self) -> None:
+        root = _default_claude_worker_root()
+        self.assertEqual(root, Path(r"D:\code\_agent-runtimes\claude-worker"))
+
     def _run_cli(self, args: list[str]) -> dict[str, object]:
         command = [sys.executable, "-m", "claude_worker", *args]
         proc = subprocess.run(
@@ -96,6 +101,16 @@ class ClaudeWorkerRuntimeTest(unittest.TestCase):
                     model="qwen3-coder-next",
                     task_id="task-123",
                     title="Toy coding packet",
+                    lane="coding",
+                    reasoning_mode="high",
+                    sandbox_identity="claude-worker-coding",
+                    sandbox_kind="claude_worker_run_root",
+                    capability_profile="coding_high_reasoning",
+                    write_scope=["services/api/claude_worker/worker.py", "services/api/tests/test_claude_worker.py"],
+                    network_policy="restricted",
+                    workspace_root=tmpdir,
+                    runtime_root=str(Path(tmpdir) / "runs"),
+                    environment_mode="isolated_workspace",
                 )
             )
 
@@ -111,6 +126,13 @@ class ClaudeWorkerRuntimeTest(unittest.TestCase):
             self.assertEqual(final_payload["files_changed"][0], "services/api/claude_worker/worker.py")
             self.assertEqual(final_payload["validation_run"], "python -m unittest tests.test_claude_worker")
             self.assertIn("Added the new worker runtime files.", final_payload["summary"])
+            self.assertEqual(final_payload["lane"], "coding")
+            self.assertEqual(final_payload["reasoning_mode"], "high")
+            self.assertEqual(final_payload["sandbox_identity"], "claude-worker-coding")
+            self.assertEqual(final_payload["sandbox_kind"], "claude_worker_run_root")
+            self.assertEqual(final_payload["capability_profile"], "coding_high_reasoning")
+            self.assertEqual(final_payload["write_scope"], ["services/api/claude_worker/worker.py", "services/api/tests/test_claude_worker.py"])
+            self.assertEqual(final_payload["network_policy"], "restricted")
 
             fetched = runtime.fetch(record.run_id)
             self.assertEqual(fetched["final"]["recommendation"], "accept_with_changes")
@@ -390,7 +412,21 @@ class ClaudeWorkerRuntimeTest(unittest.TestCase):
                     )
                 ),
             )
-            record = runtime.start(WorkerPacket(kind="coding", prompt="Projection", cwd=tmpdir, task_id="task-harness"))
+            record = runtime.start(
+                WorkerPacket(
+                    kind="coding",
+                    prompt="Projection",
+                    cwd=tmpdir,
+                    task_id="task-harness",
+                    lane="coding",
+                    reasoning_mode="high",
+                    sandbox_identity="claude-worker-coding",
+                    sandbox_kind="claude_worker_run_root",
+                    capability_profile="coding_high_reasoning",
+                    write_scope=["services/api/claude_worker/worker.py"],
+                    network_policy="restricted",
+                )
+            )
             runtime.wait(record.run_id)
             result_path = result_root / "task-harness.json"
             self.assertTrue(result_path.exists())
@@ -398,8 +434,110 @@ class ClaudeWorkerRuntimeTest(unittest.TestCase):
             self.assertEqual(payload["protocol"], "delegation_result.v1")
             self.assertEqual(payload["task_id"], "task-harness")
             self.assertEqual(payload["status"], "succeeded")
+            self.assertEqual(payload["lane"], "coding")
+            self.assertEqual(payload["reasoning_mode"], "high")
+            self.assertEqual(payload["sandbox_identity"], "claude-worker-coding")
+            self.assertEqual(payload["sandbox_kind"], "claude_worker_run_root")
+            self.assertEqual(payload["capability_profile"], "coding_high_reasoning")
+            self.assertEqual(payload["write_scope"], ["services/api/claude_worker/worker.py"])
+            self.assertEqual(payload["network_policy"], "restricted")
             self.assertIn("artifacts", payload)
             self.assertEqual(payload["files_changed"], ["services/api/claude_worker/worker.py"])
+
+    def test_fetch_finalizes_detached_run_when_exitcode_and_stdout_exist(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_root = Path(tmpdir) / "runs"
+            runtime = ClaudeWorkerRuntime(
+                run_root=run_root,
+                detached_wait_timeout_seconds=0.05,
+                detached_poll_interval_seconds=0.01,
+            )
+            run_dir = run_root / "detached-finished"
+            run_dir.mkdir(parents=True)
+            meta = {
+                "run_id": "detached-finished",
+                "kind": "coding",
+                "task_id": "detached-finished",
+                "status": "running",
+                "child_pid": 999999,
+                "packet": {
+                    "kind": "coding",
+                    "prompt": "x",
+                    "task_id": "detached-finished",
+                    "model": "qwen3.6-plus",
+                    "permission_mode": "bypassPermissions",
+                },
+            }
+            (run_dir / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+            (run_dir / "events.ndjson").write_text("", encoding="utf-8")
+            (run_dir / "summary.md").write_text("started\n", encoding="utf-8")
+            (run_dir / "patch.diff").write_text("", encoding="utf-8")
+            (run_dir / "stdout.txt").write_text(
+                json.dumps(
+                    {
+                        "summary": "Detached finalized",
+                        "files_changed": ["services/api/claude_worker/worker.py"],
+                        "validation_run": "python -m unittest tests.test_claude_worker",
+                        "known_risks": [],
+                        "recommendation": "accept_with_changes",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_dir / "stderr.txt").write_text("", encoding="utf-8")
+            (run_dir / "exitcode.txt").write_text("0", encoding="utf-8")
+
+            fetched = runtime.fetch("detached-finished")
+            self.assertIsNotNone(fetched["final"])
+            self.assertEqual(fetched["final"]["status"], "succeeded")
+            self.assertTrue((run_dir / "final.json").exists())
+
+    def test_wait_finalizes_detached_run_after_child_exit_without_stale_running(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_root = Path(tmpdir) / "runs"
+            runtime = ClaudeWorkerRuntime(
+                run_root=run_root,
+                detached_wait_timeout_seconds=0.05,
+                detached_poll_interval_seconds=0.01,
+            )
+            run_dir = run_root / "detached-exited"
+            run_dir.mkdir(parents=True)
+            meta = {
+                "run_id": "detached-exited",
+                "kind": "coding",
+                "task_id": "detached-exited",
+                "status": "running",
+                "child_pid": 999998,
+                "packet": {
+                    "kind": "coding",
+                    "prompt": "x",
+                    "task_id": "detached-exited",
+                    "model": "qwen3.6-plus",
+                    "permission_mode": "bypassPermissions",
+                },
+            }
+            (run_dir / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+            (run_dir / "events.ndjson").write_text("", encoding="utf-8")
+            (run_dir / "summary.md").write_text("started\n", encoding="utf-8")
+            (run_dir / "patch.diff").write_text("", encoding="utf-8")
+            (run_dir / "stdout.txt").write_text(
+                json.dumps(
+                    {
+                        "summary": "Detached wait finalized",
+                        "files_changed": [],
+                        "validation_run": "",
+                        "known_risks": [],
+                        "recommendation": "accept_with_changes",
+                    }
+                ),
+                encoding="utf-8",
+            )
+            (run_dir / "stderr.txt").write_text("", encoding="utf-8")
+            (run_dir / "exitcode.txt").write_text("0", encoding="utf-8")
+
+            result = runtime.wait("detached-exited")
+            self.assertEqual(result["status"], "succeeded")
+            self.assertTrue(result["lifecycle"]["detached_finalize"])
 
     def test_invalid_payload_shape_sets_normalization_error(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -445,11 +583,41 @@ class ClaudeWorkerRuntimeTest(unittest.TestCase):
                 "coding",
                 "--prompt",
                 "hello",
+                "--lane",
+                "review",
+                "--reasoning-mode",
+                "high",
+                "--sandbox-identity",
+                "claude-review",
+                "--sandbox-kind",
+                "claude_worker_run_root",
+                "--capability-profile",
+                "review_high_reasoning",
+                "--write-scope",
+                "services/api/routers/example.py",
+                "--network-policy",
+                "disabled",
+                "--workspace-root",
+                "D:\\tmp\\workspace",
+                "--runtime-root",
+                "D:\\tmp\\runtime",
+                "--environment-mode",
+                "isolated_workspace",
             ]
         )
         self.assertEqual(parsed.detached_wait_timeout_seconds, 2.5)
         self.assertEqual(parsed.detached_poll_interval_seconds, 0.5)
         self.assertEqual(parsed.result_root, "D:\\tmp\\results")
+        self.assertEqual(parsed.lane, "review")
+        self.assertEqual(parsed.reasoning_mode, "high")
+        self.assertEqual(parsed.sandbox_identity, "claude-review")
+        self.assertEqual(parsed.sandbox_kind, "claude_worker_run_root")
+        self.assertEqual(parsed.capability_profile, "review_high_reasoning")
+        self.assertEqual(parsed.write_scope, ["services/api/routers/example.py"])
+        self.assertEqual(parsed.network_policy, "disabled")
+        self.assertEqual(parsed.workspace_root, "D:\\tmp\\workspace")
+        self.assertEqual(parsed.runtime_root, "D:\\tmp\\runtime")
+        self.assertEqual(parsed.environment_mode, "isolated_workspace")
         wait = parser.parse_args(["wait", "--run-id", "abc"])
         self.assertEqual(wait.command, "wait")
         abort = parser.parse_args(["abort", "--run-id", "abc"])

@@ -1,13 +1,13 @@
 <service>
-  <id>MyAttentionWatchdog</id>
-  <name>MyAttentionWatchdog</name>
-  <description>MyAttention watchdog service</description>
-  <executable>D:\code\MyAttention\.venv\Scripts\python.exe</executable>
-  <arguments>D:\code\MyAttention\runtime_watchdog.py --mode local-process</arguments>
-  <workingdirectory>D:\code\MyAttention</workingdirectory>
+  <id>IKEWatchdog</id>
+  <name>IKEWatchdog</name>
+  <description>IKE watchdog service</description>
+  <executable>D:\code\IKE\.venv\Scripts\python.exe</executable>
+  <arguments>D:\code\IKE\runtime_watchdog.py --mode local-process</arguments>
+  <workingdirectory>D:\code\IKE</workingdirectory>
   <stoptimeout>15sec</stoptimeout>
   <startmode>Manual</startmode>
-  <logpath>D:\code\MyAttention\.runtime\logs</logpath>
+  <logpath>D:\code\IKE\.runtime\logs</logpath>
   <log mode="roll-by-size-time">
     <sizeThreshold>10240</sizeThreshold>
     <pattern>yyyyMMdd</pattern>

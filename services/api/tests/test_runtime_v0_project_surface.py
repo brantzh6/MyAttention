@@ -15,6 +15,7 @@ from db.models import (
     RuntimeTaskStatus,
     RuntimeTaskType,
 )
+from runtime.db_backed_lifecycle_proof import execute_db_backed_lifecycle_proof
 from runtime.operational_closure import (
     align_project_current_work_context,
     persist_reconstructed_work_context,
@@ -287,6 +288,30 @@ class TestProjectRuntimeReadSurface:
         assert surface is not None
         assert surface.project_key == project.project_key
         assert len(surface.active_tasks) == 1
+
+    def test_surface_aligns_with_db_backed_lifecycle_proof(self, db_session):
+        proof = execute_db_backed_lifecycle_proof(
+            db_session,
+            title="DB-backed surface alignment proof",
+        )
+        assert proof.success is True
+
+        context = reconstruct_runtime_work_context(db_session, proof.project_id)
+        persisted = persist_reconstructed_work_context(db_session, context)
+        align_project_current_work_context(db_session, proof.project_id, str(persisted.work_context_id))
+
+        surface = build_project_runtime_read_surface(db_session, proof.project_id)
+        assert surface is not None
+        assert surface.project_id == proof.project_id
+        assert surface.current_work_context_id == str(persisted.work_context_id)
+        assert surface.metadata["has_current_context"] is True
+        assert surface.metadata["active_task_count"] == 0
+        assert surface.metadata["waiting_task_count"] == 0
+        assert surface.active_tasks == []
+        assert surface.waiting_tasks == []
+        assert surface.current_focus == "No active work"
+        assert surface.blockers_summary is None
+        assert surface.next_steps_summary is None
 
     def test_bootstrap_runtime_project_surface_creates_project_explicitly(self, db_session):
         surface = bootstrap_runtime_project_surface(

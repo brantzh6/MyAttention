@@ -102,11 +102,12 @@ DEFAULT_PREFERRED_OWNER_HINTS = [
     str((Path(__file__).resolve().parents[3] / ".venv" / "Scripts" / "python.exe")).lower(),
 ]
 DEFAULT_REPO_PYTHON_PATH = Path(__file__).resolve().parents[3] / ".venv" / "Scripts" / "python.exe"
+DEFAULT_REPO_UVICORN_PATH = Path(__file__).resolve().parents[3] / ".venv" / "Scripts" / "uvicorn.exe"
 DEFAULT_REPO_SERVICE_ENTRY = Path(__file__).resolve().parents[1] / "run_service.py"
 DEFAULT_PYVENV_CFG_PATH = Path(__file__).resolve().parents[3] / ".venv" / "pyvenv.cfg"
 DEFAULT_REPO_LAUNCHER_HINTS = [
     str(DEFAULT_REPO_SERVICE_ENTRY).lower(),
-    str((Path(__file__).resolve().parents[3] / ".venv" / "Scripts" / "uvicorn.exe")).lower(),
+    str(DEFAULT_REPO_UVICORN_PATH).lower(),
 ]
 DEFAULT_CODE_FINGERPRINT_PATHS = [
     Path(__file__).resolve(),
@@ -220,6 +221,8 @@ def _evaluate_controller_acceptability(
     preferred_owner: dict[str, Any],
     owner_chain: dict[str, Any],
     repo_launcher: dict[str, Any],
+    windows_venv_redirector: dict[str, Any],
+    canonical_launch: dict[str, Any],
     code_freshness: dict[str, Any],
 ) -> dict[str, Any]:
     if not api_health.is_healthy:
@@ -230,21 +233,64 @@ def _evaluate_controller_acceptability(
     preferred_status = preferred_owner.get("status")
     owner_chain_status = owner_chain.get("status")
     repo_launcher_status = repo_launcher.get("status")
+    windows_redirector_status = windows_venv_redirector.get("status")
+    canonical_launch_status = canonical_launch.get("status")
     code_freshness_status = code_freshness.get("status")
 
     if preferred_status == "preferred_match" and code_freshness_status in {"match", "unchecked"}:
         return {"status": "canonical_ready", "acceptable": True}
     if (
-        repo_launcher_status in {"parent_and_child_repo_launcher_match", "child_repo_launcher_match"}
+        platform.system() == "Windows"
+        and windows_redirector_status == "windows_venv_redirector_candidate"
+        and repo_launcher_status == "parent_and_child_repo_launcher_match"
         and owner_chain_status == "parent_preferred_child_mismatch"
+        and canonical_launch_status == "defined"
         and code_freshness_status == "match"
     ):
-        return {"status": "bounded_live_proof_ready", "acceptable": True}
+        return {
+            "status": "acceptable_windows_venv_redirector",
+            "acceptable": True,
+            "controller_confirmation_required": True,
+            "rule": "windows_venv_redirector_v1",
+            "promotion_path": "controller_confirmation_required",
+        }
     if code_freshness_status == "mismatch":
         return {"status": "blocked_code_freshness", "acceptable": False}
     if preferred_status != "preferred_match":
         return {"status": "blocked_owner_mismatch", "acceptable": False}
     return {"status": "blocked_other", "acceptable": False}
+
+
+def _evaluate_controller_promotion(
+    controller_acceptability: dict[str, Any],
+) -> dict[str, Any]:
+    status = controller_acceptability.get("status")
+
+    if status == "canonical_ready":
+        return {
+            "status": "controller_can_promote_now",
+            "eligible": True,
+            "target_status": "canonical_accepted",
+            "controller_confirmation_required": False,
+            "basis": "direct_canonical_owner_match",
+        }
+
+    if status == "acceptable_windows_venv_redirector":
+        return {
+            "status": "controller_confirmation_required",
+            "eligible": True,
+            "target_status": "canonical_accepted",
+            "controller_confirmation_required": True,
+            "basis": "windows_venv_redirector_v1",
+        }
+
+    return {
+        "status": "not_promotable",
+        "eligible": False,
+        "target_status": None,
+        "controller_confirmation_required": False,
+        "basis": status,
+    }
 
 
 def _build_code_fingerprint(file_paths: list[Path] | None = None) -> dict[str, Any]:
@@ -306,16 +352,27 @@ def _evaluate_code_freshness(
 
 def _build_canonical_launch(host: str, port: int) -> dict[str, Any]:
     repo_python = DEFAULT_REPO_PYTHON_PATH
+    repo_uvicorn = DEFAULT_REPO_UVICORN_PATH
     service_entry = DEFAULT_REPO_SERVICE_ENTRY
-    command_line = f'"{repo_python}" "{service_entry}" --host {host} --port {port}'
+    if platform.system() == "Windows" and repo_uvicorn.exists():
+        launch_mode = "repo_uvicorn_entry"
+        launcher_path = repo_uvicorn
+        command_line = f'"{repo_uvicorn}" main:app --host {host} --port {port}'
+    else:
+        launch_mode = "repo_python_service_entry"
+        launcher_path = repo_python
+        command_line = f'"{repo_python}" "{service_entry}" --host {host} --port {port}'
     return {
         "status": "defined" if repo_python.exists() and service_entry.exists() else "incomplete",
         "interpreter_path": str(repo_python),
+        "launcher_path": str(launcher_path),
+        "launch_mode": launch_mode,
         "service_entry_path": str(service_entry),
         "host": host,
         "port": port,
         "command_line": command_line,
         "interpreter_exists": repo_python.exists(),
+        "launcher_exists": launcher_path.exists(),
         "service_entry_exists": service_entry.exists(),
     }
 
@@ -645,6 +702,7 @@ async def run_preflight(
     strict_preferred_owner: bool = False,
     expected_code_fingerprint: str | None = None,
     strict_code_freshness: bool = False,
+    self_check_current_code: bool = False,
 ) -> PreflightResult:
     """Run complete service preflight check.
 
@@ -676,19 +734,25 @@ async def run_preflight(
         repo_launcher,
     )
     code_fingerprint = _build_code_fingerprint()
+    resolved_expected_code_fingerprint = expected_code_fingerprint
+    if self_check_current_code and not resolved_expected_code_fingerprint:
+        resolved_expected_code_fingerprint = code_fingerprint.get("fingerprint")
     code_freshness = _evaluate_code_freshness(
         code_fingerprint,
-        expected_code_fingerprint=expected_code_fingerprint,
+        expected_code_fingerprint=resolved_expected_code_fingerprint,
     )
+    canonical_launch = _build_canonical_launch(host, port)
     controller_acceptability = _evaluate_controller_acceptability(
         api_health,
         port_ownership,
         preferred_owner,
         owner_chain,
         repo_launcher,
+        windows_venv_redirector,
+        canonical_launch,
         code_freshness,
     )
-    canonical_launch = _build_canonical_launch(host, port)
+    controller_promotion = _evaluate_controller_promotion(controller_acceptability)
     status = determine_preflight_status(
         api_health,
         port_ownership,
@@ -737,6 +801,7 @@ async def run_preflight(
     details["code_freshness"] = code_freshness
     details["strict_code_freshness"] = strict_code_freshness
     details["controller_acceptability"] = controller_acceptability
+    details["controller_promotion"] = controller_promotion
     details["canonical_launch"] = canonical_launch
 
     return PreflightResult(
@@ -848,6 +913,7 @@ def run_preflight_sync(
     strict_preferred_owner: bool = False,
     expected_code_fingerprint: str | None = None,
     strict_code_freshness: bool = False,
+    self_check_current_code: bool = False,
 ) -> PreflightResult:
     """Synchronous wrapper for run_preflight.
 
@@ -872,5 +938,6 @@ def run_preflight_sync(
             strict_preferred_owner=strict_preferred_owner,
             expected_code_fingerprint=expected_code_fingerprint,
             strict_code_freshness=strict_code_freshness,
+            self_check_current_code=self_check_current_code,
         )
     )

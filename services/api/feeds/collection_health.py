@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from config import get_settings
 from db.models import FeedItem, RawIngest
+from feeds.task_processor import classify_feedback_signal
 
 
 def _to_iso(value: datetime | None) -> str | None:
@@ -111,6 +112,23 @@ def build_collection_health_issue(snapshot: dict[str, Any]) -> dict[str, Any] | 
     )
     if source_summary_parts:
         description = f"{description}\n" + " | ".join(source_summary_parts)
+    source_data = {
+        "type": "feed_collection_health",
+        "task_type": f"system_health_{status}",
+        "status": status,
+        "state": state,
+        "summary": summary,
+        "pending_sources_1h": pending_sources,
+        "error_sources_24h": error_sources,
+        "snapshot": snapshot,
+    }
+    source_data.update(
+        classify_feedback_signal(
+            source_type="system_health",
+            category="quality",
+            source_data=source_data,
+        )
+    )
     return {
         "priority": priority,
         "severity": severity,
@@ -120,16 +138,7 @@ def build_collection_health_issue(snapshot: dict[str, Any]) -> dict[str, Any] | 
         "source_id": "feed_collection",
         "category": "quality",
         "auto_processible": True,
-        "source_data": {
-            "type": "feed_collection_health",
-            "task_type": f"system_health_{status}",
-            "status": status,
-            "state": state,
-            "summary": summary,
-            "pending_sources_1h": pending_sources,
-            "error_sources_24h": error_sources,
-            "snapshot": snapshot,
-        },
+        "source_data": source_data,
     }
 
 

@@ -4,7 +4,7 @@ import './globals.css'
 import { Sidebar } from '@/components/ui/sidebar'
 
 export const metadata: Metadata = {
-  title: 'MyAttention - 智能决策支持系统',
+  title: 'IKE - 智能决策支持系统',
   description: 'AI 驱动的信息获取、整理、知识沉淀与决策支持系统',
 }
 

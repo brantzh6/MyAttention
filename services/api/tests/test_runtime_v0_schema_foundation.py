@@ -726,8 +726,9 @@ class TestMigrationValidationSupport:
     from the first-wave R0-A acceptance.
 
     R1-A5 ENFORCEMENT: Migration file path is resolved relative to the
-    project root (e.g., D:\\code\\MyAttention), not the current working
-    directory. This ensures tests pass regardless of invocation location.
+    project root (for example `D:\\code\\IKE` after cutover), not the
+    current working directory. This ensures tests pass regardless of
+    invocation location.
     """
 
     @staticmethod

@@ -213,6 +213,7 @@ const labels = {
     runtimePreflightCanonicalLaunch: 'Canonical Launch',
     runtimePreflightSummary: 'Service Summary',
     runtimePreflightMismatch: 'Preferred owner mismatch detected',
+    runtimePreflightRedirectorAcceptable: 'Windows venv redirector shape is acceptable only with explicit controller confirmation.',
     runtimePreflightUnavailable: 'Service preflight not available',
     runtimeActivationDesc: 'Create or recover the explicit runtime project surface for this workspace.',
     activateRuntime: 'Activate Runtime Surface',
@@ -419,8 +420,8 @@ export default function IKEWorkspaceManager({
 
     try {
       await apiClient.bootstrapRuntimeProjectSurface({
-        project_key: 'myattention-runtime-mainline',
-        title: 'MyAttention Runtime Mainline',
+      project_key: 'ike-runtime-mainline',
+        title: 'IKE Runtime Mainline',
         current_phase: 'R2-E',
         priority: 1,
       })
@@ -440,7 +441,7 @@ export default function IKEWorkspaceManager({
 
     try {
       const result = await apiClient.importRuntimeBenchmarkCandidate({
-        project_key: runtimeSurface?.project_key || 'myattention-runtime-mainline',
+      project_key: runtimeSurface?.project_key || 'ike-runtime-mainline',
         candidate_payload: proceduralMemoryCandidate,
       })
       setBenchmarkImportResult(result?.data ?? result)
@@ -668,6 +669,16 @@ export default function IKEWorkspaceManager({
                       </span>
                       {runtimePreflight?.controller_acceptability?.status || runtimePreflight?.details?.controller_acceptability?.status || 'N/A'}
                     </p>
+                    {(runtimePreflight?.controller_acceptability?.controller_confirmation_required ||
+                      runtimePreflight?.details?.controller_acceptability?.controller_confirmation_required) && (
+                      <p className="text-xs text-blue-700">
+                        <BilingualBlock
+                          en={labels.en.runtimePreflightRedirectorAcceptable}
+                          zh={labels.en.runtimePreflightRedirectorAcceptable}
+                          mode={languageMode}
+                        />
+                      </p>
+                    )}
                     <p>
                       <span className="font-medium">
                         <BilingualBlock

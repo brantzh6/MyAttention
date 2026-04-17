@@ -27,6 +27,13 @@ def main() -> int:
     parser.add_argument("--task-type", default="implementation")
     parser.add_argument("--problem-type", required=True)
     parser.add_argument("--priority", default="P1")
+    parser.add_argument("--lane", default="coding", help="Machine-readable lane label.")
+    parser.add_argument("--reasoning-mode", default="high", help="Requested reasoning / thinking depth.")
+    parser.add_argument("--sandbox-identity", default=None, help="Machine-readable sandbox identity.")
+    parser.add_argument("--sandbox-kind", default="qoder_workspace", help="Machine-readable sandbox kind.")
+    parser.add_argument("--capability-profile", default="coding_high_reasoning", help="Capability profile label.")
+    parser.add_argument("--write-scope", action="append", default=[], help="Machine-readable write scope item. Repeat for multiple values.")
+    parser.add_argument("--network-policy", default=None, help="Machine-readable network policy intent.")
     parser.add_argument("--goal", required=True)
     parser.add_argument("--scope-allowed", nargs="+", required=True)
     parser.add_argument("--scope-read", nargs="*", default=[])
@@ -42,6 +49,8 @@ def main() -> int:
     cwd = Path(args.cwd).resolve()
     bundle_script = cwd / "scripts" / "qoder" / "create_task_bundle.py"
     launch_script = cwd / "scripts" / "qoder" / "launch_bundle.py"
+    sandbox_identity = args.sandbox_identity or f"{args.sandbox_kind}:{args.task_id}"
+    network_policy = args.network_policy or ("restricted" if args.lane == "coding" else "disabled" if args.lane == "review" else None)
 
     create_cmd = [
         sys.executable,
@@ -62,6 +71,18 @@ def main() -> int:
         args.priority,
         "--goal",
         args.goal,
+        "--lane",
+        args.lane,
+        "--reasoning-mode",
+        args.reasoning_mode,
+        "--sandbox-identity",
+        sandbox_identity,
+        "--sandbox-kind",
+        args.sandbox_kind,
+        "--capability-profile",
+        args.capability_profile,
+        "--write-scope",
+        *(args.write_scope or args.scope_allowed),
         "--scope-allowed",
         *args.scope_allowed,
         "--scope-read",
@@ -77,6 +98,8 @@ def main() -> int:
         "--stop-conditions",
         *args.stop_conditions,
     ]
+    if network_policy:
+        create_cmd.extend(["--network-policy", network_policy])
     created = subprocess.run(
         create_cmd,
         cwd=str(cwd),
@@ -140,6 +163,13 @@ def main() -> int:
                     emit_json(
                         {
                             "task_id": args.task_id,
+                            "lane": args.lane,
+                            "reasoning_mode": args.reasoning_mode,
+                            "sandbox_identity": sandbox_identity,
+                            "sandbox_kind": args.sandbox_kind,
+                            "capability_profile": args.capability_profile,
+                            "write_scope": args.write_scope or args.scope_allowed,
+                            "network_policy": network_policy,
                             "bundle": str(bundle_path),
                             "result_file": str(result_path),
                             "done_file": str(done_path),
@@ -154,6 +184,13 @@ def main() -> int:
                 emit_json(
                     {
                         "task_id": args.task_id,
+                        "lane": args.lane,
+                        "reasoning_mode": args.reasoning_mode,
+                        "sandbox_identity": sandbox_identity,
+                        "sandbox_kind": args.sandbox_kind,
+                        "capability_profile": args.capability_profile,
+                        "write_scope": args.write_scope or args.scope_allowed,
+                        "network_policy": network_policy,
                         "bundle": str(bundle_path),
                         "result_file": str(result_path),
                         "status": "completed",
@@ -167,6 +204,13 @@ def main() -> int:
     emit_json(
         {
             "task_id": args.task_id,
+            "lane": args.lane,
+            "reasoning_mode": args.reasoning_mode,
+            "sandbox_identity": sandbox_identity,
+            "sandbox_kind": args.sandbox_kind,
+            "capability_profile": args.capability_profile,
+            "write_scope": args.write_scope or args.scope_allowed,
+            "network_policy": network_policy,
             "bundle": str(bundle_path),
             "result_file": str(result_path),
             "done_file": str(done_path),

@@ -22,6 +22,12 @@ def build_prompt(
     output_path: Path,
     output_schema: str,
     allowed_writes: list[Path],
+    lane: str | None,
+    reasoning_mode: str | None,
+    sandbox_identity: str | None,
+    sandbox_kind: str | None,
+    capability_profile: str | None,
+    network_policy: str | None,
 ) -> str:
     write_rules = []
     if allowed_writes:
@@ -57,6 +63,12 @@ def build_prompt(
             "Execution requirements:",
             "- Read the brief file and the context file.",
             "- Do not wrap JSON in markdown fences.",
+            *(["- Treat lane metadata as part of the task contract.", f"- lane: {lane}"] if lane else []),
+            *(["- Use the requested reasoning mode for this task.", f"- reasoning_mode: {reasoning_mode}"] if reasoning_mode else []),
+            *(["- sandbox_identity: {0}".format(sandbox_identity)] if sandbox_identity else []),
+            *(["- sandbox_kind: {0}".format(sandbox_kind)] if sandbox_kind else []),
+            *(["- capability_profile: {0}".format(capability_profile)] if capability_profile else []),
+            *(["- network_policy: {0}".format(network_policy)] if network_policy else []),
             *write_rules,
             "- If you cannot complete the task, still write a JSON object describing the blocker.",
             "",
@@ -74,24 +86,46 @@ def run_delegate(
     session: str,
     prompt_file: Path,
     timeout: int,
+    lane: str | None,
+    reasoning_mode: str | None,
+    sandbox_identity: str | None,
+    sandbox_kind: str | None,
+    capability_profile: str | None,
+    write_scope: list[Path],
+    network_policy: str | None,
 ) -> subprocess.CompletedProcess[str]:
+    command = [
+        sys.executable,
+        str((cwd / "scripts" / "acpx" / "openclaw_delegate.py").resolve()),
+        "--mode",
+        "prompt",
+        "--agent-alias",
+        agent_alias,
+        "--cwd",
+        str(cwd),
+        "--session",
+        session,
+        "--file",
+        str(prompt_file),
+        "--timeout",
+        str(timeout),
+    ]
+    if lane:
+        command.extend(["--lane", lane])
+    if reasoning_mode:
+        command.extend(["--reasoning-mode", reasoning_mode])
+    if sandbox_identity:
+        command.extend(["--sandbox-identity", sandbox_identity])
+    if sandbox_kind:
+        command.extend(["--sandbox-kind", sandbox_kind])
+    if capability_profile:
+        command.extend(["--capability-profile", capability_profile])
+    if network_policy:
+        command.extend(["--network-policy", network_policy])
+    for path in write_scope:
+        command.extend(["--write-scope", str(path)])
     return subprocess.run(
-        [
-            sys.executable,
-            str((cwd / "scripts" / "acpx" / "openclaw_delegate.py").resolve()),
-            "--mode",
-            "prompt",
-            "--agent-alias",
-            agent_alias,
-            "--cwd",
-            str(cwd),
-            "--session",
-            session,
-            "--file",
-            str(prompt_file),
-            "--timeout",
-            str(timeout),
-        ],
+        command,
         cwd=str(cwd),
         text=True,
         encoding="utf-8",
@@ -126,6 +160,13 @@ def main() -> int:
         default=[],
         help="Project file path that the delegate is allowed to modify. Repeat for multiple files.",
     )
+    parser.add_argument("--lane", default=None, help="Machine-readable lane label for this delegation.")
+    parser.add_argument("--reasoning-mode", default="high", help="Requested reasoning / thinking depth for this delegation.")
+    parser.add_argument("--sandbox-identity", default=None, help="Machine-readable sandbox identity.")
+    parser.add_argument("--sandbox-kind", default="openclaw_workspace", help="Machine-readable sandbox kind.")
+    parser.add_argument("--capability-profile", default=None, help="Explicit capability profile override.")
+    parser.add_argument("--write-scope", action="append", default=[], help="Machine-readable write scope item. Repeat for multiple values.")
+    parser.add_argument("--network-policy", default=None, help="Machine-readable network policy intent.")
     parser.add_argument("--wait-for-output", type=int, default=30, help="Seconds to wait for output file after prompt completes.")
     args = parser.parse_args()
 
@@ -138,11 +179,26 @@ def main() -> int:
 
     prompt_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    write_scope = [Path(path).resolve() for path in args.write_scope] if args.write_scope else allowed_writes
+    sandbox_identity = args.sandbox_identity or f"{args.sandbox_kind}:{args.agent_alias}:{args.session}"
 
-    prompt_text = build_prompt(brief_path, context_path, output_path, args.output_schema, allowed_writes)
+    capability_profile = args.capability_profile
+    if capability_profile is None and args.reasoning_mode == "high":
+        if args.lane == "coding":
+            capability_profile = "coding_high_reasoning"
+        elif args.lane == "review":
+            capability_profile = "review_high_reasoning"
+    network_policy = args.network_policy
+    if network_policy is None:
+        if capability_profile == "review_high_reasoning" or args.lane == "review":
+            network_policy = "disabled"
+        elif capability_profile == "coding_high_reasoning" or args.lane == "coding":
+            network_policy = "restricted"
+
+    prompt_text = build_prompt(brief_path, context_path, output_path, args.output_schema, allowed_writes, args.lane, args.reasoning_mode, sandbox_identity, args.sandbox_kind, capability_profile, network_policy)
     prompt_path.write_text(prompt_text, encoding="utf-8", newline="\n")
 
-    result = run_delegate(cwd, args.agent_alias, args.session, prompt_path, args.timeout)
+    result = run_delegate(cwd, args.agent_alias, args.session, prompt_path, args.timeout, args.lane, args.reasoning_mode, sandbox_identity, args.sandbox_kind, capability_profile, write_scope, network_policy)
     if result.returncode != 0:
         sys.stderr.write(result.stderr or result.stdout or "delegation failed\n")
         return result.returncode
@@ -158,6 +214,13 @@ def main() -> int:
             emit_json(
                 {
                     "session": args.session,
+                    "lane": args.lane,
+                    "reasoning_mode": args.reasoning_mode,
+                    "sandbox_identity": sandbox_identity,
+                    "sandbox_kind": args.sandbox_kind,
+                    "capability_profile": capability_profile,
+                    "write_scope": [str(path) for path in write_scope],
+                    "network_policy": network_policy,
                     "output_file": str(output_path),
                     "result": payload,
                 }

@@ -8,6 +8,481 @@
 
 ### Added
 
+- 2026-04-15: Added a bounded `Source Intelligence V1 M11` version-judgment
+  inspect slice. The project can now run advisory AI judgment over persisted
+  source-plan version changes through
+  `POST /api/sources/plans/{plan_id}/versions/{version_number}/judge/inspect`.
+  This reuses the internal `feeds.ai_judgment` substrate on a second surface,
+  stays inspect-only, does not mutate source plans, and does not override the
+  persisted refresh evaluation.
+- 2026-04-15: Closed the `M11` review loop. The packet wording now more
+  explicitly says it judges bounded refresh-change targets rather than the
+  source-plan version as a whole, a `snapshot_only` fallback proof was added,
+  a missing-version `404` route proof was added, and the returned `gemini`
+  review was rejected as mixed-context drift back to `M10`.
+- 2026-04-15: Added a bounded `Source Intelligence V1 M12` version-panel
+  inspect slice. The project can now run dual-model panel judgment over
+  persisted source-plan version change targets through
+  `POST /api/sources/plans/{plan_id}/versions/{version_number}/judge/panel/inspect`.
+  This reuses both the version-target extraction from `M11` and the existing
+  multi-model judgment substrate, while staying inspect-only and non-mutating.
+- 2026-04-15: Closed the `M12` review loop. Packet wording now stays at the
+  honest level of a bounded dual-lane panel inspect, and one failure-path test
+  now proves malformed secondary output still yields a truthful mixed panel
+  signal instead of a falsely stable result.
+- 2026-04-13: Added a bounded `Source Intelligence V1 M3` noise-compression
+  slice on the existing discovery path. The current implementation now
+  suppresses redundant generic `domain` candidates when the same source already
+  yields a materially competitive specific object such as a `repository`. The
+  change stays inside the current `feeds.py` discovery flow, adds no new API
+  surface, and is covered by focused helper- and route-level tests.
+- 2026-04-13: Closed the `Source Intelligence V1 M3` review loop with
+  selective absorption. The packet wording is now explicitly narrowed to a
+  `same-source generic-domain compression heuristic`, a new guardrail test now
+  proves generic domains remain when the specific candidate is not materially
+  competitive, and the returned `gemini` review was rejected because it drifted
+  back to the older `M2` loop-proof scope.
+- 2026-04-13: Added a bounded `Source Intelligence V1 M4`
+  release-over-repository compression slice. In `LATEST` and `FRONTIER`, the
+  current discovery path now suppresses a same-repo `repository` candidate when
+  a materially competitive `release` candidate already exists. `METHOD`
+  remains unchanged, and weak release candidates do not suppress the
+  repository.
+- 2026-04-14: Closed the `Source Intelligence V1 M4` review loop. The packet
+  wording now matches the implementation more exactly (`LATEST` / `FRONTIER`
+  instead of broader `timely focus`), route-level symmetry proof now covers
+  `FRONTIER` positive compression and `METHOD` negative preservation, and the
+  packet is now explicitly framed as a same-repo duplicate-compression
+  heuristic rather than a broad release-superiority rule.
+- 2026-04-14: Added a bounded `Source Intelligence V1 M5` quality slice for
+  contextual tech-media article pages. In `LATEST` / `FRONTIER`, article pages
+  from a narrow contextual-media set such as `36kr` are now classified as
+  `signal` instead of flat `domain` entries, while `METHOD` remains on the
+  conservative path. This improves object quality without adding new API
+  surface.
+- 2026-04-14: Closed the `Source Intelligence V1 M5` review loop. The bounded
+  publisher set was tightened by removing `medium.com` and `substack.com`,
+  explicit `FRONTIER` proof and negative page-boundary proof were added, and
+  the packet wording now more accurately describes a bounded publisher/article
+  family rather than a broader media slice.
+- 2026-04-14: Added a bounded `Source Intelligence V1 M6` quality slice for
+  GitHub repo thread pages. Issue, discussion, and pull-request pages can now
+  be classified as `signal` inside the current discovery path, while plain repo
+  pages remain unchanged. This stays bounded to GitHub and does not widen into
+  a broader collaboration-platform ontology.
+- 2026-04-14: Added an explicit AI-driven evolution-kernel note so recent
+  heuristic-heavy source-intelligence slices are not misread as the project's
+  final architecture. The project now durably records that information brain,
+  knowledge brain, evolution brain, and the cross-cutting scientific
+  methodology layer remain the core north-star, while hard-coded slices are
+  temporary cleanup and normalization scaffolds.
+- 2026-04-14: Added a bounded `Source Intelligence V1 M7`
+  AI-assisted-candidate-judgment inspect lane. The current discovery surface
+  can now pass a bounded candidate subset into a model prompt and return
+  advisory `follow` / `review` / `ignore` judgments without writing source
+  truth or auto-promoting anything. This is the first explicit step that
+  reintroduces AI participation above the cleaned discovery baseline.
+- 2026-04-15: Closed the `Source Intelligence V1 M7` review loop. Malformed
+  model JSON now falls back to an empty bounded advisory result instead of a
+  500, notes now expose discarded-judgment transparency, and the truth
+  boundary explicitly states that the free-form summary is advisory
+  condensation rather than the canonical decision set.
+- 2026-04-15: Added a bounded `Source Intelligence V1 M8` panel-inspect
+  slice. The same judged candidate subset can now be sent through two model
+  lanes, and the route exposes agreement/disagreement shape without merging
+  the outputs into canonical truth or workflow actions.
+
+- 2026-04-13: Added `R2-I19` operator-substrate proof for `Runtime v0`.
+  This packet does not add new runtime APIs or scheduler semantics; it
+  formalizes that the existing runtime project read surface and controller-
+  facing inspect routes now satisfy the exit requirement that runtime truth has
+  at least one real consuming controller/operator use path.
+
+- 2026-04-13: Closed the `R2-I18` validated review loop with selective
+  absorption. The packet now has an explicit changed-basis supersession test,
+  the no-task-anchor rejection test uses `pytest.raises`, and the returned
+  mixed-context `gemini` review was explicitly rejected rather than absorbed.
+  The GitHub review-pack copy was also refreshed so external review docs use
+  repo-relative links instead of local absolute filesystem paths.
+
+- 2026-04-12: Closed the focused local validation loop for `R2-I18`. After
+  restoring the PostgreSQL service, the DB-backed
+  `tests/test_runtime_v0_controller_acceptance.py` slice now passes locally,
+  and the combined focused packet
+  (`tests/test_runtime_v0_controller_acceptance.py` +
+  `tests/test_routers_ike_v0.py`) also passes. The `R2-I18` blocker note and
+  result milestone now reflect that this packet is locally validated rather
+  than still environment-blocked.
+
+- 2026-04-12: Corrected the local `R2-I18` validation story and repaired the
+  pytest surface around it. `tests/conftest.py` no longer forces PostgreSQL
+  connection for every pytest file through an autouse cleanup dependency, so
+  the focused router/runtime inspect slice now passes under pytest again. The
+  remaining blocker is now stated truthfully as environment-level PostgreSQL
+  unavailability for `tests/test_runtime_v0_controller_acceptance.py`, not a
+  generic import/pytest timeout story.
+
+- 2026-04-11: Added a bounded `Source Intelligence V1` activation packet so
+  the project no longer treats source quality as a known bottleneck without an
+  execution entry. The new packet includes:
+  - a phase judgment
+  - an implementation-start packet
+  - an explicit M1 scope
+  - a coding brief
+  - a single review-request file
+  and upgrades `Source Intelligence V1` from background preparation to the
+  next product-capability start line beneath the true runtime mainline.
+- 2026-04-11: Added a document-compression and active-surface policy so
+  durable documentation growth does not become hidden controller drag. The
+  project now has an explicit rule that only a small set of maps, indexes,
+  packets, and handoffs count as active continuation surface; other documents
+  remain durable evidence but not default first-read material.
+- 2026-04-11: Added an explicit agent-harness boundary-proof packet so the
+  harness line can prove what is materially isolated, what is only
+  metadata-backed, and what is still unproven. This keeps future sandboxing
+  claims honest and gives the harness line one concrete next proof task.
+- 2026-04-11: Added a minimum-feasibility note for `Knowledge Brain` so this
+  line now has a truthful launch condition instead of remaining an undefined
+  future aspiration. The note explicitly keeps `Knowledge Brain` below
+  `Runtime v0` and `Source Intelligence V1` in current priority.
+- 2026-04-11: Added a compact strategic follow-up tracker so the accepted
+  outputs from the project-level strategic review now have one durable summary
+  surface instead of remaining scattered across multiple docs.
+- 2026-04-11: Added a single-file review request for the current strategic
+  follow-up package so external/project-level review can be requested without
+  reconstructing the absorbed document set by hand.
+- 2026-04-11: Tightened `Source Intelligence V1 M1` into an implementation
+  landing decision, minimal writeset, and direct task packet. Current
+  controller judgment is now explicit: the first M1 coding lane should land on
+  the existing `routers/feeds.py` discovery/source-plan path rather than
+  opening a parallel source-intelligence stack.
+- 2026-04-11: Added a single-file `Source Intelligence V1 M1` delivery pack and
+  an agent-harness boundary-proof checklist/result template. The current
+  controller follow-up wave is now easier to hand off for implementation and
+  easier to execute consistently for proof-oriented support tracks.
+- 2026-04-11: Landed the first agent-harness boundary-proof result. Current
+  truthful claim boundary is now explicit: OpenClaw workspace isolation and
+  shared metadata coverage are materially proven, Claude external run-root is
+  now artifact-proven via a fake local sample under the external run root, and
+  hard sandbox enforcement remains unproven.
+- 2026-04-11: Added a direct multi-agent execution packet for
+  `Source Intelligence V1 M1`, including coding/review/testing/evolution
+  briefs. The line can now be delegated without rebuilding packet structure
+  from the surrounding strategy docs.
+- 2026-04-11: Added a compact execution/review package entry so the current
+  `Source Intelligence V1 M1` execution wave and `Agent Harness Boundary Proof`
+  result wave can be sent to other models or weekly review as one package.
+- 2026-04-11: Added `.runtime/delegation` entrypoints for
+  `Source Intelligence V1 M1` across coding/review/testing/evolution so the
+  current packet can be executed directly without rebuilding prompts from docs.
+- 2026-04-11: Added direct Claude send packages for the current
+  `Source Intelligence V1 M1` lane and `Agent Harness Boundary Proof` lane, so
+  these packets can now be handed to Claude Code without extra controller-side
+  repackaging.
+- 2026-04-11: Started the first real Claude worker coding run for
+  `Source Intelligence V1 M1` under the external run root. Initial status is
+  `running`; detached wait timeout was observed but does not indicate failure.
+- 2026-04-11: Added a durable delivery-governance baseline to prevent AI
+  coding acceleration from outrunning recoverability. The project now has
+  explicit controller documents for:
+  - environment separation
+  - change promotion gates
+  - release and rollback discipline
+  plus a compact governance index linked from the mainline map and agent
+  harness contract.
+- 2026-04-11: Extended the governance baseline with implementation-facing
+  delivery controls:
+  - staging / production identity plan
+  - release promotion checklist
+  - backup and restore inventory
+  - updated P1 implementation queue
+  This turns the governance layer from principles-only into a concrete next
+  execution set for environment separation and release discipline.
+- 2026-04-11: Added an explicit project-governance <-> runtime alignment
+  baseline. The project now has durable controller docs explaining:
+  - why current governance is a pre-runtime shell rather than a parallel system
+  - how task / decision / memory / work-context concepts should align
+  - how memory tiers should be separated so chat is not treated as canonical
+    memory
+  - what the first concrete alignment queue should be
+- 2026-04-11: Added a unified task-landscape controller map so the project now
+  has one durable place to judge:
+  - what is the true mainline
+  - what is support work
+  - what is research work
+  - whether each line is actually on track
+  This is intended to reduce project drift from “many important threads” being
+  treated as if they were all equal-priority mainlines.
+- 2026-04-11: Added first concrete environment config templates for
+  `staging-runtime` and `prod-runtime` under `config/runtime/`, so the
+  governance line now has direct configuration landing points rather than only
+  policy docs.
+- 2026-04-11: Added a repeatable research pipeline and output templates for the
+  thinking-armory / methodology study line. This narrows that line from
+  open-ended reading into explicit batch-review -> synthesis -> retention
+  closure.
+- 2026-04-11: Absorbed the project-level strategic review into a controller
+  action document. The review's main accepted effects are:
+  - Runtime v0 now needs an explicit exit criterion
+  - Source Intelligence must stop remaining a known bottleneck without an
+    implementation start packet
+  - documentation scale now needs active-surface compression rather than just
+    continued growth
+- 2026-04-11: Added an explicit `Runtime v0` exit-criteria document and a
+  separate single-controller continuity risk note. This turns two strategic
+  concerns into durable controller artifacts instead of leaving them as review
+  commentary.
+- 2026-04-11: Added durable `R2-I18` controller acceptance record boundary
+  support:
+  - new helper: `runtime/controller_acceptance.py`
+  - new inspect route:
+    `POST /api/ike/v0/runtime/service-preflight/controller-decision/record/inspect`
+  - new explicit record route:
+    `POST /api/ike/v0/runtime/service-preflight/controller-decision/record`
+  The implementation reuses existing runtime truth tables, keeps the scope
+  fixed to `canonical_service_acceptance`, supports idempotent reuse and
+  explicit supersession, and rejects writes when no runtime task exists to
+  anchor the required audit event. Compile validation passed; full runtime
+  test execution is still pending due environment-level timeout during local
+  test execution.
+- 2026-04-10: Added durable `R2-H6` controller-promotion readiness records.
+  Runtime service preflight now exposes `controller_promotion` so the
+  controller-facing inspect result distinguishes:
+  - direct canonical-ready shapes that can be promoted now
+  - reviewed Windows redirector shapes that remain promotion-eligible but
+    require explicit controller confirmation
+  - blocked shapes that remain non-promotable
+  This remains inspect-only and does not add automatic promotion or a mutable
+  controller action.
+- 2026-04-10: Added durable `R2-H7` live canonical-service evidence. On the
+  current local Windows environment, canonical `127.0.0.1:8000` now reaches
+  the reviewed `acceptable_windows_venv_redirector` shape when code freshness
+  is explicitly matched, and `controller_promotion` reports it as
+  promotion-eligible with explicit controller confirmation still required.
+- 2026-04-10: Added durable `R2-H8` controller decision brief consolidating
+  the `R2-H5 -> R2-H7` chain. Current recommendation is
+  `accept_with_changes`: treat the reviewed Windows redirector shape as the
+  accepted local canonical proof baseline, while keeping the exception narrow
+  and explicitly documented.
+- 2026-04-10: Added `R2-I First Real Task Lifecycle On Canonical Service` as
+  the candidate next runtime phase, explicitly gated on controller acceptance
+  of the current `R2-H` canonical Windows proof path.
+- 2026-04-10: Added a durable Claude Code provider-switching note, recording:
+  - provider lookup via `cc-switch`
+  - default routine preference for latest `qwen3.6`
+  - manual switch path for the stronger `glm-5.1` backend/business-logic lane
+- 2026-04-10: Added the candidate `R2-I` runtime planning layer:
+  - phase judgment
+  - phase plan
+  - execution pack
+  - coding/review/test/evolution briefs
+  The target remains narrow: one live-service-adjacent lifecycle proof on top
+  of the accepted canonical service baseline, not a broad task runner.
+- 2026-04-10: Added durable `R2-I1` results for a new inspect-style runtime
+  lifecycle proof route:
+  - `POST /api/ike/v0/runtime/task-lifecycle/proof/inspect`
+  The route is now live on the canonical local service, returns an auditable
+  lifecycle proof payload, and explicitly preserves the truth boundary that it
+  is inspect-only and not a general task-runner API.
+- 2026-04-10: Added `R2-I2`/`R2-I3` follow-up records for the new lifecycle
+  proof route, including:
+  - a single-file external review pack
+  - a controller review checkpoint
+  - a broader targeted test slice combining the lifecycle helper and router
+    surface
+- 2026-04-10: Added `R2-I4` evolution judgment, clarifying that the next
+  narrow runtime question is now read-surface alignment above the new proof
+  route, not whether the canonical service can host the proof at all.
+- 2026-04-10: Added the candidate `R2-I5 PG-Backed Lifecycle Proof` packet to
+  answer the main semantic gap raised by review #11: the difference between a
+  live state-machine proof and a durable PG-backed lifecycle fact path.
+- 2026-04-10: Added durable `R2-I5` results for a narrow PG-backed lifecycle
+  proof helper. The runtime now has one verified lifecycle path through
+  `runtime_tasks`, `runtime_task_events`, `runtime_worker_leases`, and
+  `PostgresClaimVerifier`, closing the main semantic gap identified by review
+  #11.
+- 2026-04-10: Added durable `R2-I6` read-surface alignment results above the
+  new PG-backed lifecycle proof. The runtime now also has one verified path
+  showing that durable lifecycle truth can be reconstructed into a work
+  context, aligned onto the project pointer, and reflected by the existing
+  project read surface without inventing active work.
+- 2026-04-10: Added the candidate `R2-I7 DB-Backed Inspect Surface` packet so
+  the next runtime step is explicitly framed as controller-visible inspection
+  of the durable proof path, not a drift into general execution semantics.
+- 2026-04-10: Added durable `R2-I7` results for a bounded controller-facing
+  DB-backed proof inspect route:
+  - `POST /api/ike/v0/runtime/task-lifecycle/db-proof/inspect`
+  The route truthfully exposes one persisted proof-shaped lifecycle result and
+  explicitly states that it is inspect-only, bounded, non-detached, and not a
+  general task runner.
+- 2026-04-10: Added the candidate `R2-I8 Repeated Proof Hardening` packet so
+  the next runtime edge is explicitly narrowed to repeated-run safety for the
+  durable proof lane rather than broader orchestration drift.
+- 2026-04-10: Added durable `R2-I8` repeated-run hardening results for the
+  DB-backed proof lane. The runtime test surface now explicitly proves that
+  two sequential proof runs keep distinct project/task/lease/event identities
+  and remain query-isolated, while still not claiming broad concurrency
+  semantics.
+- 2026-04-10: Added the candidate `R2-I9 Concurrent Proof Boundary` packet so
+  the next runtime edge is explicitly narrowed to overlapping-run safety,
+  rather than letting repeated-run success be overread as full concurrency
+  capability.
+- 2026-04-10: Added durable `R2-I9` overlapping-run isolation results for the
+  DB-backed proof lane. The runtime test surface now explicitly proves that
+  two overlapping proof runs using separate threads/sessions keep distinct
+  durable identities and remain query-isolated. This also hardened the test
+  cleanup path by explicitly disposing the async engine pool after the
+  threaded proof.
+- 2026-04-10: Added the candidate `R2-I10 Abort And Failure Boundary` packet
+  so the next runtime edge is explicitly narrowed to failure honesty for the
+  bounded proof lane, not broader supervision semantics.
+- 2026-04-10: Added durable `R2-I10` failure-honesty results for the
+  DB-backed proof helper. Failed proof runs now re-read durable task/event
+  truth after rollback and report durable `final_status` plus durable
+  `persisted_event_count`, instead of trusting stale in-memory ORM state.
+- 2026-04-10: Added the candidate `R2-I11 Route-Level Failure Honesty` packet
+  so the next runtime edge is explicitly narrowed to controller-visible route
+  honesty on failure, not retries or detached supervision.
+- 2026-04-10: Added durable `R2-I11` route-level failure-honesty results for
+  the DB-backed proof inspect surface. The controller-visible route is now
+  explicitly tested to preserve durable failure summary fields and stable
+  truth-boundary flags when the bounded proof reports a partial durable
+  failure.
+- 2026-04-10: Added the candidate `R2-I12 Failure Review Pack` packet so the
+  next runtime edge is explicitly narrowed to review packaging of the new
+  failure-honesty evidence, not a fresh execution-semantics branch.
+- 2026-04-10: Added durable `Review #12` absorption records for the
+  `R2-I10/R2-I11` failure-honesty packet. External review converged on
+  `accept_with_changes`, the requested clarification around the
+  `task.__dict__` fallback has been absorbed, and the current runtime claim
+  boundary remains explicitly narrow:
+  - durable failure truth is improved
+  - route-level failure honesty is improved
+  - no broad detached supervision or scheduler claim is added
+- 2026-04-10: Added the candidate `R2-I13 Live Route Freshness Closure`
+  packet after observing a new canonical-service gap:
+  - current code and focused tests include the DB-backed inspect route
+  - canonical `127.0.0.1:8000` remains healthy
+  - but the live route currently returns `404 Not Found`
+  The next runtime edge is therefore no longer only semantic review
+  absorption; it is live route freshness closure without widening into a broad
+  service-management lane.
+- 2026-04-10: Added durable `R2-I13` live route freshness-closure results.
+  After a controlled canonical-service refresh, canonical `127.0.0.1:8000`
+  now exposes and successfully serves the DB-backed inspect route live:
+  - `POST /api/ike/v0/runtime/task-lifecycle/db-proof/inspect`
+  This closes the live route freshness gap. It also clarified a narrower
+  follow-up gap:
+  - default preflight still leaves `code_freshness = unchecked`
+  - but explicit current-fingerprint preflight reaches the reviewed
+    `acceptable_windows_venv_redirector` path
+- 2026-04-10: Added the candidate `R2-I14 Promotion Readiness Self-Check`
+  packet so the next runtime edge is explicitly narrowed to controller-usable
+  self-check of current code freshness for canonical local preflight, without
+  widening into service orchestration or auto-promotion semantics.
+- 2026-04-10: Added durable `R2-I14` promotion-readiness self-check results.
+  Runtime service preflight now supports one explicit local self-check path:
+  - `self_check_current_code = true`
+  With `strict_code_freshness = true`, canonical `127.0.0.1:8000` can now
+  truthfully reach the reviewed Windows redirector status without manual
+  fingerprint copy/paste:
+  - `controller_acceptability = acceptable_windows_venv_redirector`
+  - `controller_promotion = controller_confirmation_required`
+  This remains confirmation-gated and does not introduce automatic promotion.
+- 2026-04-10: Added an evolution feedback routing rule for logs. Logs are now
+  explicitly treated as a feedback substrate, but default triage ownership is
+  assigned to a low-cost monitoring lane. The rule distinguishes:
+  - acceleration degradation
+  - operational degradation
+  - canonical-truth risk
+  and records that Redis/cache-style failures should not automatically occupy
+  the controller lane.
+- 2026-04-10: Added durable `P1 Minimal Log Feedback Integration` results.
+  Existing collection-health and log-analysis task pathways now carry explicit
+  routing metadata so Redis/cache-style failures default to low-cost monitoring
+  instead of implicitly competing for controller attention, while canonical
+  runtime/preflight risk remains escalatable.
+- 2026-04-10: Added durable `R2-I15` controller-decision inspect results.
+  Runtime now exposes one explicit controller-facing decision surface above
+  preflight:
+  - `POST /api/ike/v0/runtime/service-preflight/controller-decision/inspect`
+  The new route makes recommendation shape and non-mutation boundary flags
+  explicit, while truthfully preserving the difference between:
+  - decision inspection
+  - actual controller acceptance
+  Live canonical `8000` now exposes the route, but the current owner chain
+  still reports `blocked_owner_mismatch`, so the live recommendation remains
+  `not_ready_for_controller_acceptance`.
+- 2026-04-10: Added durable `R2-I16` canonical owner-chain reclaim results.
+  Canonical `127.0.0.1:8000` has now been brought back onto the reviewed local
+  Windows redirector shape, so live runtime preflight and the new
+  controller-decision inspect route again return:
+  - `acceptable_windows_venv_redirector`
+  - `controller_confirmation_required`
+  This also clarified an important remaining gap: the currently validated live
+  Windows launch discipline aligns with the repo `uvicorn.exe` chain more
+  cleanly than direct `python run_service.py`, so the documented
+  `canonical_launch` baseline still needs explicit reconciliation.
+- 2026-04-10: Added durable `R2-I17` canonical-launch baseline alignment
+  results. The machine-readable `canonical_launch` field is now platform-aware
+  and on Windows reflects the same repo `uvicorn.exe` launch chain that is
+  currently validated live on canonical `8000`, while preserving fallback to
+  the existing `python run_service.py` form outside that case.
+- 2026-04-10: Added a controller-confirmation review pack and decision brief
+  for the current `R2-I17` live runtime state, plus a gated next-phase
+  judgment for `R2-I18 Controller Acceptance Record Boundary`. This keeps the
+  next edge explicit without prematurely widening runtime semantics before the
+  current live baseline is reviewed.
+- 2026-04-10: Added a narrow plan and coding brief for `R2-I18 Controller
+  Acceptance Record Boundary`. The preferred landing is now explicit:
+  reuse `runtime_decisions`, `runtime_task_events`, and work-context
+  `latest_decision_id` rather than opening a new approval subsystem.
+- 2026-04-11: Added an explicit API contract and idempotency policy for
+  `R2-I18 Controller Acceptance Record Boundary`. The next runtime packet now
+  has a fixed narrow shape: separate inspect/write routes, idempotent reuse
+  for repeated same-basis confirmation, explicit supersession for materially
+  changed eligible basis, and explicit rejection when current truth is no
+  longer confirmation-eligible.
+- 2026-04-11: Added a minimal write-set boundary for `R2-I18`. The next
+  packet is now constrained to a small runtime helper, a bounded router
+  extension, minimal read-surface alignment, and focused tests, rather than a
+  broad runtime refactor.
+- 2026-04-11: Added an implementation task packet for `R2-I18` so the next
+  delegated coding lane can start from one bounded handoff file instead of
+  reconstructing context from scattered planning notes.
+- 2026-04-10: Added a compact documentation index layer for the active
+  mainline:
+  - `CURRENT_MAINLINE_MAP_2026-04-10.md`
+  - `CURRENT_RUNTIME_MAINLINE_INDEX_2026-04-10.md`
+  - `CURRENT_RENAME_CUTOVER_INDEX_2026-04-10.md`
+  - `CURRENT_AGENT_HARNESS_INDEX_2026-04-10.md`
+  This is a documentation-structure hardening step to reduce controller
+  overhead and avoid relying on long accumulated handoff files as the only
+  navigation path.
+- 2026-04-10: Extended the first machine-readable agent-harness metadata
+  baseline across Claude worker, OpenClaw wrappers, and qoder with:
+  - `write_scope`
+  - `network_policy`
+  Current defaults are now explicit at the metadata layer:
+  - `coding_high_reasoning -> restricted`
+  - `review_high_reasoning -> disabled`
+  These fields are now durably recorded for auditability and later
+  enforcement, but are not yet claimed as hard sandbox enforcement.
+- 2026-04-10: Renamed the browser feed IndexedDB namespace from
+  `myattention_cache` to `ike_cache` as a narrow cutover-visible identity
+  cleanup. This affects only derived cache data, not durable runtime truth.
+- 2026-04-10: Updated the LLM voting system prompt to identify as `IKE`
+  instead of `MyAttention`, keeping the change narrow to visible model output
+  while leaving logger and compatibility namespaces untouched.
+- 2026-04-10: Extended practical `sandbox_identity` coverage to OpenClaw and
+  qoder so Claude worker, OpenClaw, and qoder now all emit a machine-readable
+  sandbox identity. This improves auditability and later enforcement
+  readiness, but is not yet full sandbox lifecycle enforcement.
+- 2026-04-09: Added durable `R2-H5` result records for the reviewed Windows
+  redirector acceptability rule. `service_preflight` now reports
+  `acceptable_windows_venv_redirector` for the narrow reviewed Option B shape,
+  keeps `controller_confirmation_required = true`, and no longer reuses the
+  broader `bounded_live_proof_ready` status for this canonical Windows case.
 - 2026-04-09: Added durable `R2-G14` controller-acceptability rule records,
   explicitly separating:
   - canonical live proof
@@ -1002,3 +1477,290 @@
 - 2026-04-09: Completed a fresh alternate-port live proof on `8013`. The live route now returns the latest `owner_chain`, `code_fingerprint`, and `code_freshness` fields; with the current fingerprint supplied, code freshness closes cleanly. Remaining `R2-G` ambiguity is now isolated to launch-path / interpreter ownership drift.
 - 2026-04-09: Added machine-readable `repo_launcher` evidence to `service_preflight`, exposed it through the inspect route, and surfaced it on the settings runtime panel. The remaining `R2-G` question is now controller acceptability, not missing launch-path observability.
 - 2026-04-09: Added machine-readable `controller_acceptability` to `service_preflight`, exposed it through the inspect route and runtime panel, and fixed the next `R2-G` target at an explicit controller rule for `bounded_live_proof_ready`.
+- 2026-04-09: Executed repository-restructure phase 1. Added a pre-migration checkpoint branch/commit, created cold and runtime backups, created a parallel clean project root at `D:\code\IKE`, rewrote OpenClaw agent workspaces to isolated roots under `D:\code\_agent-runtimes\openclaw-workspaces\...`, and moved the default Claude worker run-root out of the repo while keeping result integration compatible.
+- 2026-04-09: Executed a cutover-readiness cleanup pass for the repository restructure. Hardened the isolated-workspace sync exclusions, removed copied runtime/build artifacts from `D:\code\IKE`, re-synced the parallel root/workspaces, and confirmed the new root is now materially clean.
+- 2026-04-09: Added a controller inventory of rename/cutover blockers and fixed the next restructure move at a narrow phase-2 rename pass focused on service/deployment artifacts, launch-path references, and local runtime config.
+- 2026-04-09: Landed the first narrow phase-2 rename patch by parameterizing the Windows service installer. `install-app-services.ps1` now defaults to `D:\code\IKE`, derives service names from `ServicePrefix=IKE`, and is future-root ready without forcing a live service rewrite.
+- 2026-04-09: Landed the second narrow phase-2 rename patch by normalizing the Windows WinSW templates and Windows service README. The Windows service templates now target `D:\code\IKE` and `IKE*` application service names, while the live installed services remain unchanged.
+- 2026-04-09: Landed the third narrow phase-2 rename patch by normalizing Linux systemd and macOS launchd templates. Service/deployment templates now point at `/opt/ike` and `ike`-scoped identities instead of the old `myattention` paths and labels.
+- 2026-04-09: Landed the first phase-2 runtime-config normalization patch. Local runtime config defaults and docker-compose identities now point toward `IKE`, while current local infra service compatibility remains preserved where it still matters.
+- 2026-04-09: Landed the first phase-2 delegation-script normalization patch. qoder bundle generators no longer hardcode the old root for handoff/AGENTS refs, the qoder delegate prompt no longer hardcodes `MyAttention`, and the default OpenClaw delegate session now uses `ike-coder`.
+- 2026-04-09: Landed the first narrow phase-2 backend/runtime identity patch. API-facing service identity now uses `IKE API`, system-health container checks now accept canonical `ike-*` names with legacy alias compatibility, and the default coding DashScope model is now `qwen3.6-plus`.
+- 2026-04-09: Added a durable automated reasoning baseline for the routine execution chain. OpenClaw high-thinking defaults are now explicitly recorded, Claude worker now defaults to `qwen3.6-plus`, and settings/system runtime service labels now use `IKE API`.
+- 2026-04-09: Landed the narrow runtime project-key normalization patch so new visible/runtime bootstrap actions now default to `ike-runtime-mainline`.
+- 2026-04-09: Landed the narrow runtime preflight test-path normalization patch. Service-preflight and router tests no longer hardcode `D:\code\MyAttention` path hints; preferred-owner, repo-launcher, and `run_service.py` fixture paths are now derived from the active repo root so the planned `D:\code\IKE` cutover does not break these test slices.
+- 2026-04-09: Landed the narrow Windows uninstaller normalization patch. The app-service uninstall script now defaults to `ServicePrefix = IKE`, bringing uninstall behavior into line with the earlier install-side parameterization without touching live services by itself.
+- 2026-04-09: Landed the narrow runtime visible-title normalization patch so the IKE settings runtime bootstrap action now creates `IKE Runtime Mainline` instead of `MyAttention Runtime Mainline`.
+- 2026-04-09: Landed the narrow web metadata-title normalization patch so the app-level browser title now presents as `IKE - 智能决策支持系统`.
+- 2026-04-09: Landed the narrow web package-identity normalization patch so the web workspace now uses `@ike/web` instead of `@myattention/web`.
+- 2026-04-09: Landed the narrow sidebar-branding normalization patch so the main web sidebar and footer now present `IKE` instead of `MyAttention`.
+- 2026-04-09: Landed the narrow runtime comment-normalization patch so remaining runtime/test comment examples no longer treat `D:\code\MyAttention` as the future canonical root.
+- 2026-04-09: Added a durable Anthropic/CREAO agent-harness research note. The current IKE direction remains aligned, but the note makes explicit that true per-run sandbox enforcement, capability policy, and sandbox/task identity binding are still missing.
+- 2026-04-09: Added a durable DeerFlow 2.0 research note. The note records DeerFlow as a strong reference for long-horizon orchestration, dynamic sub-agents, Docker-native sandboxing, and memory layering, while preserving our current rule that runtime-core hardening still comes before broader tool/plugin expansion.
+- 2026-04-09: Added a durable agent-harness enforcement plan and updated the project harness contract. The next harness step is now explicit: move from path isolation alone toward sandbox identity, capability policy, and environment lifecycle separation.
+- 2026-04-09: Added a durable automated-lane capability matrix and a compatibility remainder note for the repository rename stream. Remaining `MyAttention` references are now explicitly split into safe-to-rename versus compatibility-sensitive items instead of being left as an undifferentiated backlog.
+- 2026-04-09: Added durable drafts for sandbox metadata and lane capability policy. The next harness hardening step is now explicitly framed as metadata-first sandbox identity plus named capability profiles, not a hand-wavy claim that isolated directories already solve sandboxing.
+- 2026-04-09: Added a synthesis note for the external Windows-redirector Review #10. The review's approval of narrow Option B is consistent with current controller judgment, but its long-tail carry-forward issue list needed correction because several earlier runtime items were already materially closed later in the mainline.
+- 2026-04-09: Landed a narrow chat visible-identity patch so the chat surface now defaults to `qwen3.6-plus` and stores locale under `ike.locale`.
+## 2026-04-09 P2-D11 Notification Visible Identity Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D11_NOTIFICATION_VISIBLE_IDENTITY_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D11_NOTIFICATION_VISIBLE_IDENTITY_RESULT_2026-04-09.md)
+- normalized:
+  - notification settings test copy now uses `IKE`
+  - backend notification test titles and button text now use `IKE`
+  - legacy task notification source label now uses `IKE 任务系统`
+
+## 2026-04-09 P2-D12 Chat System Prompt Identity Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D12_CHAT_SYSTEM_PROMPT_IDENTITY_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D12_CHAT_SYSTEM_PROMPT_IDENTITY_RESULT_2026-04-09.md)
+- normalized:
+  - backend chat system prompt now identifies the assistant as `IKE`
+  - internal `myattention.chat` logger namespace remains intentionally preserved
+
+## 2026-04-09 Agent Harness P1 Claude Metadata Landed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P1_CLAUDE_METADATA_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P1_CLAUDE_METADATA_RESULT_2026-04-09.md)
+- landed:
+  - Claude worker packets and run artifacts now carry lane / reasoning / sandbox metadata
+  - metadata now flows through `meta.json`, `final.json`, harness result projection, CLI start args, and persisted-run reload
+
+## 2026-04-09 Agent Harness P1 OpenClaw Metadata Landed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P1_OPENCLAW_METADATA_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P1_OPENCLAW_METADATA_RESULT_2026-04-09.md)
+- landed:
+  - OpenClaw delegation entrypoints now accept explicit `lane` / `reasoning_mode`
+  - wrapper output and generated prompt contract now carry those same fields
+
+## 2026-04-10 Highest Reasoning Default Tightened
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_HIGHEST_REASONING_DEFAULT_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_HIGHEST_REASONING_DEFAULT_RESULT_2026-04-10.md)
+- landed:
+  - OpenClaw verified as already using `thinkingDefault = high`
+  - Claude worker and OpenClaw delegation wrappers now default `reasoning_mode` to `high`
+  - controller policy now treats highest available automated reasoning as the default
+
+## 2026-04-10 Agent Harness P1 Qoder Metadata Landed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P1_QODER_METADATA_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P1_QODER_METADATA_RESULT_2026-04-10.md)
+- landed:
+  - qoder bundle and launch scripts now carry explicit `lane` / `reasoning_mode`
+  - qoder routine default reasoning mode is now `high`
+
+## 2026-04-10 Agent Harness P2 Profile Defaults Landed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P2_PROFILE_DEFAULTS_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P2_PROFILE_DEFAULTS_RESULT_2026-04-10.md)
+- landed:
+  - Claude worker, OpenClaw, and qoder now share `sandbox_kind` / `capability_profile` defaults
+  - the common delegated-run metadata vocabulary now spans `lane`, `reasoning_mode`, `sandbox_kind`, and `capability_profile`
+
+## 2026-04-11 Claude Worker Real-Run Gap Clarified
+
+- durable note:
+  - [D:\code\MyAttention\docs\IKE_CLAUDE_WORKER_REAL_RUN_GAP_2026-04-11.md](/D:/code/MyAttention/docs/IKE_CLAUDE_WORKER_REAL_RUN_GAP_2026-04-11.md)
+- clarified:
+  - the first real Claude worker coding run did not fail only because of a
+    short detached wait window
+  - the intended multi-line task packet was not delivered intact to the Claude
+    session
+  - detached durable finalization also did not close after owner exit
+
+## 2026-04-11 Platform Neutralization And Linux Cutover Prep Added
+
+- durable notes:
+  - [D:\code\MyAttention\docs\IKE_PLATFORM_NEUTRALIZATION_AUDIT_2026-04-11.md](/D:/code/MyAttention/docs/IKE_PLATFORM_NEUTRALIZATION_AUDIT_2026-04-11.md)
+  - [D:\code\MyAttention\docs\IKE_LINUX_CUTOVER_READINESS_2026-04-11.md](/D:/code/MyAttention/docs/IKE_LINUX_CUTOVER_READINESS_2026-04-11.md)
+- clarified:
+  - cross-platform intent already exists in project design
+  - but active harness/runtime execution still contains Windows-heavy seams
+  - Linux cutover should be treated as an active preparation track rather than
+    a later cleanup
+
+## 2026-04-11 Claude Worker P1 Hardening Packet Prepared
+
+- durable packet:
+  - [D:\code\MyAttention\docs\IKE_CLAUDE_WORKER_P1_CROSS_PLATFORM_HARDENING_PACKET_2026-04-11.md](/D:/code/MyAttention/docs/IKE_CLAUDE_WORKER_P1_CROSS_PLATFORM_HARDENING_PACKET_2026-04-11.md)
+  - [D:\code\MyAttention\docs\IKE_CLAUDE_WORKER_P1_CODING_BRIEF_2026-04-11.md](/D:/code/MyAttention/docs/IKE_CLAUDE_WORKER_P1_CODING_BRIEF_2026-04-11.md)
+- narrowed:
+  - the next worker hardening move is now fixed at two issues only
+  - cross-platform prompt delivery
+  - durable detached finalization
+
+## 2026-04-11 Claude Worker P1 Delivery Pack Prepared
+
+- durable packet:
+  - [D:\code\MyAttention\docs\IKE_CLAUDE_WORKER_P1_IMPLEMENTATION_TASK_PACKET_2026-04-11.md](/D:/code/MyAttention/docs/IKE_CLAUDE_WORKER_P1_IMPLEMENTATION_TASK_PACKET_2026-04-11.md)
+  - [D:\code\MyAttention\docs\IKE_CLAUDE_WORKER_P1_DELIVERY_PACK_2026-04-11.md](/D:/code/MyAttention/docs/IKE_CLAUDE_WORKER_P1_DELIVERY_PACK_2026-04-11.md)
+- runtime delegation entrypoints added for:
+  - coding
+  - review
+  - testing
+
+## 2026-04-11 Claude Worker P1 Hardening Landed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_CLAUDE_WORKER_P1_RESULT_2026-04-11.md](/D:/code/MyAttention/docs/IKE_CLAUDE_WORKER_P1_RESULT_2026-04-11.md)
+- landed:
+  - Claude worker prompt delivery now uses a Python-controlled detached wrapper
+    path for real runs
+  - detached `wait` / `fetch` can now finalize from durable stdout/stderr/exitcode
+    artifacts
+  - focused tests passed and one real smoke run succeeded
+
+## 2026-04-11 External Method Discovery Baseline Added
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_EXTERNAL_METHOD_DISCOVERY_AND_ABSORPTION_2026-04-11.md](/D:/code/MyAttention/docs/IKE_EXTERNAL_METHOD_DISCOVERY_AND_ABSORPTION_2026-04-11.md)
+  - [D:\code\MyAttention\docs\IKE_HERMES_SKILL_ABSORPTION_NOTE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_HERMES_SKILL_ABSORPTION_NOTE_2026-04-11.md)
+- clarified:
+  - external agent systems should be absorbed through source evidence,
+    runtime-behavior evidence, and agent-interview evidence together
+  - Hermes is now recorded as the first formal sample in that lane
+
+## 2026-04-11 Scope Control And Broad Strategy Review Pack Added
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_SCOPE_CONTROL_AND_BUILD_STRATEGY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_SCOPE_CONTROL_AND_BUILD_STRATEGY_2026-04-11.md)
+  - [D:\code\MyAttention\docs\IKE_PROJECT_SCOPE_AND_STRATEGY_REVIEW_PACK_2026-04-11.md](/D:/code/MyAttention/docs/IKE_PROJECT_SCOPE_AND_STRATEGY_REVIEW_PACK_2026-04-11.md)
+  - [D:\code\MyAttention\docs\review-for IKE_PROJECT_SCOPE_AND_STRATEGY_REVIEW_PACK_2026-04-11.md](/D:/code/MyAttention/docs/review-for%20IKE_PROJECT_SCOPE_AND_STRATEGY_REVIEW_PACK_2026-04-11.md)
+- clarified:
+  - the project now has an explicit build-vs-adapt-vs-defer baseline
+  - broad external review can now target scope risk and perfectionism-driven
+    overexpansion directly
+
+## 2026-04-12 Scope And Strategy Review Absorbed
+
+- durable absorption:
+  - [D:\code\MyAttention\docs\IKE_SCOPE_AND_STRATEGY_REVIEW_ABSORPTION_2026-04-12.md](/D:/code/MyAttention/docs/IKE_SCOPE_AND_STRATEGY_REVIEW_ABSORPTION_2026-04-12.md)
+- controller decisions updated:
+  - governance expansion freezes by default
+  - research tracks freeze unless they directly unblock active priorities
+  - the first real narrow I->K discovery loop is now a top strategic target
+
+## 2026-04-12 First AI-Domain Discovery Loop Packet Prepared
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_PHASE_JUDGMENT_2026-04-12.md](/D:/code/MyAttention/docs/IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_PHASE_JUDGMENT_2026-04-12.md)
+  - [D:\code\MyAttention\docs\IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_PLAN_2026-04-12.md](/D:/code/MyAttention/docs/IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_PLAN_2026-04-12.md)
+  - [D:\code\MyAttention\docs\IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_PACKET_2026-04-12.md](/D:/code/MyAttention/docs/IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_PACKET_2026-04-12.md)
+- clarified:
+  - the first real discovery proof is now the next practical project target
+  - `Source Intelligence V1 M1` is explicitly tied to that loop rather than
+    treated as an independent expansion line
+
+## 2026-04-12 First AI-Domain Discovery Loop Delivery Pack Prepared
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_DELIVERY_PACK_2026-04-12.md](/D:/code/MyAttention/docs/IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_DELIVERY_PACK_2026-04-12.md)
+  - [D:\code\MyAttention\docs\IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_CLAUDE_SEND_PACKAGE_2026-04-12.md](/D:/code/MyAttention/docs/IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_CLAUDE_SEND_PACKAGE_2026-04-12.md)
+- runtime delegation entrypoints added for the first narrow discovery-loop task
+
+## 2026-04-12 First AI-Domain Discovery Loop Result Landed
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_RESULT_2026-04-12.md](/D:/code/MyAttention/docs/IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_RESULT_2026-04-12.md)
+  - [D:\code\MyAttention\docs\IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_EVALUATION_2026-04-12.md](/D:/code/MyAttention/docs/IKE_AI_DOMAIN_DISCOVERY_LOOP_P1_EVALUATION_2026-04-12.md)
+- discovered:
+  - Anthropic's session/harness/sandbox split is the strongest current
+    reference pattern for durable external execution architecture
+  - Hermes confirms a practical print-vs-interactive execution split
+  - the first loop produced controller-usable signal rather than only broad
+    inspiration
+
+## 2026-04-12 Source Discovery Contract Narrowed Toward M1
+
+- code:
+  - [D:\code\MyAttention\services\api\routers\feeds.py](/D:/code/MyAttention/services/api/routers/feeds.py)
+  - [D:\code\MyAttention\services\api\tests\test_source_discovery_contract.py](/D:/code/MyAttention/services/api/tests/test_source_discovery_contract.py)
+- changed:
+  - `SourceDiscoveryRequest` now accepts bounded `task_intent` and `interest_bias`
+  - `SourceDiscoveryResponse` now returns explicit `notes` and `truth_boundary`
+  - discovery candidates now expose additional bounded semantic fields without
+    replacing the existing response contract
+  - method-focus reddit thread identity now normalizes toward community-level
+    capture, matching the existing helper expectation
+- validated with focused source-discovery/source-plan tests and compile checks
+
+## 2026-04-13 Runtime v0 Restart-Recovery Closure Added
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I20_PHASE_JUDGMENT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I20_PHASE_JUDGMENT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I20_PLAN_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I20_PLAN_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I20_RESTART_RECOVERY_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I20_RESTART_RECOVERY_RESULT_2026-04-13.md)
+- clarified:
+  - `Runtime v0` exit criterion `D` is now materially satisfied
+  - the accepted claim is narrow:
+    - durable runtime truth survives interruption
+    - work context can be reconstructed from canonical truth
+    - recovered state can be re-exposed through the existing project/operator surface
+  - no detached daemon, scheduler, or worker-session recovery claim was added
+
+## 2026-04-13 Runtime v0 Final Exit Review Pack Prepared
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I21_PHASE_JUDGMENT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I21_PHASE_JUDGMENT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I21_PLAN_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I21_PLAN_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_EXIT_REVIEW_PACK_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_EXIT_REVIEW_PACK_2026-04-13.md)
+  - [D:\code\MyAttention\docs\review-for IKE_RUNTIME_V0_EXIT_REVIEW_PACK_2026-04-13.md](/D:/code/MyAttention/docs/review-for%20IKE_RUNTIME_V0_EXIT_REVIEW_PACK_2026-04-13.md)
+- clarified:
+  - Runtime v0 now has one compact final review edge
+  - the next default move is review and selective absorption
+  - further runtime packet growth should not continue by default without a new
+    explicit gap
+
+## 2026-04-13 Runtime v0 Exit Review Absorbed
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_EXIT_HANDOFF_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_EXIT_HANDOFF_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_EXIT_REVIEW_ABSORPTION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_EXIT_REVIEW_ABSORPTION_2026-04-13.md)
+- clarified:
+  - Runtime v0 is now accepted as the first trustworthy operating kernel
+  - criterion `A` is now aligned as materially satisfied
+  - criterion `F` is now formalized through an explicit exit handoff
+  - subsequent work should move above Runtime v0 instead of continuing
+    runtime-local packet growth
+
+## 2026-04-13 Source Intelligence V1 Became Active Mainline
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_ACTIVE_MAINLINE_TRANSITION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_ACTIVE_MAINLINE_TRANSITION_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M2_PHASE_JUDGMENT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M2_PHASE_JUDGMENT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M2_PLAN_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M2_PLAN_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M2_EXECUTION_PACKET_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M2_EXECUTION_PACKET_2026-04-13.md)
+- clarified:
+  - Runtime v0 is now accepted substrate rather than active growth line
+  - the active project edge is now one real discovery loop through the
+    existing source-intelligence M1 path
+
+## 2026-04-13 Source Intelligence V1 M2 Loop Proof Added
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\review-for IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/review-for%20IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md)
+- validated:
+  - `python -m unittest tests.test_feeds_source_discovery_route tests.test_source_plan_helpers tests.test_source_discovery_contract tests.test_source_discovery_identity`
+  - `42 tests OK`
+  - `python -m py_compile D:\code\MyAttention\services\api\tests\test_feeds_source_discovery_route.py`
+- clarified:
+  - the existing M1 route path now supports one bounded route-level loop shape
+  - next work should shift from continuity proof to quality or noise judgment
+
+## 2026-04-13 Source Intelligence V1 M2 Loop Review Absorbed
+
+- durable docs:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_REVIEW_ABSORPTION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_REVIEW_ABSORPTION_2026-04-13.md)
+- clarified:
+  - `M2` is accepted as a bounded route-level loop proof
+  - it is not a broad real-loop or semantic-quality closure
+  - the next slice should move to quality improvement or noise compression
+- 2026-04-15: Improved `Source Intelligence V1` panel inspect output from shallow agreement counts to structured insight. Added consensus/disagreement insight surfaces, bounded follow-up hints, and provider-aware default model resolution for multi-provider panel lanes. Recorded Claude Code chain validation for this packet.
+- 2026-04-15: tightened `M8` panel inspect semantics and validation. `panel_signal` now requires full overlap to report `stable`; asymmetric lane failure remains visible as `mixed`. Added explicit stable-path and invalid-secondary-path route proofs. Documented multi-model judgment as a future reusable capability direction rather than permanent route-local logic.
+- 2026-04-15: extracted the generic AI judgment kernel into `services/api/feeds/ai_judgment.py` while preserving existing source-intelligence route contracts. Recorded Claude Code chain validation for this bounded internal refactor and the controller-side integration repair that closed it.
+- 2026-04-15: followed `M10` review by tightening the extraction claim and adding direct substrate tests for `feeds.ai_judgment`. This makes the reuse claim depend on explicit module-level proof, not only route-level regression coverage.
+- 2026-04-15: added a bounded selective-absorption advisory layer on top of the existing panel outputs. The reusable judgment substrate now derives controller-facing advisory buckets for both discovery-panel and version-panel surfaces, but remains inspect-only and explicitly non-canonical.

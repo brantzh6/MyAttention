@@ -750,14 +750,14 @@ class FeishuNotifier:
             # 测试 App API 模式
             return await self._app_client.send_card(
                 self.default_target_id,
-                "🔔 MyAttention 通知测试",
+                "🔔 IKE 通知测试",
                 f"**测试时间:** {now}\n\n✅ 飞书 App API 连接成功！",
                 "blue"
             )
 
         # 测试 Webhook 模式
         return await self.send_card_webhook(
-            title="🔔 MyAttention 通知测试",
+            title="🔔 IKE 通知测试",
             content=f"**测试时间:** {now}\n\n✅ 飞书 Webhook 连接成功！",
             color="blue"
         )

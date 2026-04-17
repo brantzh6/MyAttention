@@ -5,7 +5,7 @@
  * 解决 localStorage 5MB 容量限制问题
  */
 
-const DB_NAME = 'myattention_cache'
+const DB_NAME = 'ike_cache'
 const DB_VERSION = 1
 const STORE_NAME = 'feeds'
 

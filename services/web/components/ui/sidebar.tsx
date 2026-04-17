@@ -21,7 +21,7 @@ export function Sidebar() {
       <div className="border-b p-4">
         <Link href="/" className="flex items-center gap-2">
           <Brain className="h-8 w-8 text-primary" />
-          <span className="text-lg font-semibold">MyAttention</span>
+          <span className="text-lg font-semibold">IKE</span>
         </Link>
       </div>
 
@@ -51,7 +51,7 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t p-4 text-xs text-muted-foreground">
-        <p>MyAttention v0.1.0</p>
+        <p>IKE v0.1.0</p>
       </div>
     </aside>
   )

@@ -16,6 +16,14 @@ ROLE_FILE_MAP = {
 }
 
 
+def _default_allowed_read(cwd: Path) -> str:
+    return str((cwd / "docs" / "CURRENT_MAINLINE_HANDOFF.md").resolve())
+
+
+def _agents_contract(cwd: Path) -> str:
+    return str((cwd / "AGENTS.md").resolve())
+
+
 def emit_json(payload: dict) -> None:
     data = json.dumps(payload, ensure_ascii=False)
     try:
@@ -39,6 +47,12 @@ def main() -> int:
     parser.add_argument("--task-type", default="implementation", help="implementation | review | analysis | validation")
     parser.add_argument("--problem-type", required=True, help="Normalized problem type label.")
     parser.add_argument("--priority", default="P1", help="P0 | P1 | P2")
+    parser.add_argument("--lane", default="coding", help="Machine-readable lane label.")
+    parser.add_argument("--reasoning-mode", default="high", help="Requested reasoning / thinking depth.")
+    parser.add_argument("--sandbox-identity", default=None, help="Machine-readable sandbox identity.")
+    parser.add_argument("--sandbox-kind", default="qoder_workspace", help="Machine-readable sandbox kind.")
+    parser.add_argument("--capability-profile", default="coding_high_reasoning", help="Capability profile label.")
+    parser.add_argument("--network-policy", default="restricted", help="Machine-readable network policy intent.")
     parser.add_argument("--goal", required=True, help="Specific expected outcome.")
     parser.add_argument("--scope-allowed", nargs="+", required=True, help="Files allowed to change.")
     parser.add_argument("--scope-read", nargs="*", default=[], help="Files allowed to read.")
@@ -50,6 +64,7 @@ def main() -> int:
     args = parser.parse_args()
 
     cwd = Path(args.cwd).resolve()
+    sandbox_identity = args.sandbox_identity or f"{args.sandbox_kind}:{args.task_id}"
     base = cwd / ".runtime" / "delegation"
     briefs_dir = base / "briefs"
     contexts_dir = base / "contexts"
@@ -73,6 +88,12 @@ def main() -> int:
         f"problem_type: {args.problem_type}",
         f"priority: {args.priority}",
         f"role: {args.role}",
+        f"lane: {args.lane}",
+        f"reasoning_mode: {args.reasoning_mode}",
+        f"sandbox_identity: {sandbox_identity}",
+        f"sandbox_kind: {args.sandbox_kind}",
+        f"capability_profile: {args.capability_profile}",
+        f"network_policy: {args.network_policy}",
         "",
         "## Goal",
         f"- {args.goal}",
@@ -81,7 +102,7 @@ def main() -> int:
         "- Allowed to change:",
         *[f"  - {item}" for item in args.scope_allowed],
         "- Allowed to read:",
-        *([f"  - {item}" for item in args.scope_read] or ["  - D:\\code\\MyAttention\\docs\\CURRENT_MAINLINE_HANDOFF.md"]),
+        *([f"  - {item}" for item in args.scope_read] or [f"  - {_default_allowed_read(cwd)}"]),
         "- Out of scope:",
         *([f"  - {item}" for item in args.out_of_scope] or ["  - backend API contracts", "  - DB schema"]),
         "",
@@ -111,8 +132,8 @@ def main() -> int:
         *([f"- {item}" for item in args.stop_conditions] or ["- Stop if the task requires schema changes or backend contract changes."]),
         "",
         "## Version / Context Refs",
-        "- D:\\code\\MyAttention\\docs\\CURRENT_MAINLINE_HANDOFF.md",
-        "- D:\\code\\MyAttention\\AGENTS.md",
+        f"- {_default_allowed_read(cwd)}",
+        f"- {_agents_contract(cwd)}",
         f"- {str((cwd / ROLE_FILE_MAP[args.role]).resolve())}",
         "",
     ]
@@ -129,8 +150,16 @@ def main() -> int:
         "## Role Contract",
         str((cwd / ROLE_FILE_MAP[args.role]).resolve()),
         "",
+        "## Lane Metadata",
+        f"- lane: {args.lane}",
+        f"- reasoning_mode: {args.reasoning_mode}",
+        f"- sandbox_identity: {sandbox_identity}",
+        f"- sandbox_kind: {args.sandbox_kind}",
+        f"- capability_profile: {args.capability_profile}",
+        f"- network_policy: {args.network_policy}",
+        "",
         "## Additional Allowed Reads",
-        *([f"- {item}" for item in args.scope_read] or ["- D:\\code\\MyAttention\\docs\\CURRENT_MAINLINE_HANDOFF.md"]),
+        *([f"- {item}" for item in args.scope_read] or [f"- {_default_allowed_read(cwd)}"]),
         "",
     ]
     context_path.write_text("\n".join(context_lines), encoding="utf-8", newline="\n")
@@ -184,6 +213,13 @@ def main() -> int:
     emit_json(
         {
             "task_id": args.task_id,
+            "lane": args.lane,
+            "reasoning_mode": args.reasoning_mode,
+            "sandbox_identity": sandbox_identity,
+            "sandbox_kind": args.sandbox_kind,
+            "capability_profile": args.capability_profile,
+            "write_scope": args.scope_allowed,
+            "network_policy": args.network_policy,
             "role": args.role,
             "brief": str(brief_path),
             "context": str(context_path),
@@ -204,6 +240,20 @@ def main() -> int:
                 str(result_path),
                 "--done",
                 str(done_path),
+                "--lane",
+                args.lane,
+                "--reasoning-mode",
+                args.reasoning_mode,
+                "--sandbox-identity",
+                sandbox_identity,
+                "--sandbox-kind",
+                args.sandbox_kind,
+                "--capability-profile",
+                args.capability_profile,
+                "--network-policy",
+                args.network_policy,
+                "--write-scope",
+                *args.scope_allowed,
                 "--role",
                 args.role,
                 "--mode",

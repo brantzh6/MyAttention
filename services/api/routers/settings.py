@@ -163,7 +163,7 @@ async def _test_feishu_websocket(app_id: str, app_secret: str, target_id: str) -
             success = await test_client.send_message(
                 receive_id=target_id,
                 msg_type="text",
-                content=json.dumps({"text": "🔔 MyAttention 连接测试消息"}),
+                content=json.dumps({"text": "🔔 IKE 连接测试消息"}),
                 receive_id_type="chat_id"
             )
 
@@ -426,7 +426,7 @@ async def test_notification_channel(channel_id: str, request: TestNotificationRe
         raise HTTPException(status_code=400, detail="请配置 Webhook URL 或 App API (app_id + app_secret + target_id)")
 
     test_title = request.title if request else "测试通知"
-    test_message = request.message if request else "🔔 MyAttention 通知测试 - 连接成功!"
+    test_message = request.message if request else "🔔 IKE 通知测试 - 连接成功!"
 
     try:
         if channel["type"] == "feishu":
@@ -551,10 +551,10 @@ async def test_feishu_app_api(request: FeishuAppTestRequest):
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         success = await notifier.send_card(
-            title="🔔 MyAttention 飞书通知测试",
+            title="🔔 IKE 飞书通知测试",
             content=f"**测试时间:** {now}\n\n✅ 飞书 App API 连接成功！",
             color="green",
-            button_text="打开 MyAttention",
+            button_text="打开 IKE",
             button_url="http://localhost:3000"
         )
 
@@ -618,7 +618,7 @@ async def test_feishu_websocket_connection(request: FeishuWebSocketTestRequest):
             success = await test_client.send_message(
                 receive_id=target_id,
                 msg_type="text",
-                content=json.dumps({"text": "🔔 MyAttention 连接测试消息"}),
+                content=json.dumps({"text": "🔔 IKE 连接测试消息"}),
                 receive_id_type="chat_id"
             )
 
@@ -809,9 +809,9 @@ async def get_system_settings():
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get("http://localhost:8000/health")
-            results["services"].append({"name": "MyAttention API", "status": "healthy" if response.status_code == 200 else "unhealthy", "running": response.status_code == 200})
+            results["services"].append({"name": "IKE API", "status": "healthy" if response.status_code == 200 else "unhealthy", "running": response.status_code == 200})
     except Exception as e:
-        results["services"].append({"name": "MyAttention API", "status": "error", "running": False, "error": str(e)})
+            results["services"].append({"name": "IKE API", "status": "error", "running": False, "error": str(e)})
 
     # Check auto evolution
     try:

@@ -33,6 +33,62 @@ SYSTEM_HEALTH_STATUS_ORDER = {
 }
 
 
+def classify_feedback_signal(
+    *,
+    source_type: str,
+    category: str | None = None,
+    source_data: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Classify feedback signals into a small set of routing classes."""
+    payload = dict(source_data or {})
+    issue_type = str(payload.get("type") or payload.get("task_type") or "").strip().lower()
+    state = str(payload.get("state") or "").strip().lower()
+    status = str(payload.get("status") or (payload.get("summary") or {}).get("status") or "").strip().lower()
+    evidence = " ".join(str(item) for item in payload.get("evidence") or [])
+    category_value = str(category or payload.get("category") or "").strip().lower()
+    source_type_value = str(source_type or "").strip().lower()
+    combined = " ".join([issue_type, state, status, category_value, evidence.lower()])
+
+    if source_type_value == "log_analysis":
+        if "redis" in combined or "cache" in combined:
+            return {
+                "feedback_class": "acceleration_degradation",
+                "routing_lane": "low_cost_monitoring",
+                "controller_escalation": False,
+            }
+        if any(token in combined for token in ("postgres", "runtime truth", "preflight", "canonical")):
+            return {
+                "feedback_class": "canonical_truth_risk",
+                "routing_lane": "controller",
+                "controller_escalation": True,
+            }
+        return {
+            "feedback_class": "operational_degradation",
+            "routing_lane": "low_cost_monitoring",
+            "controller_escalation": False,
+        }
+
+    if source_type_value == "system_health":
+        if issue_type == "feed_collection_health":
+            return {
+                "feedback_class": "operational_degradation",
+                "routing_lane": "low_cost_monitoring",
+                "controller_escalation": status == "unhealthy",
+            }
+        if issue_type in {"runtime_truth", "runtime_preflight", "canonical_service"}:
+            return {
+                "feedback_class": "canonical_truth_risk",
+                "routing_lane": "controller",
+                "controller_escalation": True,
+            }
+
+    return {
+        "feedback_class": "operational_degradation",
+        "routing_lane": "low_cost_monitoring",
+        "controller_escalation": False,
+    }
+
+
 def make_ascii_safe(value: Any) -> Any:
     if isinstance(value, str):
         return value.encode("ascii", "replace").decode("ascii")

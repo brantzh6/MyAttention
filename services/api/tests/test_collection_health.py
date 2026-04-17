@@ -119,6 +119,9 @@ class CollectionHealthSummaryTest(unittest.TestCase):
         self.assertIn("backlog", issue["title"])
         self.assertIn("alpha(6)", issue["description"])
         self.assertEqual(issue["source_data"]["pending_sources_1h"][0]["source_key"], "alpha")
+        self.assertEqual(issue["source_data"]["feedback_class"], "operational_degradation")
+        self.assertEqual(issue["source_data"]["routing_lane"], "low_cost_monitoring")
+        self.assertFalse(issue["source_data"]["controller_escalation"])
 
     def test_build_issue_skips_healthy_snapshot(self) -> None:
         issue = build_collection_health_issue(

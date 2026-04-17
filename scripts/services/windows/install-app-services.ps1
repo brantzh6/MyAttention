@@ -1,6 +1,10 @@
 param(
-    [string]$RepoRoot = "D:\code\MyAttention",
-    [string]$NssmPath = "C:\tools\nssm\nssm.exe"
+    [string]$RepoRoot = "D:\code\IKE",
+    [string]$ServicePrefix = "IKE",
+    [string]$NssmPath = "C:\tools\nssm\nssm.exe",
+    [string]$BindHost = "0.0.0.0",
+    [int]$ApiPort = 8000,
+    [int]$WebPort = 3000
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,33 +22,36 @@ $python = Join-Path $RepoRoot ".venv\Scripts\python.exe"
 $node = "C:\Program Files\nodejs\node.exe"
 $watchdogScript = Join-Path $RepoRoot "runtime_watchdog.py"
 $webScript = Join-Path $webWorkdir ".next\standalone\server.js"
+$apiServiceName = "$ServicePrefix`Api"
+$webServiceName = "$ServicePrefix`Web"
+$watchdogServiceName = "$ServicePrefix`Watchdog"
 
-& $NssmPath install MyAttentionApi $python "-m uvicorn main:app --host 0.0.0.0 --port 8000"
-& $NssmPath set MyAttentionApi AppDirectory $apiWorkdir
-& $NssmPath set MyAttentionApi AppStdout (Join-Path $runtimeRoot "api-service.log")
-& $NssmPath set MyAttentionApi AppStderr (Join-Path $runtimeRoot "api-service.log")
-& $NssmPath set MyAttentionApi AppRotateFiles 1
-& $NssmPath set MyAttentionApi Start SERVICE_AUTO_START
-& sc.exe failure MyAttentionApi reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
-& sc.exe failureflag MyAttentionApi 1 | Out-Null
+& $NssmPath install $apiServiceName $python "-m uvicorn main:app --host $BindHost --port $ApiPort"
+& $NssmPath set $apiServiceName AppDirectory $apiWorkdir
+& $NssmPath set $apiServiceName AppStdout (Join-Path $runtimeRoot "api-service.log")
+& $NssmPath set $apiServiceName AppStderr (Join-Path $runtimeRoot "api-service.log")
+& $NssmPath set $apiServiceName AppRotateFiles 1
+& $NssmPath set $apiServiceName Start SERVICE_AUTO_START
+& sc.exe failure $apiServiceName reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
+& sc.exe failureflag $apiServiceName 1 | Out-Null
 
-& $NssmPath install MyAttentionWeb $node $webScript
-& $NssmPath set MyAttentionWeb AppDirectory $webWorkdir
-& $NssmPath set MyAttentionWeb AppEnvironmentExtra "PORT=3000" "HOSTNAME=127.0.0.1" "API_URL=http://127.0.0.1:8000" "NEXT_PUBLIC_API_URL=http://127.0.0.1:8000"
-& $NssmPath set MyAttentionWeb AppStdout (Join-Path $runtimeRoot "web-service.log")
-& $NssmPath set MyAttentionWeb AppStderr (Join-Path $runtimeRoot "web-service.log")
-& $NssmPath set MyAttentionWeb AppRotateFiles 1
-& $NssmPath set MyAttentionWeb Start SERVICE_AUTO_START
-& sc.exe failure MyAttentionWeb reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
-& sc.exe failureflag MyAttentionWeb 1 | Out-Null
+& $NssmPath install $webServiceName $node $webScript
+& $NssmPath set $webServiceName AppDirectory $webWorkdir
+& $NssmPath set $webServiceName AppEnvironmentExtra "PORT=$WebPort" "HOSTNAME=127.0.0.1" "API_URL=http://127.0.0.1:$ApiPort" "NEXT_PUBLIC_API_URL=http://127.0.0.1:$ApiPort"
+& $NssmPath set $webServiceName AppStdout (Join-Path $runtimeRoot "web-service.log")
+& $NssmPath set $webServiceName AppStderr (Join-Path $runtimeRoot "web-service.log")
+& $NssmPath set $webServiceName AppRotateFiles 1
+& $NssmPath set $webServiceName Start SERVICE_AUTO_START
+& sc.exe failure $webServiceName reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
+& sc.exe failureflag $webServiceName 1 | Out-Null
 
-& $NssmPath install MyAttentionWatchdog $python "$watchdogScript --mode local-process"
-& $NssmPath set MyAttentionWatchdog AppDirectory $RepoRoot
-& $NssmPath set MyAttentionWatchdog AppStdout (Join-Path $runtimeRoot "watchdog-service.log")
-& $NssmPath set MyAttentionWatchdog AppStderr (Join-Path $runtimeRoot "watchdog-service.log")
-& $NssmPath set MyAttentionWatchdog AppRotateFiles 1
-& $NssmPath set MyAttentionWatchdog Start SERVICE_AUTO_START
-& sc.exe failure MyAttentionWatchdog reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
-& sc.exe failureflag MyAttentionWatchdog 1 | Out-Null
+& $NssmPath install $watchdogServiceName $python "$watchdogScript --mode local-process"
+& $NssmPath set $watchdogServiceName AppDirectory $RepoRoot
+& $NssmPath set $watchdogServiceName AppStdout (Join-Path $runtimeRoot "watchdog-service.log")
+& $NssmPath set $watchdogServiceName AppStderr (Join-Path $runtimeRoot "watchdog-service.log")
+& $NssmPath set $watchdogServiceName AppRotateFiles 1
+& $NssmPath set $watchdogServiceName Start SERVICE_AUTO_START
+& sc.exe failure $watchdogServiceName reset= 86400 actions= restart/60000/restart/60000/restart/60000 | Out-Null
+& sc.exe failureflag $watchdogServiceName 1 | Out-Null
 
-Write-Host "Installed MyAttentionApi / MyAttentionWeb / MyAttentionWatchdog"
+Write-Host "Installed $apiServiceName / $webServiceName / $watchdogServiceName"

@@ -6,9 +6,247 @@ This document is the shortest reliable handoff for another agent or engineer to 
 
 It is intentionally operational, not visionary.
 
+## First Read
+
+Before scanning this long handoff, start with:
+
+- [D:\code\MyAttention\docs\CURRENT_MAINLINE_MAP_2026-04-10.md](/D:/code/MyAttention/docs/CURRENT_MAINLINE_MAP_2026-04-10.md)
+- [D:\code\MyAttention\docs\IKE_UNIFIED_TASK_LANDSCAPE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_UNIFIED_TASK_LANDSCAPE_2026-04-11.md)
+- [D:\code\MyAttention\docs\CURRENT_RUNTIME_MAINLINE_INDEX_2026-04-10.md](/D:/code/MyAttention/docs/CURRENT_RUNTIME_MAINLINE_INDEX_2026-04-10.md)
+- [D:\code\MyAttention\docs\CURRENT_RENAME_CUTOVER_INDEX_2026-04-10.md](/D:/code/MyAttention/docs/CURRENT_RENAME_CUTOVER_INDEX_2026-04-10.md)
+- [D:\code\MyAttention\docs\CURRENT_AGENT_HARNESS_INDEX_2026-04-10.md](/D:/code/MyAttention/docs/CURRENT_AGENT_HARNESS_INDEX_2026-04-10.md)
+- [D:\code\MyAttention\docs\IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md)
+- [D:\code\MyAttention\docs\IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md](/D:/code/MyAttention/docs/IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md)
+
+## Active Surface Rule
+
+Do not treat every durable result file as first-read material.
+
+For continuation:
+
+1. read [D:\code\MyAttention\docs\CURRENT_MAINLINE_MAP_2026-04-10.md](/D:/code/MyAttention/docs/CURRENT_MAINLINE_MAP_2026-04-10.md)
+2. read the relevant active index or packet
+3. open older result docs only when the active document points to them
+
+Policy reference:
+
+- [D:\code\MyAttention\docs\IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md)
+
 ## Latest Override
 
 This section overrides older runtime phase notes below when they conflict.
+
+- active project mainline is now:
+  - `Source Intelligence V1`
+  - transition note:
+    - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_ACTIVE_MAINLINE_TRANSITION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_ACTIVE_MAINLINE_TRANSITION_2026-04-13.md)
+  - current controller interpretation:
+    - `Runtime v0` is accepted substrate
+    - the next active edge is one real bounded discovery loop through the
+      existing M1 path
+- that loop proof is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\review-for IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/review-for%20IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_REVIEW_ABSORPTION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_REVIEW_ABSORPTION_2026-04-13.md)
+  - current controller interpretation:
+    - the existing M1 path is now proven capable of one bounded route-level
+      loop shape
+    - the next action should be one quality/noise slice, not more
+      continuity-only patches
+- `M3` noise compression is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M3_PHASE_JUDGMENT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M3_PHASE_JUDGMENT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M3_PLAN_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M3_PLAN_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M3_NOISE_COMPRESSION_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M3_NOISE_COMPRESSION_RESULT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M3_NOISE_COMPRESSION_REVIEW_ABSORPTION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M3_NOISE_COMPRESSION_REVIEW_ABSORPTION_2026-04-13.md)
+  - current controller interpretation:
+    - one bounded same-source generic-domain compression heuristic is now active
+    - this remains a bounded discovery-path improvement, not a ranking-engine redesign
+    - review absorption accepted `claude` and `chatgpt`, and rejected `gemini` as scope drift back to `M2`
+    - next action should choose a distinct next quality/noise slice
+- `M4` release-over-repository compression is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M4_PHASE_JUDGMENT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M4_PHASE_JUDGMENT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M4_PLAN_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M4_PLAN_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M4_RELEASE_OVER_REPOSITORY_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M4_RELEASE_OVER_REPOSITORY_RESULT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M4_RELEASE_OVER_REPOSITORY_REVIEW_ABSORPTION_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M4_RELEASE_OVER_REPOSITORY_REVIEW_ABSORPTION_2026-04-14.md)
+  - current controller interpretation:
+    - `LATEST` / `FRONTIER` discovery can now suppress same-repo repository duplicates when release is already competitive
+    - `METHOD` intentionally remains unchanged
+    - route-level symmetry is now explicit for `LATEST`, `FRONTIER`, and `METHOD`
+    - next action should not be more repository-vs-release patching by default
+- `M5` contextual-media article signal classification is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M5_PHASE_JUDGMENT_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M5_PHASE_JUDGMENT_2026-04-14.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M5_PLAN_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M5_PLAN_2026-04-14.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M5_CONTEXTUAL_MEDIA_SIGNAL_RESULT_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M5_CONTEXTUAL_MEDIA_SIGNAL_RESULT_2026-04-14.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M5_CONTEXTUAL_MEDIA_SIGNAL_REVIEW_ABSORPTION_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M5_CONTEXTUAL_MEDIA_SIGNAL_REVIEW_ABSORPTION_2026-04-14.md)
+  - current controller interpretation:
+    - bounded contextual-media publisher article pages can now be treated as `signal` in `LATEST` / `FRONTIER`
+    - `METHOD` intentionally remains conservative
+    - `FRONTIER` proof and negative page-boundary proof are now explicit
+    - next action should be review, not more media-rule patching by default
+- `M6` GitHub repo-thread signal classification is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M6_PHASE_JUDGMENT_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M6_PHASE_JUDGMENT_2026-04-14.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M6_PLAN_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M6_PLAN_2026-04-14.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M6_GITHUB_THREAD_SIGNAL_RESULT_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M6_GITHUB_THREAD_SIGNAL_RESULT_2026-04-14.md)
+  - current controller interpretation:
+    - bounded GitHub repo issue/discussion/pull pages can now be treated as `signal`
+    - plain repo pages remain unchanged
+    - next action should be review, not more GitHub page-family patching by default
+- `M7` AI-assisted candidate judgment inspect is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M7_PHASE_JUDGMENT_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M7_PHASE_JUDGMENT_2026-04-14.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M7_PLAN_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M7_PLAN_2026-04-14.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M7_AI_JUDGMENT_INSPECT_RESULT_2026-04-14.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M7_AI_JUDGMENT_INSPECT_RESULT_2026-04-14.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M7_AI_JUDGMENT_INSPECT_REVIEW_ABSORPTION_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M7_AI_JUDGMENT_INSPECT_REVIEW_ABSORPTION_2026-04-15.md)
+  - current controller interpretation:
+    - one bounded inspect-only AI judgment lane now exists above the cleaned discovery surface
+    - the route is advisory only and does not write source truth
+    - this is the first explicit step that reintroduces AI participation above recent normalization heuristics
+    - malformed JSON now degrades to a bounded empty result instead of a 500
+    - normalization transparency now records discarded judgments
+    - the summary string is explicitly weaker than the normalized decision set
+    - this packet should stop here rather than expand directly into persistence
+- `M8` AI judgment panel inspect is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M8_PHASE_JUDGMENT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M8_PHASE_JUDGMENT_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M8_PLAN_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M8_PLAN_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M8_PANEL_INSPECT_RESULT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M8_PANEL_INSPECT_RESULT_2026-04-15.md)
+  - current controller interpretation:
+    - one bounded dual-model inspect lane now exists above `M7`
+    - primary and secondary judgments remain separate
+    - panel output exposes agreement shape, not merged truth
+    - the next action should be review, not voting or workflow expansion
+- `M9` Claude-assisted panel insight is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M9_CLAUDE_PANEL_INSIGHT_RESULT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M9_CLAUDE_PANEL_INSIGHT_RESULT_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_CLAUDE_CODE_CHAIN_VALIDATION_M9_2026-04-15.md](/D:/code/MyAttention/docs/IKE_CLAUDE_CODE_CHAIN_VALIDATION_M9_2026-04-15.md)
+  - current controller interpretation:
+    - panel output now surfaces `consensus_worthy`, `disagreement_worthy`, and opportunity-oriented follow-up hints
+    - ACP Claude exec is productive for bounded coding tasks
+    - detached `claude_worker` remains a separate hardening lane
+- `M10` judgment substrate extraction is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M10_JUDGMENT_SUBSTRATE_RESULT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M10_JUDGMENT_SUBSTRATE_RESULT_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M10_REVIEW_ABSORPTION_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M10_REVIEW_ABSORPTION_2026-04-15.md)
+  - current controller interpretation:
+    - `feeds.ai_judgment` is now the first reusable internal judgment substrate step
+    - route-level behavior remains intact
+    - substrate-level tests now back the reuse claim
+- `M11` source-plan version judgment inspect is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M11_PHASE_JUDGMENT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M11_PHASE_JUDGMENT_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M11_PLAN_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M11_PLAN_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M11_VERSION_JUDGMENT_RESULT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M11_VERSION_JUDGMENT_RESULT_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M11_REVIEW_ABSORPTION_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M11_REVIEW_ABSORPTION_2026-04-15.md)
+  - current controller interpretation:
+    - the substrate is now reused on a second surface inside `Source Intelligence V1`
+    - the new route remains inspect-only and non-mutating
+    - fallback `snapshot_only` proof and missing-version `404` proof are now explicitly covered
+    - mixed-context `gemini` review was rejected
+    - the next action should not be workflow expansion
+- `M12` source-plan version judgment panel inspect is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M12_PHASE_JUDGMENT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M12_PHASE_JUDGMENT_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M12_PLAN_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M12_PLAN_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M12_VERSION_PANEL_RESULT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M12_VERSION_PANEL_RESULT_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M12_REVIEW_ABSORPTION_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M12_REVIEW_ABSORPTION_2026-04-15.md)
+  - current controller interpretation:
+    - panel disagreement/consensus shape is now proven on the version-change surface too
+    - this remains inspect-only and non-mutating
+    - wording is now tightened to bounded dual-lane panel inspect, not stronger independence claims
+    - malformed-secondary fallback is now explicitly covered
+    - the next action should not be workflow expansion
+- project-level reminder:
+  - [D:\code\MyAttention\docs\IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md](/D:/code/MyAttention/docs/IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md)
+  - current controller interpretation:
+    - recent hard-coded slices are cleanup / normalization scaffolds
+    - they must not redefine IKE as a static rules system
+    - a later slice must explicitly reopen AI-assisted judgment above the current cleaned input layer
+
+- `R2-I18` should now be treated as a closed bounded packet:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I18_RESULT_MILESTONE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I18_RESULT_MILESTONE_2026-04-11.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I18_VALIDATED_REVIEW_ABSORPTION_2026-04-13.md)
+  - current controller interpretation:
+    - focused local validation is closed
+    - changed-basis supersession proof now exists
+    - `claude` + `chatgpt` review inputs were accepted selectively
+    - `gemini` review was rejected as mixed-context drift
+    - do not reopen this line into generic approval-workflow discussion
+- GitHub review-pack publishing is now the default external-review mechanism
+  for review nodes with dependent local files:
+  - publish as a small dedicated branch/worktree package
+  - include:
+    - review entry
+    - pack entry
+    - dependent code/docs copies
+    - `FILE_LIST.md`
+    - `zip`
+  - all GitHub review-pack docs must use repo-relative links, not local
+    `D:\...` absolute paths
+- `R2-I19` now formalizes the existing runtime project surface as one real
+  operator substrate:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I19_PHASE_JUDGMENT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I19_PHASE_JUDGMENT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I19_PLAN_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I19_PLAN_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I19_OPERATOR_SUBSTRATE_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I19_OPERATOR_SUBSTRATE_RESULT_2026-04-13.md)
+  - current controller interpretation:
+    - `Runtime v0` exit criterion `E` is now materially satisfied
+    - no new runtime subsystem was added for this claim
+    - the proof rests on existing runtime truth + project-surface inspect path
+- `R2-I20` now closes restart-recovery at the bounded runtime-kernel level:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I20_PHASE_JUDGMENT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I20_PHASE_JUDGMENT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I20_PLAN_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I20_PLAN_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I20_RESTART_RECOVERY_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I20_RESTART_RECOVERY_RESULT_2026-04-13.md)
+  - current controller interpretation:
+    - `Runtime v0` exit criterion `D` is now materially satisfied
+    - the claim is bounded to canonical-truth recovery plus work-context
+      reconstruction and project-surface re-alignment
+    - do not misread this as detached worker/session recovery
+- `R2-I21` is now the active Runtime v0 review edge:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I21_PHASE_JUDGMENT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I21_PHASE_JUDGMENT_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-I21_PLAN_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-I21_PLAN_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_EXIT_REVIEW_PACK_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_EXIT_REVIEW_PACK_2026-04-13.md)
+  - [D:\code\MyAttention\docs\review-for IKE_RUNTIME_V0_EXIT_REVIEW_PACK_2026-04-13.md](/D:/code/MyAttention/docs/review-for%20IKE_RUNTIME_V0_EXIT_REVIEW_PACK_2026-04-13.md)
+  - current controller interpretation:
+    - Runtime v0 now has one compact exit-review packet
+    - by default, the next action should be review and selective absorption
+      rather than more narrow runtime growth
+- Runtime v0 exit review is now absorbed and closed:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_EXIT_REVIEW_ABSORPTION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_EXIT_REVIEW_ABSORPTION_2026-04-13.md)
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_EXIT_HANDOFF_2026-04-13.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_EXIT_HANDOFF_2026-04-13.md)
+  - current controller interpretation:
+    - `Runtime v0 = accept`
+    - Runtime v0 packet growth should stop by default
+    - next mainline continuation should move above Runtime v0 rather than
+      reopen runtime-local closure
+
+- project-level strategic follow-up tracker now exists:
+  - [D:\code\MyAttention\docs\IKE_STRATEGIC_FOLLOWUP_TRACKER_2026-04-11.md](/D:/code/MyAttention/docs/IKE_STRATEGIC_FOLLOWUP_TRACKER_2026-04-11.md)
+  - current controller interpretation:
+    - accepted strategic-review follow-ups are now durably materialized
+    - the remaining work is execution/review on those packets, not re-deciding
+      what they were
+- current execution/review package now exists:
+  - [D:\code\MyAttention\docs\IKE_EXECUTION_REVIEW_PACKAGE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_EXECUTION_REVIEW_PACKAGE_2026-04-11.md)
+  - current controller interpretation:
+    - this is the shortest current package for external execution/review below
+      the runtime mainline
+- `Source Intelligence V1` is now materially opened as the next
+  product-capability start line:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_PHASE_JUDGMENT_2026-04-11.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_PHASE_JUDGMENT_2026-04-11.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_IMPLEMENTATION_START_PACKET_2026-04-11.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_IMPLEMENTATION_START_PACKET_2026-04-11.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M1_SCOPE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M1_SCOPE_2026-04-11.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M1_CODING_BRIEF_2026-04-11.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M1_CODING_BRIEF_2026-04-11.md)
+  - current controller interpretation:
+    - this line is no longer only research/architecture
+    - it now has a bounded implementation start and an M1 coding lane
+- document-compression policy is now active:
+  - [D:\code\MyAttention\docs\IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md)
+  - current controller interpretation:
+    - not every durable result file should be treated as first-read material
+    - continuation should prefer map -> active index/packet -> historical
+      evidence only as needed
+- agent harness boundary proof now has a first durable result:
+ - agent harness boundary proof now has a first durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_BOUNDARY_PROOF_RESULT_2026-04-11.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_BOUNDARY_PROOF_RESULT_2026-04-11.md)
+  - current controller interpretation:
+    - workspace isolation and metadata coverage are materially proven
+    - Claude external run-root artifact landing is now also proven via a fake
+      local artifact sample
+    - hard sandbox enforcement is still unproven
+    - live subprocess robustness remains a separate stronger proof target
 
 - `R2-G14` controller-acceptability rule is now durably fixed:
   - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-G14_CONTROLLER_ACCEPTABILITY_RULE_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-G14_CONTROLLER_ACCEPTABILITY_RULE_RESULT_2026-04-09.md)
@@ -17,6 +255,10 @@ This section overrides older runtime phase notes below when they conflict.
       - acceptable for canonical live proof
     - `ambiguous + bounded_live_proof_ready`:
       - acceptable only for bounded alternate-port live proof
+      - this remains historical guidance, not the new canonical Windows redirector state
+    - `ambiguous + acceptable_windows_venv_redirector`:
+      - acceptable only as an intermediate Windows redirector state
+      - explicit controller confirmation is still required
     - `ambiguous + blocked_owner_mismatch`:
       - not acceptable
     - `ambiguous + blocked_code_freshness`:
@@ -71,8 +313,17 @@ This section overrides older runtime phase notes below when they conflict.
     - helper/test evidence now classifies the current process shape as
       `windows_venv_redirector_candidate`
     - controller acceptability is still unchanged and still blocked
-- next narrow decision note is now prepared:
-  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-H5_ACCEPTABILITY_DECISION_PLAN_2026-04-09.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-H5_ACCEPTABILITY_DECISION_PLAN_2026-04-09.md)
+- `R2-H5` Windows redirector acceptability is now durably recorded:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-H5_RESULT_MILESTONE_2026-04-09.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-H5_RESULT_MILESTONE_2026-04-09.md)
+  - supporting decision note:
+    - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-H5_ACCEPTABILITY_DECISION_PLAN_2026-04-09.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-H5_ACCEPTABILITY_DECISION_PLAN_2026-04-09.md)
+  - current controller interpretation:
+    - approved narrow Option B is now implemented
+    - Windows redirector shape no longer maps to `bounded_live_proof_ready`
+    - it now maps to:
+      - `acceptable_windows_venv_redirector`
+    - this remains an intermediate state and still requires explicit controller confirmation
+    - generic owner mismatch remains blocked
 - repository/workspace isolation work is now formally prepared:
   - [D:\code\MyAttention\docs\IKE_REPOSITORY_RESTRUCTURE_AND_WORKSPACE_ISOLATION_PLAN_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RESTRUCTURE_AND_WORKSPACE_ISOLATION_PLAN_2026-04-09.md)
   - [D:\code\MyAttention\docs\IKE_REPOSITORY_RESTRUCTURE_INVENTORY_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RESTRUCTURE_INVENTORY_2026-04-09.md)
@@ -82,6 +333,58 @@ This section overrides older runtime phase notes below when they conflict.
   - current controller interpretation:
     - workspace pollution risk is now formally accepted as real
     - migration should proceed as controlled parallel-root migration, not blind in-place rename
+- repository rename phase-2 backend/runtime identity normalization is now durably recorded:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D1_BACKEND_RUNTIME_IDENTITY_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D1_BACKEND_RUNTIME_IDENTITY_RESULT_2026-04-09.md)
+  - current controller interpretation:
+    - backend/runtime service identity is now partially normalized to `IKE`
+    - canonical `ike-*` container names are now accepted while legacy `myattention-*` aliases remain compatible
+    - default coding DashScope model is now `qwen3.6-plus`
+    - database identity and notification/product copy remain intentionally untouched
+- repository rename phase-2 visible cache namespace normalization is now durably recorded:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D13_FEED_CACHE_NAMESPACE_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D13_FEED_CACHE_NAMESPACE_RESULT_2026-04-10.md)
+  - current controller interpretation:
+    - browser feed cache namespace now uses `ike_cache`
+    - this is derived-data cleanup only, not truth migration
+- repository rename phase-2 voting prompt visible identity is now durably recorded:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D14_VOTING_PROMPT_IDENTITY_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D14_VOTING_PROMPT_IDENTITY_RESULT_2026-04-10.md)
+  - current controller interpretation:
+    - the model-facing decision-voting prompt now identifies as `IKE`
+    - logger and compatibility namespaces remain intentionally unchanged
+- automated reasoning baseline is now durably recorded:
+  - [D:\code\MyAttention\docs\IKE_AUTOMATED_REASONING_BASELINE_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AUTOMATED_REASONING_BASELINE_2026-04-09.md)
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D2_REASONING_AND_SERVICE_LABEL_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D2_REASONING_AND_SERVICE_LABEL_RESULT_2026-04-09.md)
+  - current controller interpretation:
+    - automated delivery should treat high reasoning / high thinking depth as the default for important delegated packets
+    - local OpenClaw config already has `thinkingDefault = high`
+    - Claude worker routine default model is now `qwen3.6-plus`
+    - runtime project-key migration remains a separate narrow packet
+- agent harness metadata hardening is now durably extended through P4:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P3_WRITE_SCOPE_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P3_WRITE_SCOPE_RESULT_2026-04-10.md)
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P4_NETWORK_POLICY_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P4_NETWORK_POLICY_RESULT_2026-04-10.md)
+  - current controller interpretation:
+    - Claude worker, OpenClaw wrappers, and qoder chain now all carry:
+      - `lane`
+      - `reasoning_mode`
+      - `sandbox_kind`
+      - `capability_profile`
+      - `write_scope`
+      - `network_policy`
+    - current `network_policy` defaults are:
+      - `coding_high_reasoning -> restricted`
+      - `review_high_reasoning -> disabled`
+    - this is metadata-first hardening only, not full sandbox enforcement
+- agent harness metadata hardening is now durably extended through P5:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P5_SANDBOX_IDENTITY_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P5_SANDBOX_IDENTITY_RESULT_2026-04-10.md)
+  - current controller interpretation:
+    - Claude worker, OpenClaw, and qoder now all carry practical
+      `sandbox_identity`
+    - this closes the largest remaining cross-lane metadata gap
+    - full sandbox lifecycle enforcement remains future work
+- runtime project-key normalization is now durably recorded:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D3_RUNTIME_PROJECT_KEY_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D3_RUNTIME_PROJECT_KEY_RESULT_2026-04-09.md)
+  - current controller interpretation:
+    - default runtime surface bootstrap/import now uses `ike-runtime-mainline`
+    - this packet does not retroactively rename existing DB rows
 
 - collaboration baseline is now fixed as:
   - `GPT / Codex` = controller and decision routing
@@ -382,7 +685,7 @@ This section overrides older runtime phase notes below when they conflict.
   - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-G14_CONTROLLER_ACCEPTABILITY_RULE_PLAN_2026-04-09.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-G14_CONTROLLER_ACCEPTABILITY_RULE_PLAN_2026-04-09.md)
   - current controller interpretation:
     - the next real question is not another field
-    - it is the explicit usage rule for `bounded_live_proof_ready`
+    - it is the explicit usage rule for the reviewed Windows redirector intermediate state
 - active delegated execution for `R2-G2`:
   - [D:\code\MyAttention\.runtime\claude-worker\runs\20260408T153652-948b3f83](/D:/code/MyAttention/.runtime/claude-worker/runs/20260408T153652-948b3f83)
 - detached completion pressure is now durably recorded at:
@@ -1782,3 +2085,328 @@ Current `R1-A2` note:
 - `R2-B` is materially complete and sufficient to open the next narrow phase
 - next active phase is now:
   - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-C_PHASE_JUDGMENT_2026-04-08.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-C_PHASE_JUDGMENT_2026-04-08.md)
+
+## 2026-04-09 Repository Restructure Phase 1 Executed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RESTRUCTURE_PHASE1_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RESTRUCTURE_PHASE1_RESULT_2026-04-09.md)
+- executed:
+  - pre-migration git checkpoint on `codex/pre-ike-restructure-2026-04-09`
+  - cold backup at `D:\code\_backups\MyAttention-pre-ike-restructure-2026-04-09`
+  - runtime/agent backups under `D:\code\_agent-runtimes\...-2026-04-09`
+  - parallel clean project root at `D:\code\IKE`
+  - OpenClaw agent workspace rewrite to isolated roots under `D:\code\_agent-runtimes\openclaw-workspaces\...`
+  - Claude worker default run-root rewrite to `D:\code\_agent-runtimes\claude-worker\runs`
+- truthful current state:
+  - controller thread still runs from `D:\code\MyAttention`
+  - final rename/cutover has not happened yet
+  - stale OpenClaw session history still exists and may need later cleanup
+
+## 2026-04-09 Cutover Readiness Scan Executed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RESTRUCTURE_CUTOVER_READINESS_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RESTRUCTURE_CUTOVER_READINESS_2026-04-09.md)
+- important new truth:
+  - `D:\code\IKE` is now materially clean
+  - leaked runtime/build artifacts were removed from the parallel root
+  - sync exclusions now prevent `api.log`, `chat_debug.log`, and `services\web\.next` from being recopied
+- remaining cutover blockers:
+  - controller still runs from `D:\code\MyAttention`
+  - historical `MyAttention` / `D:\code\MyAttention` references remain
+  - stale OpenClaw session history still exists
+
+## 2026-04-09 Rename Blocker Inventory And Phase 2 Plan
+
+- blocker inventory:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_REFERENCE_INVENTORY_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_REFERENCE_INVENTORY_2026-04-09.md)
+- next narrow rename phase:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_PHASE2_PLAN_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_PHASE2_PLAN_2026-04-09.md)
+- current truthful next step:
+  - start with service/deployment artifact normalization
+  - do not attempt a single broad rename sweep
+
+## 2026-04-09 P2-A1 Windows Service Installer Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2A1_WINDOWS_INSTALLER_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2A1_WINDOWS_INSTALLER_RESULT_2026-04-09.md)
+- first narrow phase-2 patch now exists:
+  - `scripts/services/windows/install-app-services.ps1`
+- new default assumptions:
+  - `RepoRoot = D:\code\IKE`
+  - `ServicePrefix = IKE`
+- this is parameterization only:
+  - it does not yet rewrite live installed services
+
+## 2026-04-09 P2-A2 Windows WinSW Templates Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2A2_WINSW_TEMPLATE_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2A2_WINSW_TEMPLATE_RESULT_2026-04-09.md)
+- normalized:
+  - `scripts/services/windows/winsw/MyAttentionApi.xml`
+  - `scripts/services/windows/winsw/MyAttentionWeb.xml`
+  - `scripts/services/windows/winsw/MyAttentionWatchdog.xml`
+  - `scripts/services/windows/README.md`
+- truthful state:
+  - Windows service templates are now future-root/future-name ready
+  - live installed services have not yet been renamed
+
+## 2026-04-09 P2-A3 Linux And macOS Service Templates Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2A3_LINUX_MAC_TEMPLATES_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2A3_LINUX_MAC_TEMPLATES_RESULT_2026-04-09.md)
+- normalized:
+  - Linux systemd templates now target `/opt/ike`
+  - macOS plist templates now target `/opt/ike` and `com.ike.*`
+- truthful state:
+  - service/deployment templates are now materially future-name/future-root ready across Windows/Linux/macOS
+  - live installs are still unchanged
+
+## 2026-04-09 P2-B1 Runtime Config Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2B1_RUNTIME_CONFIG_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2B1_RUNTIME_CONFIG_RESULT_2026-04-09.md)
+- normalized:
+  - `config/runtime/local-process.local.toml`
+  - `config/runtime/local-process.local.example.toml`
+  - `infrastructure/docker-compose.yml`
+- truthful state:
+  - infra service names stay compatible where needed
+  - app/runtime-facing defaults now point toward `IKE`
+
+## 2026-04-09 P2-C1 Delegation Scripts Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2C1_DELEGATION_SCRIPTS_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2C1_DELEGATION_SCRIPTS_RESULT_2026-04-09.md)
+- normalized:
+  - qoder bundle generators no longer hardcode the old root for handoff/AGENTS refs
+  - qoder delegate prompt no longer hardcodes `MyAttention`
+  - OpenClaw delegate default session now points at `ike-coder`
+
+## 2026-04-09 P2-D1 Backend Runtime Identity Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D1_BACKEND_RUNTIME_IDENTITY_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D1_BACKEND_RUNTIME_IDENTITY_RESULT_2026-04-09.md)
+- normalized:
+  - API-facing backend identity now presents as `IKE API`
+  - `services/api/routers/system.py` treats `ike-*` as canonical while accepting legacy `myattention-*` aliases
+  - default coding DashScope model now resolves to `qwen3.6-plus`
+
+## 2026-04-09 P2-D2 Automated Reasoning Baseline Recorded
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D2_REASONING_AND_SERVICE_LABEL_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D2_REASONING_AND_SERVICE_LABEL_RESULT_2026-04-09.md)
+- truthful state:
+  - OpenClaw routine delivery baseline is now durably recorded as `thinkingDefault = high`
+  - reasoning-capable routine models are `qwen3.6-plus`, `glm-5`, and `kimi-k2.5`
+  - Claude worker default model is now `qwen3.6-plus`
+
+## 2026-04-09 P2-D3 Runtime Project Key Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D3_RUNTIME_PROJECT_KEY_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D3_RUNTIME_PROJECT_KEY_RESULT_2026-04-09.md)
+- normalized:
+  - visible/runtime bootstrap now defaults to `ike-runtime-mainline`
+  - corresponding router tests now assert the same runtime project identity
+
+## 2026-04-09 P2-D4 Runtime Preflight Tests De-hardcoded
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D4_RUNTIME_PREFLIGHT_TEST_PATH_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D4_RUNTIME_PREFLIGHT_TEST_PATH_RESULT_2026-04-09.md)
+- normalized:
+  - runtime preflight tests no longer hardcode `D:\code\MyAttention`
+  - preferred-owner, repo-launcher, and `run_service.py` fixture paths are now derived from the current repo root
+- truthful next step:
+  - continue with narrow rename/cutover packets
+  - do not attempt a broad repository-wide root replacement
+
+## 2026-04-09 P2-A4 Windows Uninstaller Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2A4_WINDOWS_UNINSTALLER_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2A4_WINDOWS_UNINSTALLER_RESULT_2026-04-09.md)
+- normalized:
+  - `scripts/services/windows/uninstall-app-services.ps1` now defaults to `ServicePrefix = IKE`
+  - uninstall behavior is now symmetric with the earlier install-side parameterization
+- truthful state:
+  - this does not touch live installed services by itself
+  - legacy `MyAttention*` uninstall remains possible by explicitly passing the old prefix
+
+## 2026-04-09 P2-D5 Runtime Visible Title Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D5_RUNTIME_VISIBLE_TITLE_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D5_RUNTIME_VISIBLE_TITLE_RESULT_2026-04-09.md)
+- normalized:
+  - runtime bootstrap on the IKE settings surface now uses `IKE Runtime Mainline`
+  - visible/runtime title is aligned with the earlier `ike-runtime-mainline` project key
+
+## 2026-04-09 P2-D6 Web Metadata Title Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D6_WEB_METADATA_TITLE_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D6_WEB_METADATA_TITLE_RESULT_2026-04-09.md)
+- normalized:
+  - web root metadata title now uses `IKE`
+  - patch was kept narrow to visible metadata only
+
+## 2026-04-09 P2-D7 Web Package Identity Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D7_WEB_PACKAGE_IDENTITY_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D7_WEB_PACKAGE_IDENTITY_RESULT_2026-04-09.md)
+- normalized:
+  - `services/web` package identity now uses `@ike/web`
+  - package-lock metadata was aligned in the same narrow patch
+
+## 2026-04-09 P2-D8 Sidebar Branding Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D8_SIDEBAR_BRANDING_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D8_SIDEBAR_BRANDING_RESULT_2026-04-09.md)
+- normalized:
+  - web sidebar brand label now uses `IKE`
+  - sidebar footer version label now uses `IKE v0.1.0`
+
+## 2026-04-09 P2-D9 Runtime Comment Examples Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D9_RUNTIME_COMMENT_NORMALIZATION_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D9_RUNTIME_COMMENT_NORMALIZATION_RESULT_2026-04-09.md)
+- normalized:
+  - runtime/test comments no longer point at `D:\code\MyAttention` as the canonical future root example
+  - cutover guidance in comments now stays future-root safe
+
+## 2026-04-09 Anthropic / CREAO Agent Harness Research Captured
+
+- durable note:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_ANTHROPIC_CREAO_RESEARCH_NOTE_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_ANTHROPIC_CREAO_RESEARCH_NOTE_2026-04-09.md)
+- current controller judgment:
+  - Anthropic + CREAO both reinforce the current IKE direction toward isolated execution surfaces
+  - our repo is directionally aligned on policy and path layout
+  - we are still missing first-class sandbox enforcement, execution capability policy, and sandbox/task binding
+
+## 2026-04-09 DeerFlow 2.0 Research Captured
+
+- durable note:
+  - [D:\code\MyAttention\docs\IKE_DEERFLOW_2_RESEARCH_NOTE_2026-04-09.md](/D:/code/MyAttention/docs/IKE_DEERFLOW_2_RESEARCH_NOTE_2026-04-09.md)
+- current controller judgment:
+  - DeerFlow 2.0 strengthens the case for long-horizon orchestration, dynamic sub-agents, and enforced sandbox execution
+  - the highest-value borrow point is not tool breadth but execution-environment discipline
+
+## 2026-04-09 Agent Harness Enforcement Plan Opened
+
+- durable plan:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_ENFORCEMENT_PLAN_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_ENFORCEMENT_PLAN_2026-04-09.md)
+- contract update:
+  - [D:\code\MyAttention\docs\PROJECT_AGENT_HARNESS_CONTRACT.md](/D:/code/MyAttention/docs/PROJECT_AGENT_HARNESS_CONTRACT.md)
+- current controller judgment:
+  - workspace isolation is now treated as phase-1 only
+  - next harness evolution is sandbox identity, capability policy, and environment lifecycle separation
+
+## 2026-04-09 Capability Matrix And Rename Remainder Captured
+
+- durable notes:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_CAPABILITY_MATRIX_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_CAPABILITY_MATRIX_2026-04-09.md)
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_COMPATIBILITY_REMAINDER_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_COMPATIBILITY_REMAINDER_2026-04-09.md)
+- current controller judgment:
+  - routine lane reasoning baseline is now explicitly captured from local OpenClaw/Claude config truth
+  - remaining `MyAttention` references are now split into compatibility-sensitive items versus safe continued rename targets
+
+## 2026-04-09 Sandbox Metadata And Capability Draft Opened
+
+- durable drafts:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_SANDBOX_METADATA_SPEC_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_SANDBOX_METADATA_SPEC_2026-04-09.md)
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_CAPABILITY_POLICY_DRAFT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_CAPABILITY_POLICY_DRAFT_2026-04-09.md)
+- current controller judgment:
+  - next harness hardening should start with metadata-first sandbox identity and named lane capability profiles
+  - do not jump straight from path isolation to a broad execution-runtime rewrite
+
+## 2026-04-09 R2-H5 External Review #10 Synthesized
+
+- durable synthesis:
+  - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-H5_REVIEW10_SYNTHESIS_2026-04-09.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-H5_REVIEW10_SYNTHESIS_2026-04-09.md)
+- current controller judgment:
+  - the external review's Option B conclusion is consistent with current controller thinking
+  - its historical carry-forward list should be corrected before reuse because some earlier runtime items were already materially closed later in the mainline
+
+## 2026-04-09 P2-D10 Chat Visible Identity Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D10_CHAT_VISIBLE_IDENTITY_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D10_CHAT_VISIBLE_IDENTITY_RESULT_2026-04-09.md)
+- normalized:
+  - chat UI default model preference now aligns with `qwen3.6-plus`
+  - locale cache key now uses `ike.locale`
+
+## 2026-04-09 P2-D11 Notification Visible Identity Normalized
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_REPOSITORY_RENAME_P2D11_NOTIFICATION_VISIBLE_IDENTITY_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_REPOSITORY_RENAME_P2D11_NOTIFICATION_VISIBLE_IDENTITY_RESULT_2026-04-09.md)
+- current controller judgment:
+  - notification settings test copy and backend notification test labels now use `IKE`
+  - compatibility-sensitive `MyAttention` markers remain intentionally preserved
+
+## 2026-04-09 Agent Harness P1 Claude Metadata Landed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P1_CLAUDE_METADATA_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P1_CLAUDE_METADATA_RESULT_2026-04-09.md)
+- current controller judgment:
+  - Claude worker artifacts now carry lane / reasoning / sandbox metadata in a machine-readable way
+  - this is an enforcement-adjacent improvement, not a claim of full sandbox hardening
+
+## 2026-04-09 Agent Harness P1 OpenClaw Metadata Landed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P1_OPENCLAW_METADATA_RESULT_2026-04-09.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P1_OPENCLAW_METADATA_RESULT_2026-04-09.md)
+- current controller judgment:
+  - OpenClaw delegation entrypoints now carry explicit `lane` / `reasoning_mode`
+  - Claude worker and OpenClaw now share a first small metadata vocabulary for future comparison and enforcement
+
+## 2026-04-10 Highest Reasoning Default Tightened
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_HIGHEST_REASONING_DEFAULT_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_HIGHEST_REASONING_DEFAULT_RESULT_2026-04-10.md)
+- current controller judgment:
+  - OpenClaw already had real `thinkingDefault = high`
+  - Claude worker and OpenClaw delegation wrappers now default `reasoning_mode` to `high`
+  - important delegated work should now be treated as highest-available-reasoning by default
+
+## 2026-04-10 Agent Harness P1 Qoder Metadata Landed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P1_QODER_METADATA_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P1_QODER_METADATA_RESULT_2026-04-10.md)
+- current controller judgment:
+  - qoder bundle/launch scripts now also carry `lane` / `reasoning_mode`
+  - qoder is still a secondary lane, but no longer lags the newer lanes on metadata and default-high reasoning discipline
+
+## 2026-04-10 Agent Harness P2 Profile Defaults Landed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_AGENT_HARNESS_P2_PROFILE_DEFAULTS_RESULT_2026-04-10.md](/D:/code/MyAttention/docs/IKE_AGENT_HARNESS_P2_PROFILE_DEFAULTS_RESULT_2026-04-10.md)
+- current controller judgment:
+  - Claude worker, OpenClaw, and qoder now share:
+    - `lane`
+    - `reasoning_mode`
+    - `sandbox_kind`
+    - `capability_profile`
+  - this is still packet/wrapper level, not full runtime enforcement
+- Latest bounded slice: `Source Intelligence V1 M9`.
+  - Goal: make multi-model panel output insight-oriented instead of simple aggregation.
+  - Result: landed through Claude ACP exec lane, then controller-reviewed.
+  - Extra correction: provider-aware default model resolution for panel lanes.
+  - Status: ready for review.
+- Latest bounded slice after that: `Source Intelligence V1 M10`.
+  - Goal: move generic AI judgment logic toward a reusable internal substrate.
+  - Result: Claude created `feeds/ai_judgment.py`; controller then repaired incomplete router integration.
+  - Status: ready for review.
+- `M10` absorbed.
+  - claim tightened to first reusable internal judgment substrate step
+  - substrate-level tests added so reuse claims are not backed only by route regression
+  - wrappers in `feeds.py` remain temporary compatibility debt
+- `M8` absorbed.
+  - wording tightened from `independent dual-model` to bounded dual-lane panel inspect
+  - `panel_signal` honesty fixed so asymmetric lane failure cannot appear as `stable`
+  - stable case and invalid-secondary case now both have focused proofs
+- multi-model judgment should now be treated as future capability-shaped incubation, not permanent project-private route logic
+- `M13` selective-absorption advisory is now materially landed:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M13_PHASE_JUDGMENT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M13_PHASE_JUDGMENT_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M13_PLAN_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M13_PLAN_2026-04-15.md)
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M13_SELECTIVE_ABSORPTION_RESULT_2026-04-15.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M13_SELECTIVE_ABSORPTION_RESULT_2026-04-15.md)
+  - current controller judgment:
+    - no new inspect route was added
+    - selective absorption is now a reusable substrate-derived advisory shape
+    - panel outputs now surface bounded controller guidance without mutating truth
+    - this remains advisory only and must not slide into workflow or persistence

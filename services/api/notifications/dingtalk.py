@@ -292,7 +292,7 @@ class DingTalkNotifier:
 - 高紧急度: {high_urgency} 条
 
 ---
-*由 MyAttention 自动推送*
+*由 IKE 自动推送*
 """
 
         return await self.send_markdown(
@@ -516,6 +516,6 @@ class DingTalkNotifier:
         """测试 Webhook 连接"""
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         return await self.send_markdown(
-            title="🔔 MyAttention 通知测试",
+            title="🔔 IKE 通知测试",
             content=f"**测试时间:** {now}\n\n✅ 钉钉 Webhook 连接成功！"
         )

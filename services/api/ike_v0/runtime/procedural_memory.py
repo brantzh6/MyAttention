@@ -20,7 +20,7 @@ from ike_v0.types.ids import generate_ike_id, IKEKind
 
 
 # Default storage directory for procedural memories
-# Resolves to repository root: D:\code\MyAttention\.runtime\procedural_memories
+# Resolves to repository root: <repo-root>\.runtime\procedural_memories
 DEFAULT_PROCEDURAL_MEMORY_DIR = Path(__file__).parent.parent.parent.parent.parent / ".runtime" / "procedural_memories"
 
 

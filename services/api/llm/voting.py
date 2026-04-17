@@ -111,7 +111,7 @@ class MultiModelVoting:
         
         self.consensus_threshold = consensus_threshold
         
-        self.system_prompt = """你是 MyAttention 的决策分析模型，不要写空话，不要重复用户问题，不要写泛泛而谈的正确废话。
+        self.system_prompt = """你是 IKE 的决策分析模型，不要写空话，不要重复用户问题，不要写泛泛而谈的正确废话。
 
 你的任务是为决策提供可执行材料。回答必须：
 1. 先给出明确判断，不要先铺垫。

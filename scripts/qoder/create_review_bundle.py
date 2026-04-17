@@ -10,6 +10,10 @@ from pathlib import Path
 ROLE = "code-review-agent"
 
 
+def _agents_contract(cwd: Path) -> str:
+    return str((cwd / "AGENTS.md").resolve())
+
+
 def emit_json(payload: dict) -> None:
     data = json.dumps(payload, ensure_ascii=False)
     try:
@@ -31,6 +35,12 @@ def main() -> int:
     parser.add_argument("--title", required=True, help="Short review title.")
     parser.add_argument("--problem-type", default="patch_review", help="Normalized problem type label.")
     parser.add_argument("--priority", default="P1", help="P0 | P1 | P2")
+    parser.add_argument("--lane", default="review", help="Machine-readable lane label.")
+    parser.add_argument("--reasoning-mode", default="high", help="Requested reasoning / thinking depth.")
+    parser.add_argument("--sandbox-identity", default=None, help="Machine-readable sandbox identity.")
+    parser.add_argument("--sandbox-kind", default="qoder_workspace", help="Machine-readable sandbox kind.")
+    parser.add_argument("--capability-profile", default="review_high_reasoning", help="Capability profile label.")
+    parser.add_argument("--network-policy", default="disabled", help="Machine-readable network policy intent.")
     parser.add_argument("--target-brief", required=True, help="Path to the implementation brief.")
     parser.add_argument("--target-result", required=True, help="Path to the implementation result file.")
     parser.add_argument("--target-files", nargs="*", default=[], help="Files changed by the implementation task.")
@@ -38,6 +48,7 @@ def main() -> int:
     args = parser.parse_args()
 
     cwd = Path(args.cwd).resolve()
+    sandbox_identity = args.sandbox_identity or f"{args.sandbox_kind}:{args.task_id}"
     base = cwd / ".runtime" / "delegation"
     briefs_dir = base / "briefs"
     contexts_dir = base / "contexts"
@@ -62,6 +73,12 @@ def main() -> int:
         f"problem_type: {args.problem_type}",
         f"priority: {args.priority}",
         f"role: {ROLE}",
+        f"lane: {args.lane}",
+        f"reasoning_mode: {args.reasoning_mode}",
+        f"sandbox_identity: {sandbox_identity}",
+        f"sandbox_kind: {args.sandbox_kind}",
+        f"capability_profile: {args.capability_profile}",
+        f"network_policy: {args.network_policy}",
         "",
         "## Goal",
         "- Review the implementation patch for correctness, scope discipline, regressions, and validation quality.",
@@ -95,7 +112,7 @@ def main() -> int:
         "- Stop if the patch cannot be reviewed without files outside the declared scope.",
         "",
         "## Version / Context Refs",
-        "- D:\\code\\MyAttention\\AGENTS.md",
+        f"- {_agents_contract(cwd)}",
         f"- {role_path}",
         "",
     ]
@@ -103,6 +120,14 @@ def main() -> int:
 
     context_lines = [
         f"# Context Packet: {args.task_id}",
+        "",
+        "## Lane Metadata",
+        f"- lane: {args.lane}",
+        f"- reasoning_mode: {args.reasoning_mode}",
+        f"- sandbox_identity: {sandbox_identity}",
+        f"- sandbox_kind: {args.sandbox_kind}",
+        f"- capability_profile: {args.capability_profile}",
+        f"- network_policy: {args.network_policy}",
         "",
         "## Review Target",
         f"- Brief: {Path(args.target_brief).resolve()}",
@@ -154,6 +179,13 @@ def main() -> int:
     emit_json(
         {
             "task_id": args.task_id,
+            "lane": args.lane,
+            "reasoning_mode": args.reasoning_mode,
+            "sandbox_identity": sandbox_identity,
+            "sandbox_kind": args.sandbox_kind,
+            "capability_profile": args.capability_profile,
+            "write_scope": [],
+            "network_policy": args.network_policy,
             "role": ROLE,
             "brief": str(brief_path),
             "context": str(context_path),
@@ -174,6 +206,18 @@ def main() -> int:
                 str(result_path),
                 "--done",
                 str(done_path),
+                "--lane",
+                args.lane,
+                "--reasoning-mode",
+                args.reasoning_mode,
+                "--sandbox-identity",
+                sandbox_identity,
+                "--sandbox-kind",
+                args.sandbox_kind,
+                "--capability-profile",
+                args.capability_profile,
+                "--network-policy",
+                args.network_policy,
                 "--role",
                 ROLE,
                 "--mode",

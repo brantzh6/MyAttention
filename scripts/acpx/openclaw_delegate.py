@@ -146,6 +146,33 @@ def find_latest_assistant(entries: list[dict[str, Any]]) -> dict[str, Any] | Non
     return None
 
 
+def default_capability_profile(lane: str | None, reasoning_mode: str | None) -> str | None:
+    if reasoning_mode == "high":
+        if lane == "coding":
+            return "coding_high_reasoning"
+        if lane == "review":
+            return "review_high_reasoning"
+    return None
+
+
+def default_network_policy(lane: str | None, capability_profile: str | None) -> str | None:
+    if capability_profile == "review_high_reasoning":
+        return "disabled"
+    if capability_profile == "coding_high_reasoning":
+        return "restricted"
+    if lane == "review":
+        return "disabled"
+    if lane == "coding":
+        return "restricted"
+    return None
+
+
+def default_sandbox_identity(agent_alias: str, session: str, sandbox_kind: str | None) -> str | None:
+    if not sandbox_kind:
+        return None
+    return f"{sandbox_kind}:{agent_alias}:{session}"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Submit a delegated task through acpx/openclaw and recover the result.")
     parser.add_argument("prompt", nargs="?", help="Task prompt to delegate.")
@@ -156,17 +183,27 @@ def main() -> int:
         default="openclaw-qwen",
         help="acpx agent alias from .acpxrc.json (for example: openclaw-qwen, openclaw-glm, openclaw-reviewer).",
     )
-    parser.add_argument("--session", default="myattention-coder", help="Named acpx session to use.")
+    parser.add_argument("--session", default="ike-coder", help="Named acpx session to use.")
     parser.add_argument("--cwd", default=".", help="Workspace directory.")
     parser.add_argument("--timeout", type=int, default=120, help="Seconds to wait for a result.")
     parser.add_argument("--poll-interval", type=float, default=2.0, help="Polling interval in seconds.")
     parser.add_argument("--history-limit", type=int, default=20, help="How many history entries to fetch.")
+    parser.add_argument("--lane", default=None, help="Machine-readable lane label for this delegation.")
+    parser.add_argument("--reasoning-mode", default="high", help="Requested reasoning / thinking depth for this delegation.")
+    parser.add_argument("--sandbox-identity", default=None, help="Machine-readable sandbox identity.")
+    parser.add_argument("--sandbox-kind", default="openclaw_workspace", help="Machine-readable sandbox kind.")
+    parser.add_argument("--capability-profile", default=None, help="Explicit capability profile override.")
+    parser.add_argument("--write-scope", action="append", default=[], help="Machine-readable write scope item. Repeat for multiple values.")
+    parser.add_argument("--network-policy", default=None, help="Machine-readable network policy intent.")
     args = parser.parse_args()
     if bool(args.prompt) == bool(args.file):
         parser.error("Provide exactly one of: prompt or --file")
 
     cwd = Path(args.cwd).resolve()
     agent_alias = args.agent_alias
+    capability_profile = args.capability_profile or default_capability_profile(args.lane, args.reasoning_mode)
+    network_policy = args.network_policy or default_network_policy(args.lane, capability_profile)
+    sandbox_identity = args.sandbox_identity or default_sandbox_identity(agent_alias, args.session, args.sandbox_kind)
     prompt_text = args.prompt
     if args.file:
         prompt_text = Path(args.file).read_text(encoding="utf-8")
@@ -197,6 +234,13 @@ def main() -> int:
                     "agent_alias": agent_alias,
                     "session": args.session,
                     "cwd": str(cwd),
+                    "lane": args.lane,
+                    "reasoning_mode": args.reasoning_mode,
+                    "sandbox_identity": sandbox_identity,
+                    "sandbox_kind": args.sandbox_kind,
+                    "capability_profile": capability_profile,
+                    "write_scope": args.write_scope,
+                    "network_policy": network_policy,
                     "assistant": latest,
                     "history": history,
                     "session_info": session_info,

@@ -68,7 +68,7 @@ def get_effective_qwen_default_model(settings: Settings | None = None) -> str:
     settings = settings or get_settings()
     base_url = get_effective_qwen_base_url(settings)
     if "coding.dashscope.aliyuncs.com" in base_url:
-        return "qwen3.5-plus"
+        return "qwen3.6-plus"
     return "qwen-max"
 
 

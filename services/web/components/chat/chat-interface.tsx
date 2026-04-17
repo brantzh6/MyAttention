@@ -31,7 +31,7 @@ const API_URL = process.env.API_URL || 'http://localhost:8000'
 
 const AVAILABLE_MODELS = [
   { provider: 'qwen', model: 'qwen-max', name: 'Qwen Max', supportsSearch: true, supportsThinking: false },
-  { provider: 'qwen', model: 'qwen3.5-plus', name: 'Qwen 3.5 Plus', supportsSearch: true, supportsThinking: true },
+  { provider: 'qwen', model: 'qwen3.6-plus', name: 'Qwen 3.6 Plus', supportsSearch: true, supportsThinking: true },
   { provider: 'qwen', model: 'MiniMax-M2.5', name: 'MiniMax M2.5', supportsSearch: true, supportsThinking: false },
   { provider: 'qwen', model: 'deepseek-v3.2', name: 'DeepSeek V3.2', supportsSearch: true, supportsThinking: true },
   { provider: 'qwen', model: 'glm-5', name: 'GLM-5', supportsSearch: false, supportsThinking: true },
@@ -39,7 +39,7 @@ const AVAILABLE_MODELS = [
 ] as const
 
 const DEFAULT_MODEL =
-  AVAILABLE_MODELS.find((model) => model.model === 'qwen3.5-plus') ?? AVAILABLE_MODELS[0]
+  AVAILABLE_MODELS.find((model) => model.model === 'qwen3.6-plus') ?? AVAILABLE_MODELS[0]
 
 type AvailableModel = (typeof AVAILABLE_MODELS)[number]
 
@@ -208,7 +208,7 @@ function MarkdownContent({ content }: { content: string }) {
 function detectLocale(): Locale {
   if (typeof window === 'undefined') return 'zh-CN'
 
-  const saved = window.localStorage.getItem('myattention.locale')
+  const saved = window.localStorage.getItem('ike.locale')
   if (saved === 'zh-CN' || saved === 'en') {
     return saved
   }

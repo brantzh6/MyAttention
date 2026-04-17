@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from sqlalchemy import String as SqlString, cast, or_, select
 from sqlalchemy.orm import joinedload
 
-from config import get_settings
+from config import get_effective_qwen_default_model, get_settings
 from attention import apply_attention_policy, resolve_attention_policy
 from db.models import FeedItem as FeedItemModel
 from db.models import Source as SourceModel
@@ -21,6 +21,19 @@ from db.models import SourcePlan as SourcePlanModel
 from db.models import SourcePlanItem as SourcePlanItemModel
 from db.models import SourcePlanVersion as SourcePlanVersionModel
 from feeds.fetcher import PROXY_DOMAINS, get_feed_fetcher, FeedSource as _FeedSource, FeedEntry, reload_feed_fetcher, map_category, reload_feed_fetcher
+from feeds.ai_judgment import (
+    SourceCandidateJudgment,
+    SourceDiscoveryJudgePanelConsensusItem,
+    SourceDiscoveryJudgePanelDisagreementItem,
+    SourceDiscoveryJudgePanelInsights,
+    SourceJudgmentSelectiveAbsorptionAdvice,
+    compare_judgment_verdict_overlap,
+    default_model_for_provider,
+    derive_selective_absorption_advice,
+    derive_panel_insights,
+    normalize_ai_judgments_from_candidates,
+    parse_ai_judgment_payload,
+)
 from feeds.authority import get_authority_classifier
 from feeds.persistence import (
     build_import_feed_extra,
@@ -31,6 +44,7 @@ from feeds.persistence import (
 from feeds.proxy_config import load_proxy_settings, normalize_proxy_mode, should_use_proxy
 from feeds.raw_ingest import persist_import_item_raw
 from knowledge.web_search import AliyunWebSearch
+from llm.adapter import LLMAdapter
 from db import get_db, AsyncSession
 
 router = APIRouter()
@@ -114,7 +128,16 @@ class SourceDiscoveryFocus(str, Enum):
     METHOD = "method"
 
 
+class SourceDiscoveryInterestBias(str, Enum):
+    AUTHORITY = "authority"
+    FRONTIER = "frontier"
+    COMMUNITY = "community"
+    METHOD = "method"
+
+
 class SourceDiscoveryRequest(BaseModel):
+    task_intent: str = Field("", description="discovery task intent")
+    interest_bias: Optional[SourceDiscoveryInterestBias] = Field(None, description="signal preference bias")
     topic: str = Field(..., min_length=2, description="需要研究或持续关注的主题")
     focus: SourceDiscoveryFocus = Field(SourceDiscoveryFocus.AUTHORITATIVE, description="发现目标")
     limit: int = Field(12, ge=3, le=30, description="返回候选源数量")
@@ -144,22 +167,97 @@ class SourceDiscoveryCandidate(BaseModel):
     policy_score: float = 0.0
     gate_status: str = "candidate"
     selection_reason: str = ""
+    source_nature: str = "mixed"
+    temperature: str = "medium"
+    recommended_mode: str = ""
+    recommended_execution_strategy: str = ""
+    why_relevant: str = ""
+    confidence_note: str = ""
+    canonical_ref: str = ""
+    candidate_endpoints: List[str] = []
 
 
 class SourceDiscoveryResponse(BaseModel):
     topic: str
     focus: SourceDiscoveryFocus
+    task_intent: str = ""
+    interest_bias: SourceDiscoveryInterestBias = SourceDiscoveryInterestBias.AUTHORITY
     queries: List[str]
     policy_id: str = ""
     policy_version: int = 1
     portfolio_summary: Dict[str, Any] = {}
+    notes: List[str] = []
+    truth_boundary: List[str] = []
     candidates: List[SourceDiscoveryCandidate]
+
+
+class SourceDiscoveryJudgeInspectRequest(BaseModel):
+    topic: str = Field(..., min_length=2)
+    focus: SourceDiscoveryFocus = Field(SourceDiscoveryFocus.AUTHORITATIVE)
+    task_intent: str = Field("")
+    interest_bias: Optional[SourceDiscoveryInterestBias] = Field(None)
+    limit: int = Field(12, ge=3, le=30)
+    max_candidates: int = Field(6, ge=1, le=12)
+    provider: str = Field("qwen")
+    model: str = Field("")
+
+
+class SourceDiscoveryJudgeInspectResponse(BaseModel):
+    topic: str
+    focus: SourceDiscoveryFocus
+    task_intent: str = ""
+    interest_bias: SourceDiscoveryInterestBias = SourceDiscoveryInterestBias.AUTHORITY
+    provider: str
+    model: str
+    discovery: SourceDiscoveryResponse
+    judged_candidates: List[SourceDiscoveryCandidate]
+    judgments: List[SourceCandidateJudgment]
+    summary: str = ""
+    notes: List[str] = []
+    truth_boundary: List[str] = []
+
+
+class SourceDiscoveryJudgePanelInspectRequest(BaseModel):
+    topic: str = Field(..., min_length=2)
+    focus: SourceDiscoveryFocus = Field(SourceDiscoveryFocus.AUTHORITATIVE)
+    task_intent: str = Field("")
+    interest_bias: Optional[SourceDiscoveryInterestBias] = Field(None)
+    limit: int = Field(12, ge=3, le=30)
+    max_candidates: int = Field(6, ge=1, le=12)
+    primary_provider: str = Field("qwen")
+    primary_model: str = Field("")
+    secondary_provider: str = Field("anthropic")
+    secondary_model: str = Field("")
+
+
+class SourceDiscoveryJudgePanelInspectResponse(BaseModel):
+    topic: str
+    focus: SourceDiscoveryFocus
+    task_intent: str = ""
+    interest_bias: SourceDiscoveryInterestBias = SourceDiscoveryInterestBias.AUTHORITY
+    primary_provider: str
+    primary_model: str
+    secondary_provider: str
+    secondary_model: str
+    discovery: SourceDiscoveryResponse
+    judged_candidates: List[SourceDiscoveryCandidate]
+    primary_judgments: List[SourceCandidateJudgment]
+    secondary_judgments: List[SourceCandidateJudgment]
+    primary_summary: str = ""
+    secondary_summary: str = ""
+    panel_summary: Dict[str, Any] = {}
+    panel_insights: SourceDiscoveryJudgePanelInsights = SourceDiscoveryJudgePanelInsights()
+    selective_absorption: SourceJudgmentSelectiveAbsorptionAdvice = SourceJudgmentSelectiveAbsorptionAdvice()
+    notes: List[str] = []
+    truth_boundary: List[str] = []
 
 
 class SourcePlanCreateRequest(BaseModel):
     topic: str = Field(..., min_length=2, description="需要持续跟踪的主题")
     focus: SourceDiscoveryFocus = Field(SourceDiscoveryFocus.AUTHORITATIVE, description="建源重点")
     objective: str = Field("", description="为什么要关注这个主题")
+    task_intent: str = Field("", description="source plan creation task intent")
+    interest_bias: Optional[SourceDiscoveryInterestBias] = Field(None, description="signal preference bias")
     limit: int = Field(12, ge=3, le=30)
     review_cadence_days: int = Field(14, ge=1, le=180)
 
@@ -188,6 +286,8 @@ class SourcePlanResponse(BaseModel):
     topic: str
     focus: str
     objective: str
+    task_intent: str = ""
+    interest_bias: str = ""
     planning_brain: str
     status: str
     review_status: str
@@ -198,6 +298,8 @@ class SourcePlanResponse(BaseModel):
     policy_version: int = 1
     policy_name: str = ""
     policy_decision_status: str = ""
+    discovery_notes: List[str] = []
+    discovery_truth_boundary: List[str] = []
     last_reviewed_at: Optional[datetime] = None
     next_review_due_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
@@ -211,6 +313,12 @@ class SourcePlanVersionResponse(BaseModel):
     parent_version: Optional[int] = None
     trigger_type: str
     decision_status: str
+    topic: str = ""
+    focus: str = ""
+    task_intent: str = ""
+    interest_bias: str = ""
+    discovery_notes: List[str] = []
+    discovery_truth_boundary: List[str] = []
     change_reason: str = ""
     change_summary: Dict[str, Any] = {}
     evaluation: Dict[str, Any] = {}
@@ -220,6 +328,66 @@ class SourcePlanVersionResponse(BaseModel):
 
 
 # ── Import models ────────────────────────────────────
+
+class SourcePlanVersionJudgmentTarget(BaseModel):
+    object_key: str
+    item_type: str = "domain"
+    name: str = ""
+    url: str = ""
+    status: str = "active"
+    authority_tier: str = "C"
+    authority_score: float = 0.0
+    change_type: str = "changed"
+    score_delta: float = 0.0
+    evidence_count: int = 0
+
+
+class SourcePlanVersionJudgeInspectRequest(BaseModel):
+    provider: str = Field("qwen")
+    model: str = Field("")
+    max_candidates: int = Field(6, ge=1, le=12)
+
+
+class SourcePlanVersionJudgeInspectResponse(BaseModel):
+    plan_id: str
+    version_number: int
+    provider: str
+    model: str
+    version: SourcePlanVersionResponse
+    judged_targets: List[SourcePlanVersionJudgmentTarget]
+    judgments: List[SourceCandidateJudgment]
+    summary: str = ""
+    notes: List[str] = []
+    truth_boundary: List[str] = []
+
+
+class SourcePlanVersionJudgePanelInspectRequest(BaseModel):
+    primary_provider: str = Field("qwen")
+    primary_model: str = Field("")
+    secondary_provider: str = Field("anthropic")
+    secondary_model: str = Field("")
+    max_candidates: int = Field(6, ge=1, le=12)
+
+
+class SourcePlanVersionJudgePanelInspectResponse(BaseModel):
+    plan_id: str
+    version_number: int
+    primary_provider: str
+    primary_model: str
+    secondary_provider: str
+    secondary_model: str
+    version: SourcePlanVersionResponse
+    judged_targets: List[SourcePlanVersionJudgmentTarget]
+    primary_judgments: List[SourceCandidateJudgment]
+    secondary_judgments: List[SourceCandidateJudgment]
+    primary_summary: str = ""
+    secondary_summary: str = ""
+    panel_summary: Dict[str, Any] = {}
+    panel_insights: SourceDiscoveryJudgePanelInsights = SourceDiscoveryJudgePanelInsights()
+    selective_absorption: SourceJudgmentSelectiveAbsorptionAdvice = SourceJudgmentSelectiveAbsorptionAdvice()
+    notes: List[str] = []
+    truth_boundary: List[str] = []
+
 
 class ImportItem(BaseModel):
     """Single item from info-processor output."""
@@ -306,10 +474,103 @@ def _normalize_domain(value: str) -> str:
     return normalized
 
 
+_CONTEXTUAL_TECH_MEDIA_DOMAINS = {
+    "36kr.com",
+    "huxiu.com",
+    "ithome.com",
+    "jiqizhixin.com",
+    "techcrunch.com",
+    "theverge.com",
+    "wired.com",
+}
+
+
+def _is_contextual_media_article_candidate(domain: str, path_segments: list[str]) -> bool:
+    if domain not in _CONTEXTUAL_TECH_MEDIA_DOMAINS:
+        return False
+    if not path_segments:
+        return False
+    first = path_segments[0].lower()
+    if first in {
+        "tag",
+        "tags",
+        "topic",
+        "topics",
+        "category",
+        "categories",
+        "author",
+        "authors",
+        "about",
+        "team",
+        "search",
+        "newsletters",
+        "podcasts",
+        "events",
+    }:
+        return False
+    return True
+
+
+def _github_repo_signal_identity(
+    domain: str,
+    path_segments: list[str],
+    url: str,
+    focus: SourceDiscoveryFocus,
+) -> Optional[tuple[str, str, str, str, str]]:
+    if domain != "github.com":
+        return None
+    if focus not in {
+        SourceDiscoveryFocus.METHOD,
+        SourceDiscoveryFocus.FRONTIER,
+        SourceDiscoveryFocus.LATEST,
+    }:
+        return None
+    if len(path_segments) < 4:
+        return None
+
+    owner, repo = path_segments[0], path_segments[1]
+    section = path_segments[2].lower()
+    item_id = path_segments[3]
+
+    if section == "issues":
+        object_key = f"{domain}/{owner}/{repo}/issue/{item_id}".lower()
+        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/issues/{item_id}"
+        display_name = f"{owner}/{repo} issue {item_id}"
+        return "signal", object_key, display_name, canonical_url, domain
+
+    if section in {"pull", "pulls"}:
+        object_key = f"{domain}/{owner}/{repo}/pull/{item_id}".lower()
+        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/pull/{item_id}"
+        display_name = f"{owner}/{repo} pull {item_id}"
+        return "signal", object_key, display_name, canonical_url, domain
+
+    if section == "discussions":
+        object_key = f"{domain}/{owner}/{repo}/discussion/{item_id}".lower()
+        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/discussions/{item_id}"
+        display_name = f"{owner}/{repo} discussion {item_id}"
+        return "signal", object_key, display_name, canonical_url, domain
+
+    return None
+
+
 def _candidate_identity(url: str, focus: SourceDiscoveryFocus) -> tuple[str, str, str, str, str]:
     parsed = urlparse(url if "://" in url else f"https://{url}")
     domain = _normalize_domain(parsed.netloc or parsed.path)
     path_segments = [segment for segment in (parsed.path or "").split("/") if segment]
+
+    if focus in {SourceDiscoveryFocus.LATEST, SourceDiscoveryFocus.FRONTIER} and _is_contextual_media_article_candidate(
+        domain,
+        path_segments,
+    ):
+        slug = "-".join(path_segments).lower()
+        object_key = f"{domain}/article/{slug}"
+        canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments)}"
+        display_name = f"{domain} article"
+        return "signal", object_key, display_name, canonical_url, domain
+
+    github_repo_signal = _github_repo_signal_identity(domain, path_segments, url, focus)
+    if github_repo_signal is not None:
+        return github_repo_signal
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 4 and path_segments[2].lower() == "releases":
         owner, repo = path_segments[0], path_segments[1]
@@ -348,6 +609,12 @@ def _candidate_identity(url: str, focus: SourceDiscoveryFocus) -> tuple[str, str
 
     if domain == "reddit.com" and len(path_segments) >= 2 and path_segments[0].lower() == "r":
         if len(path_segments) >= 4 and path_segments[2].lower() in {"comments", "s"}:
+            if focus == SourceDiscoveryFocus.METHOD:
+                community = path_segments[1]
+                object_key = f"{domain}/r/{community}".lower()
+                canonical_url = f"https://{domain}/r/{community}"
+                display_name = f"r/{community}"
+                return "community", object_key, display_name, canonical_url, domain
             thread_id = path_segments[3]
             object_key = f"{domain}/thread/{thread_id}".lower()
             canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments[:4])}"
@@ -514,6 +781,105 @@ def _discovery_recommendation(
     return "review", "候选源价值未稳定，建议人工复核或继续搜索"
 
 
+def _interest_bias_for_focus(focus: SourceDiscoveryFocus) -> SourceDiscoveryInterestBias:
+    if focus == SourceDiscoveryFocus.FRONTIER:
+        return SourceDiscoveryInterestBias.FRONTIER
+    if focus == SourceDiscoveryFocus.METHOD:
+        return SourceDiscoveryInterestBias.METHOD
+    if focus == SourceDiscoveryFocus.LATEST:
+        return SourceDiscoveryInterestBias.COMMUNITY
+    return SourceDiscoveryInterestBias.AUTHORITY
+
+
+def _source_nature_for_candidate(item_type: str, domain: str) -> str:
+    domain = domain.lower()
+    if item_type in {"repository", "release"}:
+        return "artifact"
+    if item_type in {"person", "organization"}:
+        return "actor"
+    if item_type in {"community", "signal"}:
+        return "community"
+    if any(token in domain for token in ("docs.", "readthedocs", "developer.", "openai.com", "anthropic.com")):
+        return "official"
+    return "publication"
+
+
+def _temperature_for_candidate(focus: SourceDiscoveryFocus, item_type: str) -> str:
+    if item_type in {"signal", "community", "event"}:
+        return "high"
+    if focus in {SourceDiscoveryFocus.FRONTIER, SourceDiscoveryFocus.METHOD} and item_type in {"release", "repository", "person"}:
+        return "high"
+    if focus == SourceDiscoveryFocus.AUTHORITATIVE:
+        return "low"
+    return "medium"
+
+
+def _confidence_note(item: Dict[str, Any]) -> str:
+    evidence_count = int(item.get("evidence_count", 0) or 0)
+    authority_score = float(item.get("authority_score", 0.0) or 0.0)
+    if evidence_count >= 3 and authority_score >= 0.75:
+        return "multi-hit candidate with strong score"
+    if evidence_count >= 2 and authority_score >= 0.55:
+        return "repeat signal with usable confidence"
+    return "single or weak signal; keep under review"
+
+
+def _discovery_notes(body: SourceDiscoveryRequest, selected_count: int) -> list[str]:
+    bias = body.interest_bias.value if body.interest_bias else _interest_bias_for_focus(body.focus).value
+    notes = [
+        f"topic={body.topic}",
+        f"focus={body.focus.value}",
+        f"interest_bias={bias}",
+        f"selected_candidates={selected_count}",
+    ]
+    if body.task_intent:
+        notes.append(f"task_intent={body.task_intent}")
+    return notes
+
+
+def _discovery_truth_boundary() -> list[str]:
+    return [
+        "candidate discovery is inspect output, not canonical source truth",
+        "results should inform controller planning or review, not auto-promote",
+        "source quality remains bounded and topic-contextual",
+    ]
+
+
+def _ai_judgment_truth_boundary() -> list[str]:
+    return [
+        "AI judgment inspect output is advisory, not canonical source truth",
+        "AI judgment does not auto-subscribe, auto-promote, or write source plans",
+        "model verdicts must remain reviewable and may be wrong or incomplete",
+        "model summary is advisory condensation, not the canonical decision set",
+    ]
+
+
+def _discovery_request_from_source_plan(body: "SourcePlanCreateRequest") -> SourceDiscoveryRequest:
+    return SourceDiscoveryRequest(
+        topic=body.topic,
+        focus=body.focus,
+        task_intent=body.task_intent or body.objective,
+        interest_bias=body.interest_bias,
+        limit=body.limit,
+    )
+
+
+def _discovery_request_from_persisted_plan(
+    plan: SourcePlanModel,
+    focus: SourceDiscoveryFocus,
+    limit: int,
+) -> SourceDiscoveryRequest:
+    extra = dict(plan.extra or {})
+    interest_bias = extra.get("interest_bias")
+    return SourceDiscoveryRequest(
+        topic=plan.topic,
+        focus=focus,
+        task_intent=str(extra.get("task_intent", "") or plan.objective or ""),
+        interest_bias=SourceDiscoveryInterestBias(interest_bias) if interest_bias else None,
+        limit=limit,
+    )
+
+
 def _focus_category(focus: SourceDiscoveryFocus) -> str:
     if focus == SourceDiscoveryFocus.METHOD:
         return "开发者"
@@ -549,7 +915,571 @@ def _candidate_to_attention_payload(candidate: SourceDiscoveryCandidate) -> Dict
         "policy_score": candidate.policy_score,
         "gate_status": candidate.gate_status,
         "selection_reason": candidate.selection_reason,
+        "source_nature": candidate.source_nature,
+        "temperature": candidate.temperature,
+        "recommended_mode": candidate.recommended_mode,
+        "recommended_execution_strategy": candidate.recommended_execution_strategy,
+        "why_relevant": candidate.why_relevant,
+        "confidence_note": candidate.confidence_note,
+        "canonical_ref": candidate.canonical_ref,
+        "candidate_endpoints": list(candidate.candidate_endpoints),
     }
+
+
+def _candidate_to_judgment_payload(candidate: SourceDiscoveryCandidate) -> Dict[str, Any]:
+    return {
+        "object_key": candidate.object_key,
+        "item_type": candidate.item_type,
+        "name": candidate.name,
+        "domain": candidate.domain,
+        "url": candidate.url,
+        "authority_tier": candidate.authority_tier,
+        "authority_score": candidate.authority_score,
+        "recommendation": candidate.recommendation,
+        "recommendation_reason": candidate.recommendation_reason,
+        "follow_score": candidate.follow_score,
+        "activity_freshness": candidate.activity_freshness,
+        "inferred_roles": list(candidate.inferred_roles),
+        "source_nature": candidate.source_nature,
+        "temperature": candidate.temperature,
+        "recommended_execution_strategy": candidate.recommended_execution_strategy,
+        "why_relevant": candidate.why_relevant,
+        "confidence_note": candidate.confidence_note,
+        "sample_titles": list(candidate.sample_titles[:2]),
+        "sample_snippets": list(candidate.sample_snippets[:1]),
+    }
+
+
+def _source_plan_focus_from_value(value: str) -> SourceDiscoveryFocus:
+    try:
+        return SourceDiscoveryFocus(str(value or SourceDiscoveryFocus.AUTHORITATIVE.value))
+    except ValueError:
+        return SourceDiscoveryFocus.AUTHORITATIVE
+
+
+def _build_source_plan_version_judgment_targets(
+    version: SourcePlanVersionResponse,
+    snapshot_items: list[dict[str, Any]],
+    max_candidates: int,
+) -> list[SourcePlanVersionJudgmentTarget]:
+    snapshot_map = {
+        str(item.get("object_key", "")).strip(): item
+        for item in list(snapshot_items or [])
+        if str(item.get("object_key", "")).strip()
+    }
+    summary = dict(version.change_summary.get("summary", {}) or {})
+    score_delta_map = {
+        str(entry.get("object_key", "")).strip(): float(entry.get("delta", 0.0) or 0.0)
+        for entry in list(version.change_summary.get("score_deltas", []) or [])
+        if str(entry.get("object_key", "")).strip()
+    }
+    authority_regression_keys = {
+        str(entry.get("object_key", "")).strip()
+        for entry in list(version.change_summary.get("authority_regressions", []) or [])
+        if str(entry.get("object_key", "")).strip()
+    }
+
+    change_priority: dict[str, tuple[int, str]] = {}
+
+    def _remember(keys: list[str], priority: int, change_type: str) -> None:
+        for key in keys:
+            clean = str(key or "").strip()
+            if not clean:
+                continue
+            current = change_priority.get(clean)
+            if current is None or priority < current[0]:
+                change_priority[clean] = (priority, change_type)
+
+    _remember(list(version.change_summary.get("removed", []) or []), 0, "removed")
+    _remember(list(version.change_summary.get("stale", []) or []), 1, "stale")
+    _remember(sorted(authority_regression_keys), 2, "authority_regressed")
+    _remember(list(version.change_summary.get("subscribed", []) or []), 3, "subscribed")
+    _remember(list(version.change_summary.get("added", []) or []), 4, "added")
+    _remember(sorted(score_delta_map), 5, "score_shift")
+
+    targets: list[SourcePlanVersionJudgmentTarget] = []
+    for object_key, (priority, change_type) in sorted(
+        change_priority.items(),
+        key=lambda pair: (
+            pair[1][0],
+            -abs(score_delta_map.get(pair[0], 0.0)),
+            pair[0],
+        ),
+    ):
+        item = dict(snapshot_map.get(object_key, {}) or {})
+        evidence = dict(item.get("evidence", {}) or {})
+        name = str(item.get("name", "") or "").strip() or object_key
+        targets.append(
+            SourcePlanVersionJudgmentTarget(
+                object_key=object_key,
+                item_type=str(item.get("item_type", "domain") or "domain"),
+                name=name,
+                url=str(item.get("url", "") or ""),
+                status=str(item.get("status", "removed" if change_type == "removed" else "active") or "active"),
+                authority_tier=str(item.get("authority_tier", "C") or "C"),
+                authority_score=float(item.get("authority_score", 0.0) or 0.0),
+                change_type=change_type,
+                score_delta=round(float(score_delta_map.get(object_key, 0.0) or 0.0), 4),
+                evidence_count=int(evidence.get("evidence_count", 0) or 0),
+            )
+        )
+
+    if targets:
+        return targets[:max_candidates]
+
+    # Keep the inspect lane bounded but non-empty when a version carries no explicit diff keys.
+    fallback_keys = sorted(snapshot_map)[:max_candidates]
+    for object_key in fallback_keys:
+        item = dict(snapshot_map.get(object_key, {}) or {})
+        evidence = dict(item.get("evidence", {}) or {})
+        targets.append(
+            SourcePlanVersionJudgmentTarget(
+                object_key=object_key,
+                item_type=str(item.get("item_type", "domain") or "domain"),
+                name=str(item.get("name", "") or "").strip() or object_key,
+                url=str(item.get("url", "") or ""),
+                status=str(item.get("status", "active") or "active"),
+                authority_tier=str(item.get("authority_tier", "C") or "C"),
+                authority_score=float(item.get("authority_score", 0.0) or 0.0),
+                change_type="snapshot_only",
+                score_delta=0.0,
+                evidence_count=int(evidence.get("evidence_count", 0) or 0),
+            )
+        )
+    return targets
+
+
+def _source_plan_version_target_to_judgment_payload(target: SourcePlanVersionJudgmentTarget) -> Dict[str, Any]:
+    return {
+        "object_key": target.object_key,
+        "item_type": target.item_type,
+        "name": target.name,
+        "url": target.url,
+        "status": target.status,
+        "authority_tier": target.authority_tier,
+        "authority_score": target.authority_score,
+        "change_type": target.change_type,
+        "score_delta": target.score_delta,
+        "evidence_count": target.evidence_count,
+    }
+
+
+def _build_source_plan_version_judgment_prompt(
+    version: SourcePlanVersionResponse,
+    judged_targets: list[SourcePlanVersionJudgmentTarget],
+) -> str:
+    candidate_block = json.dumps(
+        [_source_plan_version_target_to_judgment_payload(target) for target in judged_targets],
+        ensure_ascii=False,
+        indent=2,
+    )
+    summary_block = json.dumps(dict(version.change_summary.get("summary", {}) or {}), ensure_ascii=False, indent=2)
+    gate_block = json.dumps(dict(version.evaluation.get("gate_signals", {}) or {}), ensure_ascii=False, indent=2)
+    return (
+        "你是 Source Intelligence 的 AI judgment lane。"
+        "你的任务不是改写 source-plan 规则，而是对一次 version refresh 里最值得看的变化对象做 advisory judgment。\n\n"
+        f"topic: {version.topic}\n"
+        f"focus: {version.focus}\n"
+        f"trigger_type: {version.trigger_type}\n"
+        f"current_decision_status: {version.decision_status}\n"
+        f"change_reason: {version.change_reason}\n\n"
+        f"change_summary.summary:\n{summary_block}\n\n"
+        f"evaluation.gate_signals:\n{gate_block}\n\n"
+        "请只基于给定变化对象，返回 JSON：\n"
+        "{\n"
+        '  "summary": "一句话总结",\n'
+        '  "judgments": [\n'
+        "    {\n"
+        '      "object_key": "候选 object_key",\n'
+        '      "verdict": "follow|review|ignore",\n'
+        '      "rationale": "为什么",\n'
+        '      "confidence": 0.0,\n'
+        '      "review_priority": "high|normal|low"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n\n"
+        "要求：\n"
+        "1. 不要输出给定变化对象之外的 object_key\n"
+        "2. 不要输出 JSON 之外的内容\n"
+        "3. verdict 只能是 follow/review/ignore\n"
+        "4. 这是 advisory judgment，不是 source-plan 的 canonical decision\n\n"
+        f"变化对象列表:\n{candidate_block}"
+    )
+
+
+def _enrich_discovery_candidate(
+    candidate: SourceDiscoveryCandidate,
+    focus: SourceDiscoveryFocus,
+) -> SourceDiscoveryCandidate:
+    if candidate.source_nature in {"", "mixed"}:
+        candidate.source_nature = _source_nature_for_candidate(candidate.item_type, candidate.domain)
+    if candidate.temperature in {"", "medium"}:
+        candidate.temperature = _temperature_for_candidate(focus, candidate.item_type)
+    candidate.recommended_mode = candidate.recommended_mode or candidate.recommendation
+    candidate.recommended_execution_strategy = (
+        candidate.recommended_execution_strategy or _execution_strategy_for_candidate(candidate, focus)
+    )
+    candidate.why_relevant = candidate.why_relevant or candidate.selection_reason or candidate.recommendation_reason
+    candidate.confidence_note = candidate.confidence_note or _confidence_note(candidate.model_dump())
+    candidate.canonical_ref = candidate.canonical_ref or candidate.object_key
+    if not candidate.candidate_endpoints:
+        candidate.candidate_endpoints = [candidate.url]
+    return candidate
+
+
+def _build_ai_candidate_judgment_prompt(
+    topic: str,
+    focus: SourceDiscoveryFocus,
+    task_intent: str,
+    interest_bias: SourceDiscoveryInterestBias,
+    candidates: list[SourceDiscoveryCandidate],
+) -> str:
+    candidate_block = json.dumps(
+        [_candidate_to_judgment_payload(candidate) for candidate in candidates],
+        ensure_ascii=False,
+        indent=2,
+    )
+    return (
+        "你是 Source Intelligence 的 AI judgment lane。"
+        "你的任务不是改写系统规则，而是对已经过初步降噪的候选对象做 advisory judgment。\n\n"
+        f"topic: {topic}\n"
+        f"focus: {focus.value}\n"
+        f"task_intent: {task_intent}\n"
+        f"interest_bias: {interest_bias.value}\n\n"
+        "请只基于给定候选，返回 JSON：\n"
+        "{\n"
+        '  "summary": "一句话总结",\n'
+        '  "judgments": [\n'
+        "    {\n"
+        '      "object_key": "候选 object_key",\n'
+        '      "verdict": "follow|review|ignore",\n'
+        '      "rationale": "为什么",\n'
+        '      "confidence": 0.0,\n'
+        '      "review_priority": "high|normal|low"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n\n"
+        "要求：\n"
+        "1. 不要输出候选之外的 object_key\n"
+        "2. 不要输出 JSON 之外的内容\n"
+        "3. verdict 只能是 follow/review/ignore\n"
+        "4. 这是 advisory judgment，不是最终真相\n\n"
+        f"候选列表:\n{candidate_block}"
+    )
+
+
+async def _run_ai_candidate_judgment_once(
+    *,
+    adapter: LLMAdapter,
+    provider: str,
+    model: str,
+    discovery: SourceDiscoveryResponse,
+    judged_candidates: list[SourceDiscoveryCandidate],
+) -> tuple[list[SourceCandidateJudgment], str, str, int]:
+    raw = await adapter.chat(
+        message=_build_ai_candidate_judgment_prompt(
+            discovery.topic,
+            discovery.focus,
+            discovery.task_intent,
+            discovery.interest_bias,
+            judged_candidates,
+        ),
+        provider=provider,
+        model=model,
+        system_prompt="Return valid JSON only.",
+    )
+    payload, parse_status = parse_ai_judgment_payload(raw)
+    judgments, summary, discarded_judgments = normalize_ai_judgments_from_candidates(judged_candidates, payload)
+    return judgments, summary, parse_status, discarded_judgments
+
+
+def _compare_ai_candidate_judgments(
+    primary: list[SourceCandidateJudgment],
+    secondary: list[SourceCandidateJudgment],
+) -> Dict[str, Any]:
+    return compare_judgment_verdict_overlap(primary, secondary)
+
+
+_CONSENSUS_VERDICTS = {"follow", "ignore"}
+_HIGH_CONFIDENCE_THRESHOLD = 0.75
+_LOW_CONFIDENCE_THRESHOLD = 0.5
+
+
+def _derive_panel_insights(
+    primary: list[SourceCandidateJudgment],
+    secondary: list[SourceCandidateJudgment],
+) -> SourceDiscoveryJudgePanelInsights:
+    return derive_panel_insights(primary, secondary)
+
+
+def _derive_selective_absorption(
+    primary: list[SourceCandidateJudgment],
+    secondary: list[SourceCandidateJudgment],
+) -> SourceJudgmentSelectiveAbsorptionAdvice:
+    return derive_selective_absorption_advice(primary, secondary)
+
+
+async def _run_ai_candidate_judgment_inspect(
+    body: SourceDiscoveryJudgeInspectRequest,
+    db: AsyncSession,
+) -> SourceDiscoveryJudgeInspectResponse:
+    discovery = await _run_source_discovery(
+        SourceDiscoveryRequest(
+            topic=body.topic,
+            focus=body.focus,
+            task_intent=body.task_intent,
+            interest_bias=body.interest_bias,
+            limit=body.limit,
+        ),
+        db,
+    )
+    judged_candidates = discovery.candidates[: body.max_candidates]
+    adapter = LLMAdapter()
+    model = body.model.strip() or default_model_for_provider(body.provider)
+    judgments, summary, parse_status, discarded_judgments = await _run_ai_candidate_judgment_once(
+        adapter=adapter,
+        provider=body.provider,
+        model=model,
+        discovery=discovery,
+        judged_candidates=judged_candidates,
+    )
+    notes = [
+        f"ai_judgment_provider={body.provider}",
+        f"ai_judgment_model={model}",
+        f"ai_judgment_parse_status={parse_status}",
+        f"judged_candidates={len(judged_candidates)}",
+        f"normalized_judgments={len(judgments)}",
+        f"discarded_judgments={discarded_judgments}",
+    ]
+    return SourceDiscoveryJudgeInspectResponse(
+        topic=discovery.topic,
+        focus=discovery.focus,
+        task_intent=discovery.task_intent,
+        interest_bias=discovery.interest_bias,
+        provider=body.provider,
+        model=model,
+        discovery=discovery,
+        judged_candidates=judged_candidates,
+        judgments=judgments,
+        summary=summary,
+        notes=notes,
+        truth_boundary=_ai_judgment_truth_boundary(),
+    )
+
+
+async def _run_ai_candidate_judgment_panel_inspect(
+    body: SourceDiscoveryJudgePanelInspectRequest,
+    db: AsyncSession,
+) -> SourceDiscoveryJudgePanelInspectResponse:
+    discovery = await _run_source_discovery(
+        SourceDiscoveryRequest(
+            topic=body.topic,
+            focus=body.focus,
+            task_intent=body.task_intent,
+            interest_bias=body.interest_bias,
+            limit=body.limit,
+        ),
+        db,
+    )
+    judged_candidates = discovery.candidates[: body.max_candidates]
+    adapter = LLMAdapter()
+    primary_model = body.primary_model.strip() or default_model_for_provider(body.primary_provider)
+    secondary_model = body.secondary_model.strip() or default_model_for_provider(body.secondary_provider)
+    primary_judgments, primary_summary, primary_parse_status, primary_discarded = await _run_ai_candidate_judgment_once(
+        adapter=adapter,
+        provider=body.primary_provider,
+        model=primary_model,
+        discovery=discovery,
+        judged_candidates=judged_candidates,
+    )
+    secondary_judgments, secondary_summary, secondary_parse_status, secondary_discarded = await _run_ai_candidate_judgment_once(
+        adapter=adapter,
+        provider=body.secondary_provider,
+        model=secondary_model,
+        discovery=discovery,
+        judged_candidates=judged_candidates,
+    )
+    panel_summary = compare_judgment_verdict_overlap(primary_judgments, secondary_judgments)
+    panel_insights = derive_panel_insights(primary_judgments, secondary_judgments)
+    selective_absorption = derive_selective_absorption_advice(primary_judgments, secondary_judgments)
+    notes = [
+        f"primary_provider={body.primary_provider}",
+        f"primary_model={primary_model}",
+        f"primary_parse_status={primary_parse_status}",
+        f"primary_discarded_judgments={primary_discarded}",
+        f"secondary_provider={body.secondary_provider}",
+        f"secondary_model={secondary_model}",
+        f"secondary_parse_status={secondary_parse_status}",
+        f"secondary_discarded_judgments={secondary_discarded}",
+        f"judged_candidates={len(judged_candidates)}",
+        f"panel_signal={panel_summary['panel_signal']}",
+        f"panel_agreement_count={panel_summary['agreement_count']}",
+        f"panel_disagreement_count={panel_summary['disagreement_count']}",
+    ]
+    truth_boundary = list(_ai_judgment_truth_boundary())
+    truth_boundary.append("panel inspect exposes agreement shape, not a merged canonical verdict")
+    truth_boundary.append("selective_absorption is advisory controller guidance, not an automatic promotion or persistence step")
+    return SourceDiscoveryJudgePanelInspectResponse(
+        topic=discovery.topic,
+        focus=discovery.focus,
+        task_intent=discovery.task_intent,
+        interest_bias=discovery.interest_bias,
+        primary_provider=body.primary_provider,
+        primary_model=primary_model,
+        secondary_provider=body.secondary_provider,
+        secondary_model=secondary_model,
+        discovery=discovery,
+        judged_candidates=judged_candidates,
+        primary_judgments=primary_judgments,
+        secondary_judgments=secondary_judgments,
+        primary_summary=primary_summary,
+        secondary_summary=secondary_summary,
+        panel_summary=panel_summary,
+        panel_insights=panel_insights,
+        selective_absorption=selective_absorption,
+        notes=notes,
+        truth_boundary=truth_boundary,
+    )
+
+
+async def _load_source_plan_version_judgment_context(
+    plan_id: str,
+    version_number: int,
+    db: AsyncSession,
+) -> tuple[SourcePlanVersionResponse, list[dict[str, Any]]]:
+    stmt = (
+        select(SourcePlanVersionModel)
+        .join(SourcePlanModel, SourcePlanModel.id == SourcePlanVersionModel.plan_id)
+        .where(
+            cast(SourcePlanModel.id, SqlString) == plan_id,
+            SourcePlanVersionModel.version_number == version_number,
+        )
+        .order_by(SourcePlanVersionModel.created_at.desc())
+    )
+    version = (await db.execute(stmt)).scalars().first()
+    if version is None:
+        raise HTTPException(status_code=404, detail="Source plan version not found")
+    snapshot = dict(version.plan_snapshot or {})
+    return _serialize_source_plan_version(version), list(snapshot.get("items", []) or [])
+
+
+async def _run_source_plan_version_judgment_inspect(
+    plan_id: str,
+    version_number: int,
+    body: SourcePlanVersionJudgeInspectRequest,
+    db: AsyncSession,
+) -> SourcePlanVersionJudgeInspectResponse:
+    version, snapshot_items = await _load_source_plan_version_judgment_context(plan_id, version_number, db)
+    judged_targets = _build_source_plan_version_judgment_targets(version, snapshot_items, body.max_candidates)
+    adapter = LLMAdapter()
+    model = body.model.strip() or default_model_for_provider(body.provider)
+    raw = await adapter.chat(
+        message=_build_source_plan_version_judgment_prompt(version, judged_targets),
+        provider=body.provider,
+        model=model,
+        system_prompt="Return valid JSON only.",
+    )
+    payload, parse_status = parse_ai_judgment_payload(raw)
+    judgments, summary, discarded_judgments = normalize_ai_judgments_from_candidates(judged_targets, payload)
+    notes = [
+        f"ai_judgment_provider={body.provider}",
+        f"ai_judgment_model={model}",
+        f"ai_judgment_parse_status={parse_status}",
+        f"judged_targets={len(judged_targets)}",
+        f"normalized_judgments={len(judgments)}",
+        f"discarded_judgments={discarded_judgments}",
+    ]
+    truth_boundary = list(_ai_judgment_truth_boundary())
+    truth_boundary.append("plan-version inspect judges refresh-change targets, not the canonical plan decision")
+    return SourcePlanVersionJudgeInspectResponse(
+        plan_id=plan_id,
+        version_number=version.version_number,
+        provider=body.provider,
+        model=model,
+        version=version,
+        judged_targets=judged_targets,
+        judgments=judgments,
+        summary=summary,
+        notes=notes,
+        truth_boundary=truth_boundary,
+    )
+
+
+async def _run_source_plan_version_judgment_panel_inspect(
+    plan_id: str,
+    version_number: int,
+    body: SourcePlanVersionJudgePanelInspectRequest,
+    db: AsyncSession,
+) -> SourcePlanVersionJudgePanelInspectResponse:
+    version, snapshot_items = await _load_source_plan_version_judgment_context(plan_id, version_number, db)
+    judged_targets = _build_source_plan_version_judgment_targets(version, snapshot_items, body.max_candidates)
+    adapter = LLMAdapter()
+    primary_model = body.primary_model.strip() or default_model_for_provider(body.primary_provider)
+    secondary_model = body.secondary_model.strip() or default_model_for_provider(body.secondary_provider)
+
+    primary_raw = await adapter.chat(
+        message=_build_source_plan_version_judgment_prompt(version, judged_targets),
+        provider=body.primary_provider,
+        model=primary_model,
+        system_prompt="Return valid JSON only.",
+    )
+    primary_payload, primary_parse_status = parse_ai_judgment_payload(primary_raw)
+    primary_judgments, primary_summary, primary_discarded = normalize_ai_judgments_from_candidates(
+        judged_targets,
+        primary_payload,
+    )
+
+    secondary_raw = await adapter.chat(
+        message=_build_source_plan_version_judgment_prompt(version, judged_targets),
+        provider=body.secondary_provider,
+        model=secondary_model,
+        system_prompt="Return valid JSON only.",
+    )
+    secondary_payload, secondary_parse_status = parse_ai_judgment_payload(secondary_raw)
+    secondary_judgments, secondary_summary, secondary_discarded = normalize_ai_judgments_from_candidates(
+        judged_targets,
+        secondary_payload,
+    )
+
+    panel_summary = compare_judgment_verdict_overlap(primary_judgments, secondary_judgments)
+    panel_insights = derive_panel_insights(primary_judgments, secondary_judgments)
+    selective_absorption = derive_selective_absorption_advice(primary_judgments, secondary_judgments)
+    notes = [
+        f"primary_provider={body.primary_provider}",
+        f"primary_model={primary_model}",
+        f"primary_parse_status={primary_parse_status}",
+        f"primary_discarded_judgments={primary_discarded}",
+        f"secondary_provider={body.secondary_provider}",
+        f"secondary_model={secondary_model}",
+        f"secondary_parse_status={secondary_parse_status}",
+        f"secondary_discarded_judgments={secondary_discarded}",
+        f"judged_targets={len(judged_targets)}",
+        f"panel_signal={panel_summary['panel_signal']}",
+        f"panel_agreement_count={panel_summary['agreement_count']}",
+        f"panel_disagreement_count={panel_summary['disagreement_count']}",
+    ]
+    truth_boundary = list(_ai_judgment_truth_boundary())
+    truth_boundary.append("plan-version panel inspect exposes agreement shape, not a merged canonical version decision")
+    truth_boundary.append("selective_absorption is advisory controller guidance over refresh-change targets, not version decision automation")
+    return SourcePlanVersionJudgePanelInspectResponse(
+        plan_id=plan_id,
+        version_number=version.version_number,
+        primary_provider=body.primary_provider,
+        primary_model=primary_model,
+        secondary_provider=body.secondary_provider,
+        secondary_model=secondary_model,
+        version=version,
+        judged_targets=judged_targets,
+        primary_judgments=primary_judgments,
+        secondary_judgments=secondary_judgments,
+        primary_summary=primary_summary,
+        secondary_summary=secondary_summary,
+        panel_summary=panel_summary,
+        panel_insights=panel_insights,
+        selective_absorption=selective_absorption,
+        notes=notes,
+        truth_boundary=truth_boundary,
+    )
 
 
 def _attention_policy_name(policy_id: str) -> str:
@@ -631,6 +1561,8 @@ def _serialize_source_plan(plan: SourcePlanModel) -> SourcePlanResponse:
         topic=plan.topic,
         focus=plan.focus,
         objective=plan.objective or "",
+        task_intent=str(extra.get("task_intent", "")),
+        interest_bias=str(extra.get("interest_bias", "")),
         planning_brain=plan.planning_brain,
         status=plan.status,
         review_status=plan.review_status,
@@ -641,6 +1573,8 @@ def _serialize_source_plan(plan: SourcePlanModel) -> SourcePlanResponse:
         policy_version=int(policy_meta.get("policy_version", 1) or 1),
         policy_name=str(policy_meta.get("policy_name", "")),
         policy_decision_status=str(latest_evaluation.get("decision_status", "")),
+        discovery_notes=list(extra.get("discovery_notes", []) or []),
+        discovery_truth_boundary=list(extra.get("discovery_truth_boundary", []) or []),
         last_reviewed_at=_parse_datetime_value(extra.get("last_reviewed_at")),
         next_review_due_at=_parse_datetime_value(extra.get("next_review_due_at")),
         created_at=plan.created_at,
@@ -650,12 +1584,19 @@ def _serialize_source_plan(plan: SourcePlanModel) -> SourcePlanResponse:
 
 
 def _serialize_source_plan_version(version: SourcePlanVersionModel) -> SourcePlanVersionResponse:
+    snapshot = dict(version.plan_snapshot or {})
     return SourcePlanVersionResponse(
         id=str(version.id),
         version_number=version.version_number,
         parent_version=version.parent_version,
         trigger_type=version.trigger_type,
         decision_status=version.decision_status,
+        topic=str(snapshot.get("topic", "")),
+        focus=str(snapshot.get("focus", "")),
+        task_intent=str(snapshot.get("task_intent", "")),
+        interest_bias=str(snapshot.get("interest_bias", "")),
+        discovery_notes=list(snapshot.get("discovery_notes", []) or []),
+        discovery_truth_boundary=list(snapshot.get("discovery_truth_boundary", []) or []),
         change_reason=version.change_reason or "",
         change_summary=dict(version.change_summary or {}),
         evaluation=dict(version.evaluation or {}),
@@ -666,11 +1607,12 @@ def _serialize_source_plan_version(version: SourcePlanVersionModel) -> SourcePla
 
 
 def _snapshot_source_plan(plan: SourcePlanModel) -> Dict[str, Any]:
+    extra = dict(getattr(plan, "extra", None) or {})
     items = []
     for item in sorted(list(plan.items or []), key=lambda value: value.object_key):
         items.append(
             {
-                "item_type": item.item_type,
+                "item_type": getattr(item, "item_type", "domain"),
                 "object_key": item.object_key,
                 "name": item.name,
                 "url": item.url or "",
@@ -688,6 +1630,10 @@ def _snapshot_source_plan(plan: SourcePlanModel) -> Dict[str, Any]:
         "topic": plan.topic,
         "focus": plan.focus,
         "objective": plan.objective or "",
+        "task_intent": str(extra.get("task_intent", "")),
+        "interest_bias": str(extra.get("interest_bias", "")),
+        "discovery_notes": list(extra.get("discovery_notes", []) or []),
+        "discovery_truth_boundary": list(extra.get("discovery_truth_boundary", []) or []),
         "review_cadence_days": int(plan.review_cadence_days or 14),
         "items": items,
     }
@@ -698,6 +1644,10 @@ def _snapshot_source_plan_from_payload(
     topic: str,
     focus: str,
     objective: str,
+    task_intent: str = "",
+    interest_bias: str = "",
+    discovery_notes: Optional[List[str]] = None,
+    discovery_truth_boundary: Optional[List[str]] = None,
     review_cadence_days: int,
     items: List[Dict[str, Any]],
 ) -> Dict[str, Any]:
@@ -705,7 +1655,7 @@ def _snapshot_source_plan_from_payload(
     for item in sorted(items, key=lambda value: value["object_key"]):
         normalized_items.append(
             {
-                "item_type": item["item_type"],
+                "item_type": item.get("item_type", "domain"),
                 "object_key": item["object_key"],
                 "name": item["name"],
                 "url": item.get("url", ""),
@@ -723,6 +1673,10 @@ def _snapshot_source_plan_from_payload(
         "topic": topic,
         "focus": focus,
         "objective": objective or "",
+        "task_intent": task_intent or "",
+        "interest_bias": interest_bias or "",
+        "discovery_notes": list(discovery_notes or []),
+        "discovery_truth_boundary": list(discovery_truth_boundary or []),
         "review_cadence_days": int(review_cadence_days or 14),
         "items": normalized_items,
     }
@@ -1103,10 +2057,7 @@ async def _refresh_source_plan_items(
     review_cadence_days: int,
     limit: int,
 ) -> SourcePlanModel:
-    discovery = await _run_source_discovery(
-        SourceDiscoveryRequest(topic=plan.topic, focus=focus, limit=limit),
-        db,
-    )
+    discovery = await _run_source_discovery(_discovery_request_from_persisted_plan(plan, focus, limit), db)
 
     existing_by_key = {item.object_key: item for item in list(plan.items or [])}
     discovered_keys: set[str] = set()
@@ -1166,6 +2117,10 @@ async def _refresh_source_plan_items(
     plan.extra = {
         **dict(plan.extra or {}),
         "queries": discovery.queries,
+        "task_intent": discovery.task_intent,
+        "interest_bias": discovery.interest_bias.value,
+        "discovery_notes": discovery.notes,
+        "discovery_truth_boundary": discovery.truth_boundary,
         "attention_policy": {
             "policy_id": discovery.policy_id,
             "policy_version": discovery.policy_version,
@@ -1234,24 +2189,12 @@ def _domain_quality_adjustment(domain: str, focus: SourceDiscoveryFocus) -> floa
         "blog.csdn.net",
         "m.blog.csdn.net",
     )
-    contextual_tech_media = (
-        "36kr.com",
-        "huxiu.com",
-        "ithome.com",
-        "jiqizhixin.com",
-        "techcrunch.com",
-        "theverge.com",
-        "wired.com",
-        "substack.com",
-        "medium.com",
-    )
-
     score = 0.0
     if any(token in domain for token in positive.get(focus, ())):
         score += 0.25
     if any(token in domain for token in negative):
         score -= 0.3
-    if any(token in domain for token in contextual_tech_media):
+    if any(token in domain for token in _CONTEXTUAL_TECH_MEDIA_DOMAINS):
         if focus == SourceDiscoveryFocus.LATEST:
             score += 0.08
         elif focus == SourceDiscoveryFocus.FRONTIER:
@@ -1365,6 +2308,21 @@ def _candidate_relation_hints(item_type: str, object_key: str, url: str) -> list
             handle = key.split("linkedin.com/in/", 1)[1]
             related.append({"relation": "profile", "item_type": "domain", "object_key": "linkedin.com", "label": f"{handle} profile"})
     elif item_type == "signal":
+        if key.startswith("x.com/") and "/status/" in key:
+            handle = key.split("x.com/", 1)[1].split("/status/", 1)[0].strip("/")
+            if handle:
+                related.append({"relation": "author", "item_type": "person", "object_key": f"x.com/{handle}", "label": f"@{handle}"})
+        elif key.startswith("twitter.com/") and "/status/" in key:
+            handle = key.split("twitter.com/", 1)[1].split("/status/", 1)[0].strip("/")
+            if handle:
+                related.append(
+                    {
+                        "relation": "author",
+                        "item_type": "person",
+                        "object_key": f"twitter.com/{handle}",
+                        "label": f"@{handle}",
+                    }
+                )
         related.append({"relation": "source_stream", "item_type": "domain", "object_key": url.lower(), "label": "discussion"})
     return related[:3]
 
@@ -1398,6 +2356,17 @@ def _related_entity_url(item_type: str, object_key: str) -> str:
     return f"https://{key}"
 
 
+def _parent_related_item_type(parent_object_key: str) -> str:
+    key = parent_object_key.lower()
+    if key.startswith("github.com/") and key.count("/") >= 2 and "/release/" not in key:
+        return "repository"
+    if "/status/" in key or "/thread/" in key or "/item/" in key:
+        return "signal"
+    if "/release/" in key or key.endswith(":release"):
+        return "release"
+    return "domain"
+
+
 def _build_related_candidate_seed(
     related: dict[str, str],
     *,
@@ -1417,9 +2386,17 @@ def _build_related_candidate_seed(
     inferred_roles: list[str] = []
     if item_type == "person" and relation == "owner" and focus in {SourceDiscoveryFocus.METHOD, SourceDiscoveryFocus.FRONTIER}:
         inferred_roles.append("maintainer")
+    if item_type == "person" and relation == "author" and focus in {SourceDiscoveryFocus.METHOD, SourceDiscoveryFocus.FRONTIER}:
+        inferred_roles.append("builder")
 
     if item_type == "organization" and focus == SourceDiscoveryFocus.FRONTIER:
         inferred_roles.append("researcher")
+
+    follow_score = 0.04
+    if "maintainer" in inferred_roles:
+        follow_score = 0.1
+    elif any(role in inferred_roles for role in ("builder", "author", "speaker")):
+        follow_score = 0.07
 
     return {
         "item_type": item_type,
@@ -1431,12 +2408,12 @@ def _build_related_candidate_seed(
         "authority_score": max(0.45, min(0.92, parent_score - 0.08)),
         "evidence_count": 1,
         "activity_freshness": 0.02 if item_type == "person" else 0.0,
-        "follow_score": 0.1 if "maintainer" in inferred_roles else 0.04,
+        "follow_score": follow_score,
         "inferred_roles": inferred_roles,
         "related_entities": [
             {
                 "relation": "associated_with",
-                "item_type": "repository" if "github.com/" in parent_object_key else "domain",
+                "item_type": _parent_related_item_type(parent_object_key),
                 "object_key": parent_object_key,
                 "label": parent_name,
             }
@@ -1508,6 +2485,82 @@ def _candidate_selection_threshold(item_type: str, focus: SourceDiscoveryFocus) 
     if item_type == "repository" and focus == SourceDiscoveryFocus.METHOD:
         return 0.4
     return base_threshold
+
+
+def _compress_generic_domain_candidates(
+    candidates: list[dict[str, Any]],
+    focus: SourceDiscoveryFocus,
+) -> list[dict[str, Any]]:
+    if focus not in {
+        SourceDiscoveryFocus.METHOD,
+        SourceDiscoveryFocus.FRONTIER,
+        SourceDiscoveryFocus.LATEST,
+    }:
+        return candidates
+
+    specific_best_by_domain: dict[str, float] = {}
+    for candidate in candidates:
+        item_type = str(candidate.get("item_type", "")).lower()
+        domain = str(candidate.get("domain", "")).lower()
+        if not domain or item_type == "domain":
+            continue
+        specific_best_by_domain[domain] = max(
+            specific_best_by_domain.get(domain, 0.0),
+            float(candidate.get("authority_score", 0.0) or 0.0),
+        )
+
+    compressed: list[dict[str, Any]] = []
+    for candidate in candidates:
+        item_type = str(candidate.get("item_type", "")).lower()
+        domain = str(candidate.get("domain", "")).lower()
+        score = float(candidate.get("authority_score", 0.0) or 0.0)
+        best_specific = specific_best_by_domain.get(domain, 0.0)
+        if item_type == "domain" and best_specific >= max(score - 0.02, 0.38):
+            continue
+        compressed.append(candidate)
+    return compressed
+
+
+def _repository_base_object_key(object_key: str, item_type: str) -> str:
+    key = str(object_key or "").lower()
+    item_type = str(item_type or "").lower()
+    if item_type == "repository":
+        return key
+    if item_type == "release" and "/release/" in key:
+        return key.split("/release/", 1)[0]
+    return ""
+
+
+def _compress_release_repository_overlap(
+    candidates: list[dict[str, Any]],
+    focus: SourceDiscoveryFocus,
+) -> list[dict[str, Any]]:
+    if focus not in {SourceDiscoveryFocus.LATEST, SourceDiscoveryFocus.FRONTIER}:
+        return candidates
+
+    release_best_by_repo: dict[str, float] = {}
+    for candidate in candidates:
+        item_type = str(candidate.get("item_type", "")).lower()
+        if item_type != "release":
+            continue
+        repo_key = _repository_base_object_key(candidate.get("object_key", ""), item_type)
+        if not repo_key:
+            continue
+        release_best_by_repo[repo_key] = max(
+            release_best_by_repo.get(repo_key, 0.0),
+            float(candidate.get("authority_score", 0.0) or 0.0),
+        )
+
+    compressed: list[dict[str, Any]] = []
+    for candidate in candidates:
+        item_type = str(candidate.get("item_type", "")).lower()
+        object_key = str(candidate.get("object_key", "")).lower()
+        score = float(candidate.get("authority_score", 0.0) or 0.0)
+        best_release = release_best_by_repo.get(object_key, 0.0)
+        if item_type == "repository" and best_release >= max(score - 0.02, 0.38):
+            continue
+        compressed.append(candidate)
+    return compressed
 
 
 async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) -> SourceDiscoveryResponse:
@@ -1672,7 +2725,9 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
             1 if item["item_type"] == "community" and body.focus == SourceDiscoveryFocus.METHOD else 0,
         ),
         reverse=True,
-    )[: max(body.limit * 4, 24)]
+    )
+    ranked = _compress_generic_domain_candidates(ranked, body.focus)
+    ranked = _compress_release_repository_overlap(ranked, body.focus)[: max(body.limit * 4, 24)]
 
     candidates: list[SourceDiscoveryCandidate] = []
     for item in ranked:
@@ -1682,7 +2737,8 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
             item["evidence_count"],
         )
         candidates.append(
-            SourceDiscoveryCandidate(
+            _enrich_discovery_candidate(
+                SourceDiscoveryCandidate(
                 item_type=item["item_type"],
                 object_key=item["object_key"],
                 domain=item["domain"],
@@ -1700,6 +2756,16 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
                 matched_queries=item["matched_queries"],
                 sample_titles=item["sample_titles"],
                 sample_snippets=item["sample_snippets"],
+                source_nature=_source_nature_for_candidate(item["item_type"], item["domain"]),
+                temperature=_temperature_for_candidate(body.focus, item["item_type"]),
+                recommended_mode=recommendation,
+                recommended_execution_strategy="",
+                why_relevant=reason,
+                confidence_note=_confidence_note(item),
+                canonical_ref=item["object_key"],
+                candidate_endpoints=[item["url"]],
+                ),
+                body.focus,
             )
         )
 
@@ -1713,11 +2779,18 @@ async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) 
     return SourceDiscoveryResponse(
         topic=body.topic,
         focus=body.focus,
+        task_intent=body.task_intent,
+        interest_bias=body.interest_bias or _interest_bias_for_focus(body.focus),
         queries=queries,
         policy_id=attention_result.policy_id,
         policy_version=attention_result.policy_version,
         portfolio_summary=attention_result.portfolio_summary,
-        candidates=[SourceDiscoveryCandidate(**payload) for payload in attention_result.selected],
+        notes=_discovery_notes(body, len(attention_result.selected)),
+        truth_boundary=_discovery_truth_boundary(),
+        candidates=[
+            _enrich_discovery_candidate(SourceDiscoveryCandidate(**payload), body.focus)
+            for payload in attention_result.selected
+        ],
     )
     return Source(
         id=source.id,
@@ -1932,6 +3005,80 @@ async def discover_sources(body: SourceDiscoveryRequest, db: AsyncSession = Depe
     return await _run_source_discovery(body, db)
 
 
+@router.post("/sources/discover/judge/inspect", response_model=SourceDiscoveryJudgeInspectResponse)
+async def inspect_source_candidate_judgment(
+    body: SourceDiscoveryJudgeInspectRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Run an inspect-only AI judgment pass on bounded discovery candidates.
+
+    This route is advisory only:
+    - it reuses the existing discovery path
+    - it does not persist judgments
+    - it does not auto-promote candidates into canonical truth
+    """
+    return await _run_ai_candidate_judgment_inspect(body, db)
+
+
+@router.post("/sources/discover/judge/panel/inspect", response_model=SourceDiscoveryJudgePanelInspectResponse)
+async def inspect_source_candidate_judgment_panel(
+    body: SourceDiscoveryJudgePanelInspectRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Run a bounded dual-model panel inspect on the same judged candidate subset.
+
+    This route is still inspect-only:
+    - it exposes agreement and disagreement shape
+    - it does not merge panel output into canonical truth
+    - it does not persist decisions or mutate source plans
+    """
+    return await _run_ai_candidate_judgment_panel_inspect(body, db)
+
+
+@router.post(
+    "/sources/plans/{plan_id}/versions/{version_number}/judge/inspect",
+    response_model=SourcePlanVersionJudgeInspectResponse,
+)
+async def inspect_source_plan_version_judgment(
+    plan_id: str,
+    version_number: int,
+    body: SourcePlanVersionJudgeInspectRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Run an inspect-only AI judgment pass over bounded source-plan version changes.
+
+    This route is advisory only:
+    - it judges change targets extracted from an existing version snapshot/diff
+    - it does not mutate the source plan or version record
+    - it does not override the persisted evaluation.decision_status
+    """
+    return await _run_source_plan_version_judgment_inspect(plan_id, version_number, body, db)
+
+
+@router.post(
+    "/sources/plans/{plan_id}/versions/{version_number}/judge/panel/inspect",
+    response_model=SourcePlanVersionJudgePanelInspectResponse,
+)
+async def inspect_source_plan_version_judgment_panel(
+    plan_id: str,
+    version_number: int,
+    body: SourcePlanVersionJudgePanelInspectRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Run a bounded dual-model panel inspect over source-plan version change targets.
+
+    This route is still inspect-only:
+    - it exposes agreement and disagreement shape on version-change targets
+    - it does not mutate plan/version records
+    - it does not override the persisted version decision
+    """
+    return await _run_source_plan_version_judgment_panel_inspect(plan_id, version_number, body, db)
+
+
 @router.get("/sources/plans", response_model=List[SourcePlanResponse])
 async def list_source_plans(db: AsyncSession = Depends(get_db)):
     """List persisted source-intelligence plans."""
@@ -2041,10 +3188,7 @@ async def create_source_plan(
         )
         return _serialize_source_plan(refreshed)
 
-    discovery = await _run_source_discovery(
-        SourceDiscoveryRequest(topic=body.topic, focus=body.focus, limit=body.limit),
-        db,
-    )
+    discovery = await _run_source_discovery(_discovery_request_from_source_plan(body), db)
 
     plan = SourcePlanModel(
         topic=body.topic,
@@ -2058,6 +3202,10 @@ async def create_source_plan(
         review_cadence_days=body.review_cadence_days,
         extra={
             "queries": discovery.queries,
+            "task_intent": discovery.task_intent,
+            "interest_bias": discovery.interest_bias.value,
+            "discovery_notes": discovery.notes,
+            "discovery_truth_boundary": discovery.truth_boundary,
             "attention_policy": {
                 "policy_id": discovery.policy_id,
                 "policy_version": discovery.policy_version,
@@ -2132,6 +3280,10 @@ async def create_source_plan(
         topic=plan.topic,
         focus=plan.focus,
         objective=plan.objective or "",
+        task_intent=discovery.task_intent,
+        interest_bias=discovery.interest_bias.value,
+        discovery_notes=discovery.notes,
+        discovery_truth_boundary=discovery.truth_boundary,
         review_cadence_days=plan.review_cadence_days,
         items=created_items_payload,
     )

@@ -256,7 +256,7 @@ class TaskNotificationService:
             return await self.notification_manager.send_important_alert(
                 title=title,
                 content=content,
-                source="MyAttention 任务系统",
+                source="IKE 任务系统",
                 url=f"/tasks/{task.id}",
                 channels=channels
             )
@@ -357,7 +357,7 @@ class TaskNotificationService:
             return await self.notification_manager.send_important_alert(
                 title=title,
                 content=content,
-                source="MyAttention 任务系统",
+                source="IKE 任务系统",
                 url=f"/tasks/{task.id}",
                 channels=channels
             )

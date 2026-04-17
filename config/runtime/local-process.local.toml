@@ -20,12 +20,12 @@ command = "{python} run_service.py --host {api_host} --port {api_port}"
 
 [web]
 use_service = false
-service_name = "MyAttentionWeb"
-log_path = "D:/code/MyAttention/.runtime/logs/web.log"
+service_name = "IKEWeb"
+log_path = "D:/code/IKE/.runtime/logs/web.log"
 command = "node .next/standalone/server.js"
 
 [watchdog]
 auto_start = true
 use_service = true
-service_name = "MyAttentionWatchdog"
-log_path = "D:/code/MyAttention/.runtime/logs/MyAttentionWatchdog.out.log"
+service_name = "IKEWatchdog"
+log_path = "D:/code/IKE/.runtime/logs/IKEWatchdog.out.log"

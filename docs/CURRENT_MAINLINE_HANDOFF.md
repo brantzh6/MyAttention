@@ -15,6 +15,7 @@ Before scanning this long handoff, start with:
 - [D:\code\MyAttention\docs\CURRENT_RUNTIME_MAINLINE_INDEX_2026-04-10.md](/D:/code/MyAttention/docs/CURRENT_RUNTIME_MAINLINE_INDEX_2026-04-10.md)
 - [D:\code\MyAttention\docs\CURRENT_RENAME_CUTOVER_INDEX_2026-04-10.md](/D:/code/MyAttention/docs/CURRENT_RENAME_CUTOVER_INDEX_2026-04-10.md)
 - [D:\code\MyAttention\docs\CURRENT_AGENT_HARNESS_INDEX_2026-04-10.md](/D:/code/MyAttention/docs/CURRENT_AGENT_HARNESS_INDEX_2026-04-10.md)
+- [D:\code\MyAttention\docs\IKE_MILESTONE_POLICY_2026-04-17.md](/D:/code/MyAttention/docs/IKE_MILESTONE_POLICY_2026-04-17.md)
 - [D:\code\MyAttention\docs\IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md)
 - [D:\code\MyAttention\docs\IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md](/D:/code/MyAttention/docs/IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md)
 

@@ -31,6 +31,8 @@ It defines how those lines move safely from development into stable operation.
   - [D:\code\MyAttention\docs\IKE_CHANGE_PROMOTION_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_CHANGE_PROMOTION_POLICY_2026-04-11.md)
 - release and rollback policy:
   - [D:\code\MyAttention\docs\IKE_RELEASE_AND_ROLLBACK_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_RELEASE_AND_ROLLBACK_POLICY_2026-04-11.md)
+- milestone policy:
+  - [D:\code\MyAttention\docs\IKE_MILESTONE_POLICY_2026-04-17.md](/D:/code/MyAttention/docs/IKE_MILESTONE_POLICY_2026-04-17.md)
 - immediate implementation queue:
   - [D:\code\MyAttention\docs\IKE_DELIVERY_GOVERNANCE_P1_IMPLEMENTATION_QUEUE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_DELIVERY_GOVERNANCE_P1_IMPLEMENTATION_QUEUE_2026-04-11.md)
 - staging/prod identity plan:
@@ -80,6 +82,8 @@ Related alignment documents:
 - [D:\code\MyAttention\docs\IKE_PROJECT_RUNTIME_ALIGNMENT_2026-04-11.md](/D:/code/MyAttention/docs/IKE_PROJECT_RUNTIME_ALIGNMENT_2026-04-11.md)
 - [D:\code\MyAttention\docs\IKE_PROJECT_RUNTIME_ALIGNMENT_P1_QUEUE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_PROJECT_RUNTIME_ALIGNMENT_P1_QUEUE_2026-04-11.md)
 - [D:\code\MyAttention\docs\IKE_MEMORY_TIERS_AND_RETENTION_RULE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_MEMORY_TIERS_AND_RETENTION_RULE_2026-04-11.md)
+- milestone policy:
+  - [D:\code\MyAttention\docs\IKE_MILESTONE_POLICY_2026-04-17.md](/D:/code/MyAttention/docs/IKE_MILESTONE_POLICY_2026-04-17.md)
 - single-controller continuity risk:
   - [D:\code\MyAttention\docs\IKE_SINGLE_CONTROLLER_RISK_NOTE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_SINGLE_CONTROLLER_RISK_NOTE_2026-04-11.md)
 - external method absorption baseline:

@@ -7,8 +7,8 @@ import { Activity, Brain, Home, MessageSquare, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { href: '/', label: '信息流', icon: Home },
-  { href: '/chat', label: '智能对话', icon: MessageSquare },
+  { href: '/', label: '信息大脑', icon: Home },
+  { href: '/chat', label: '知识大脑', icon: MessageSquare },
   { href: '/evolution', label: '进化大脑', icon: Activity },
   { href: '/settings', label: '设置', icon: Settings },
 ]
@@ -19,9 +19,12 @@ export function Sidebar() {
   return (
     <aside className="flex w-64 flex-col border-r bg-card">
       <div className="border-b p-4">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-3">
           <Brain className="h-8 w-8 text-primary" />
-          <span className="text-lg font-semibold">IKE</span>
+          <div className="leading-tight">
+            <p className="text-lg font-semibold">IKE</p>
+            <p className="text-xs text-muted-foreground">信息 / 知识 / 进化 / 世界模型</p>
+          </div>
         </Link>
       </div>
 
@@ -52,6 +55,7 @@ export function Sidebar() {
 
       <div className="border-t p-4 text-xs text-muted-foreground">
         <p>IKE v0.1.0</p>
+        <p className="mt-1">代码仓库仍是 MyAttention，迁移到 IKE 后再统一改名。</p>
       </div>
     </aside>
   )

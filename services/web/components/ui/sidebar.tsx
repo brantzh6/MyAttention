@@ -23,7 +23,7 @@ export function Sidebar() {
           <Brain className="h-8 w-8 text-primary" />
           <div className="leading-tight">
             <p className="text-lg font-semibold">IKE</p>
-            <p className="text-xs text-muted-foreground">信息 / 知识 / 进化 / 世界模型</p>
+            <p className="text-xs text-muted-foreground">信息 / 知识 / 进化 / 世界模型 / 思维工具</p>
           </div>
         </Link>
       </div>

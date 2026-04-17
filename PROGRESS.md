@@ -3037,3 +3037,6 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - `review-for IKE_PROJECT_SCOPE_AND_STRATEGY_REVIEW_PACK_2026-04-11.md`
   - `services/web/app/chat/page.tsx`
   - `services/web/app/evolution/page.tsx`
+- prepared a bounded follow-up packet for the Claude Code capability line:
+  - `IKE_CLAUDE_CODE_CAPABILITY_P2_TASK_PACKET_2026-04-17.md`
+  - `IKE_CLAUDE_CODE_CAPABILITY_P2_CONTEXT_2026-04-17.md`

@@ -1785,3 +1785,9 @@
 - synced the same framing into README, review-entry docs, and the web
   knowledge/evolution pages so external reviewers and operators see the same
   objective/path distinction
+
+## Added
+
+- `docs/IKE_CLAUDE_CODE_CAPABILITY_P2_TASK_PACKET_2026-04-17.md` and
+  `docs/IKE_CLAUDE_CODE_CAPABILITY_P2_CONTEXT_2026-04-17.md` to hand off a
+  bounded follow-up packet for the Claude Code capability line

@@ -1,5 +1,24 @@
 # MyAttention 项目工作进度
 
+## 2026-04-18 - Worker model switching standard added
+
+- added a portable worker model-switching standard so every worker skill can
+  expose the same multi-model selection surface to IKE
+- current meaning:
+  - model choice is now treated as a skill-level contract, not a Claude-only
+    operator trick
+  - IKE can remain multi-model by design while still letting the harness
+    validate and record the selected model/provider
+
+## 2026-04-18 - Combined AI-native direction design review pack updated
+
+- updated the worker-skill portion of the combined design review pack so it
+  now explicitly includes the worker model-switching standard
+- current meaning:
+  - the reviewer can judge the conversation-runtime path and worker-skill
+    path together
+  - the worker path now includes a standardized model-switching requirement
+
 ## 2026-04-15 - Source Intelligence V1 M11 version judgment inspect
 
 - opened one bounded second-use-case packet above `M10`
@@ -3040,3 +3059,27 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
 - prepared a bounded follow-up packet for the Claude Code capability line:
   - `IKE_CLAUDE_CODE_CAPABILITY_P2_TASK_PACKET_2026-04-17.md`
   - `IKE_CLAUDE_CODE_CAPABILITY_P2_CONTEXT_2026-04-17.md`
+# 2026-04-18
+
+- absorbed the review for `IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2`
+- recorded the corrected controller direction:
+  - keep the v0.2 plan as direction baseline
+  - treat current `Source Intelligence V1` and `Runtime v0` as substrate
+  - open the next bounded packet as `Conversation Runtime Phase 0`
+- added:
+  - `IKE_AI_NATIVE_CONVERSATION_RUNTIME_V02_REVIEW_ABSORPTION_2026-04-18.md`
+  - `IKE_CONVERSATION_RUNTIME_P0_PHASE_JUDGMENT_2026-04-18.md`
+  - `IKE_CONVERSATION_RUNTIME_P0_PLAN_2026-04-18.md`
+  - `IKE_CONVERSATION_RUNTIME_P0_EXECUTION_PACKET_2026-04-18.md`
+- updated current mainline map and handoff to reflect the new active edge
+- established the worker-skill support track:
+  - `IKE_WORKER_SKILL_CONTRACT_2026-04-18.md`
+  - `IKE_WORKER_SKILL_PHASE_JUDGMENT_2026-04-18.md`
+  - `IKE_WORKER_SKILL_PHASE0_PLAN_2026-04-18.md`
+- added a combined direction review pack that covers both conversation runtime
+  and worker-skill integration:
+  - `IKE_AI_Native_Direction_Design_Review_Pack_2026-04-18.md`
+  - `review-for IKE_AI_Native_Direction_Design_Review_Pack_2026-04-18.md`
+- prepared a design review entry for the new conversation-runtime Phase 0:
+  - `IKE_CONVERSATION_RUNTIME_P0_DESIGN_REVIEW_PACK_2026-04-18.md`
+  - `review-for IKE_CONVERSATION_RUNTIME_P0_DESIGN_REVIEW_PACK_2026-04-18.md`

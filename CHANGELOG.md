@@ -8,6 +8,11 @@
 
 ### Added
 
+- 2026-04-18: Added a portable IKE worker model-switching standard and
+  threaded it into the worker-skill contract and combined AI-native design
+  review pack so all workers must expose the same multi-model selection
+  surface.
+
 - 2026-04-15: Added a bounded `Source Intelligence V1 M11` version-judgment
   inspect slice. The project can now run advisory AI judgment over persisted
   source-plan version changes through

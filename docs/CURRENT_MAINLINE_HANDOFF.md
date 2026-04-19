@@ -16,8 +16,10 @@ Operational continuation still depends on one stable framing:
   - world model as a cross-cutting layer
   - thinking tools / scientific methodology as a cross-cutting layer
 - current architecture uses `Runtime v0` as accepted substrate
-- current implementation path is allowed to change and is now centered on
-  `Source Intelligence V1`
+- current implementation path is allowed to change and is now moving from
+  `Source Intelligence V1` substrate proof toward a first bounded
+  conversation-to-object entry slice while a separate worker-skill support
+  track is formalized
 
 Reference:
 
@@ -35,6 +37,8 @@ Before scanning this long handoff, start with:
 - [D:\code\MyAttention\docs\IKE_MILESTONE_POLICY_2026-04-17.md](/D:/code/MyAttention/docs/IKE_MILESTONE_POLICY_2026-04-17.md)
 - [D:\code\MyAttention\docs\IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md)
 - [D:\code\MyAttention\docs\IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md](/D:/code/MyAttention/docs/IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md)
+- [D:\code\MyAttention\docs\IKE_WORKER_SKILL_CONTRACT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_WORKER_SKILL_CONTRACT_2026-04-18.md)
+- [D:\code\MyAttention\docs\IKE_WORKER_SKILL_PHASE_JUDGMENT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_WORKER_SKILL_PHASE_JUDGMENT_2026-04-18.md)
 
 ## Active Surface Rule
 
@@ -53,6 +57,110 @@ Policy reference:
 ## Latest Override
 
 This section overrides older runtime phase notes below when they conflict.
+
+- a new direction baseline now exists:
+  - [D:\code\MyAttention\docs\IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_bundle\ike_ai_native_conversation_runtime_v02\md\IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_EN.md](/D:/code/MyAttention/docs/IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_bundle/ike_ai_native_conversation_runtime_v02/md/IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_EN.md)
+  - [D:\code\MyAttention\docs\IKE_AI_NATIVE_CONVERSATION_RUNTIME_V02_REVIEW_ABSORPTION_2026-04-18.md](/D:/code/MyAttention/docs/IKE_AI_NATIVE_CONVERSATION_RUNTIME_V02_REVIEW_ABSORPTION_2026-04-18.md)
+  - current controller interpretation:
+    - the project objective has not changed
+    - the next decisive capability is not another heuristic family
+    - the next decisive capability is a bounded AI-native conversation entry
+      slice that converts conversation into typed candidate objects under
+      runtime trust semantics
+- the next execution packet is now:
+  - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_P0_PHASE_JUDGMENT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_P0_PHASE_JUDGMENT_2026-04-18.md)
+  - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_P0_PLAN_2026-04-18.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_P0_PLAN_2026-04-18.md)
+  - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_P0_EXECUTION_PACKET_2026-04-18.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_P0_EXECUTION_PACKET_2026-04-18.md)
+  - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_P0_IMPLEMENTATION_RESULT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_P0_IMPLEMENTATION_RESULT_2026-04-18.md)
+  - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_P0_REVIEW_ABSORPTION_2026-04-19.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_P0_REVIEW_ABSORPTION_2026-04-19.md)
+  - current controller interpretation:
+    - first bounded slice should target `SourceCandidate` and `CorrectionEvent`
+    - existing `Source Intelligence V1 M1-M13` and `feeds.ai_judgment`
+      should be reused as substrate
+    - raw conversation must remain non-canonical and review-gated
+    - current implementation already includes:
+      - single-lane inspect
+      - bounded panel inspect
+      - shared source semantics
+      - substrate-level AI judgment reuse without the old private
+        `feeds.py` judgment-runner dependency
+      - panel extraction-divergence visibility so secondary-only discovered
+        source candidates are no longer dropped before judgment
+      - bounded correction judgment on the single-lane inspect route so
+        source-related correction proposals now receive AI-assisted review
+      - bounded correction panel review on the panel inspect route so
+        source-related correction proposals now also expose dual-lane
+        agreement/disagreement shape
+      - a compact `controller_packet` on inspect responses so future
+        controller consumers can read the bounded next-action surface without
+        re-parsing the full payload
+      - review-driven P0 hardening so correction proposals now explicitly
+        declare proposed/review-gated/not-absorbed state and
+        `controller_packet` now explicitly declares advisory/non-canonical
+        status
+      - `conversation_runtime/contracts.py` now holds conversation-owned
+        request/response contracts, and `feeds/source_contracts.py` now holds
+        shared source-discovery contracts used by both feeds and conversation
+        runtime
+      - mixed-intent disagreement is now explicitly proven to fall back to
+        `manual_review`
+      - long conversation text is now windowed for bounded inspect and records
+        truncation in response notes
+      - conversation-derived evidence snippets now preserve head+tail context
+        when the original segment is truncated
+      - conversation-derived source candidates now reuse the same shared
+        generic-domain and release-over-repository compression rules as source
+        discovery
+      - this source-compression alignment is now accepted as a bounded `P0`
+        slice and should not be generalized to all future conversation object
+        families
+      - inspect responses now also carry bounded `intent_trace` metadata so
+        pre-compression source-candidate shape remains review-visible
+      - review convergence now treats `P0` as materially complete for the
+        current source/correction object family and recommends phase judgment
+        rather than further default `P0` semantic expansion
+      - the active controller packet is now a next-phase selection decision,
+        not another `P0` implementation packet
+        - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_NEXT_PHASE_SELECTION_PACKET_2026-04-19.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_NEXT_PHASE_SELECTION_PACKET_2026-04-19.md)
+- the worker skill support track is now also explicit:
+  - `claude-worker` is the first concrete implementation, but IKE still needs
+    the formal skill contract and loader policy
+  - latest repo state now includes a machine-readable skill manifest,
+    explicit model switching, three invocation patterns, and durable
+    artifacts
+  - see:
+    - [D:\code\MyAttention\docs\IKE_CLAUDE_WORKER_LATEST_INTEGRATION_NOTE_2026-04-19.md](/D:/code/MyAttention/docs/IKE_CLAUDE_WORKER_LATEST_INTEGRATION_NOTE_2026-04-19.md)
+  - do not confuse the implementation repo with the IKE-level contract
+  - delegation should default to single-shot bounded packets, not `continue`
+    loops
+  - current preferred lane order is:
+    - coding: `claude-worker`
+    - review/analysis: `claude-worker` or OpenClaw
+    - tests/validation: `qwen3.6-plus`
+  - policy reference:
+    - [D:\code\MyAttention\docs\IKE_DELEGATION_SINGLE_SHOT_LANE_POLICY_2026-04-19.md](/D:/code/MyAttention/docs/IKE_DELEGATION_SINGLE_SHOT_LANE_POLICY_2026-04-19.md)
+  - source repo and production runtime must now be kept separate
+  - policy reference:
+    - [D:\code\MyAttention\docs\IKE_DEV_VS_RUNTIME_ENVIRONMENT_SEPARATION_POLICY_2026-04-19.md](/D:/code/MyAttention/docs/IKE_DEV_VS_RUNTIME_ENVIRONMENT_SEPARATION_POLICY_2026-04-19.md)
+  - runtime root must be configurable and install-time resolved, not source-tree
+    hardcoded
+  - installed runtime root is machine-local and resolved from configuration:
+    - `IKE_RUNTIME_ROOT`
+  - installation/runtime policy reference:
+    - [D:\code\MyAttention\docs\IKE_INSTALLATION_AND_RUNTIME_ROOT_POLICY_2026-04-19.md](/D:/code/MyAttention/docs/IKE_INSTALLATION_AND_RUNTIME_ROOT_POLICY_2026-04-19.md)
+  - development-time worker use and production runtime use must now be treated
+    as separate instances
+  - policy reference:
+    - [D:\code\MyAttention\docs\IKE_DEV_RUNTIME_DUAL_INSTANCE_POLICY_2026-04-19.md](/D:/code/MyAttention/docs/IKE_DEV_RUNTIME_DUAL_INSTANCE_POLICY_2026-04-19.md)
+  - environment work is now explicitly staged:
+    - first make the development worker environment usable
+    - then validate the single-shot delegation loop
+    - only then install the production IKE runtime
+  - milestone design reference:
+    - [D:\code\MyAttention\docs\IKE_WORKER_ENVIRONMENT_MILESTONE_DESIGN_2026-04-19.md](/D:/code/MyAttention/docs/IKE_WORKER_ENVIRONMENT_MILESTONE_DESIGN_2026-04-19.md)
+  - development worker environment smoke test completed under
+    `CLAUDE_WORKER_HOME`, and a bounded coding packet returned a doc-only
+    patch in the `claude-worker` source repo
 
 - active project mainline is now:
   - `Source Intelligence V1`
@@ -2432,3 +2540,30 @@ Current `R1-A2` note:
     - selective absorption is now a reusable substrate-derived advisory shape
     - panel outputs now surface bounded controller guidance without mutating truth
     - this remains advisory only and must not slide into workflow or persistence
+
+## 2026-04-18 AI-Native Direction Tightening
+
+- absorbed current `claude` + `chatgpt` direction review into:
+  - [D:\code\MyAttention\docs\IKE_AI_NATIVE_DIRECTION_DESIGN_REVIEW_ABSORPTION_2026-04-18.md](/D:/code/MyAttention/docs/IKE_AI_NATIVE_DIRECTION_DESIGN_REVIEW_ABSORPTION_2026-04-18.md)
+- current controller judgment:
+  - `Conversation Runtime Phase 0` remains the active mainline slice
+  - `Worker Skill / Harness Integration` is a concurrent support track
+  - Phase 0 intent classification is explicitly LLM-assisted and bounded
+  - `CorrectionEvent` is limited to source-related corrections
+  - new conversation-runtime logic should land outside `feeds.py`
+  - Gemini re-review is not currently required
+- if a third-party cross-check is needed later, use the lean pack:
+  - [D:\code\MyAttention\docs\IKE_AI_Native_Direction_Lean_Review_Pack_2026-04-18.md](/D:/code/MyAttention/docs/IKE_AI_Native_Direction_Lean_Review_Pack_2026-04-18.md)
+
+## 2026-04-18 Conversation Runtime P0 First Implementation
+
+- landed:
+  - [D:\code\MyAttention\services\api\conversation_runtime\p0.py](/D:/code/MyAttention/services/api/conversation_runtime/p0.py)
+  - [D:\code\MyAttention\services\api\routers\conversation_runtime.py](/D:/code/MyAttention/services/api/routers/conversation_runtime.py)
+  - [D:\code\MyAttention\services\api\tests\test_conversation_runtime_route.py](/D:/code/MyAttention/services/api/tests/test_conversation_runtime_route.py)
+- current controller judgment:
+  - first bounded inspect-only conversation entry is now real
+  - raw conversation still does not become truth
+  - source candidates can already reuse existing judgment substrate
+  - `CorrectionEvent` remains source-scoped only
+  - current review focus should be temporary reuse of `feeds.py` private helpers

@@ -1,5 +1,172 @@
 # MyAttention 项目工作进度
 
+## 2026-04-19 - Worker environment milestone design added
+
+- formalized the staged environment plan:
+  - dev worker environment first
+  - single-shot closed-loop validation second
+  - production IKE runtime installation third
+- the new milestone design is durably recorded in:
+  - [D:\code\MyAttention\docs\IKE_WORKER_ENVIRONMENT_MILESTONE_DESIGN_2026-04-19.md](/D:/code/MyAttention/docs/IKE_WORKER_ENVIRONMENT_MILESTONE_DESIGN_2026-04-19.md)
+
+## 2026-04-19 - Dev/runtime dual-instance policy formalized
+
+- formalized that the worker may exist in both development and production
+  runtime forms, but those instances must be separate
+- the new policy is durably recorded in:
+  - [D:\code\MyAttention\docs\IKE_DEV_RUNTIME_DUAL_INSTANCE_POLICY_2026-04-19.md](/D:/code/MyAttention/docs/IKE_DEV_RUNTIME_DUAL_INSTANCE_POLICY_2026-04-19.md)
+
+## 2026-04-19 - Installation/runtime root policy formalized
+
+- formalized that IKE runtime must be install-time resolved and not source-tree
+  hardcoded
+- installed runtime root is resolved from configuration:
+  - `IKE_RUNTIME_ROOT`
+- development worker environment smoke test completed under
+  `CLAUDE_WORKER_HOME`
+- the new policy is durably recorded in:
+  - [D:\code\MyAttention\docs\IKE_INSTALLATION_AND_RUNTIME_ROOT_POLICY_2026-04-19.md](/D:/code/MyAttention/docs/IKE_INSTALLATION_AND_RUNTIME_ROOT_POLICY_2026-04-19.md)
+
+## 2026-04-19 - Dev/runtime environment boundary corrected
+
+- formalized that source repositories are not production runtime environments
+- current worker/source split is now explicit:
+  - `claude-worker` is the skill source repository
+  - IKE runtime must live in a separate runtime root outside the source tree
+- the new policy is durably recorded in:
+  - [D:\code\MyAttention\docs\IKE_DEV_VS_RUNTIME_ENVIRONMENT_SEPARATION_POLICY_2026-04-19.md](/D:/code/MyAttention/docs/IKE_DEV_VS_RUNTIME_ENVIRONMENT_SEPARATION_POLICY_2026-04-19.md)
+
+## 2026-04-19 - Delegation lane policy tightened
+
+- formalized the default delegation rule as single-shot bounded packets
+- current lane priority is now explicit:
+  - coding: `claude-worker`
+  - review/analysis: `claude-worker` or OpenClaw
+  - tests/validation: `qwen3.6-plus`
+- continue loops are now exception-only, not the default follow-up mode
+- the new policy is durably recorded in:
+  - [D:\code\MyAttention\docs\IKE_DELEGATION_SINGLE_SHOT_LANE_POLICY_2026-04-19.md](/D:/code/MyAttention/docs/IKE_DELEGATION_SINGLE_SHOT_LANE_POLICY_2026-04-19.md)
+
+## 2026-04-19 - Conversation Runtime P0 source compression alignment
+
+- aligned `Conversation Runtime P0` with shared source-intelligence
+  post-processing
+- current implementation now:
+  - applies the same generic-domain compression used by discovery
+  - applies the same release-over-repository compression used by discovery
+  - routes both conversation inspect and source discovery through one shared
+    `services/api/feeds/source_postprocess.py` module
+- current meaning:
+  - conversation-derived inspect output no longer keeps generic domain or
+    duplicate repo/release objects that discovery would already compress away
+  - object post-processing is now more consistent across the two active
+    surfaces without adding persistence or workflow semantics
+  - this slice is now review-accepted as a bounded `SourceCandidate`
+    alignment, not as a broader conversation-runtime readiness claim
+
+## 2026-04-19 - Conversation Runtime P0 intent trace
+
+- added a bounded `intent_trace` layer to the conversation inspect responses
+- current implementation now preserves:
+  - raw extracted intent
+  - pre-compression source candidate count
+  - post-compression source candidate count
+  - dropped source object keys
+  - correction counts
+  - conversation-window truncation state
+- current meaning:
+  - compression no longer makes dropped source objects invisible at the
+    inspect surface
+  - `P0` can stay aligned with shared source compression without pretending
+    that pre-compression conversation shape never existed
+  - review convergence now treats this as the last intended semantic patch on
+    the current `P0` source/correction line
+
+## 2026-04-19 - Conversation Runtime P0 closure judgment
+
+- absorbed the `intent_trace` review and converted the next step into a phase
+  judgment rather than more `P0` coding
+- current meaning:
+  - `P0` is now treated as a closed bounded proof line
+  - future work should either hold `P0` steady or explicitly open a new object
+    family through a new phase packet
+
+## 2026-04-19 - Conversation Runtime next phase selection
+
+- converted the post-`P0` question into a bounded controller selection packet
+- current recommendation:
+  - hold `P0` closed
+  - do not open the next conversation object family yet
+  - prefer worker/harness execution work before further conversation-runtime
+    semantic expansion
+
+## 2026-04-18 - Conversation Runtime P0 substrate decoupling
+
+- removed the most important private-router coupling from `Conversation Runtime P0`
+- current implementation now reuses:
+  - shared source semantics in `services/api/feeds/source_semantics.py`
+  - a substrate-level candidate judgment runner in `services/api/feeds/ai_judgment.py`
+- current meaning:
+  - conversation runtime is no longer calling a `feeds.py` private judgment runner
+  - source intelligence and conversation runtime now share object semantics and AI judgment execution more honestly
+  - remaining debt is bounded type coupling, not hidden execution coupling
+
+## 2026-04-18 - Conversation Runtime P0 panel extraction divergence
+
+- upgraded the existing conversation panel inspect so it now compares
+  extraction shape as well as judgment shape
+- current implementation now:
+  - runs extraction on both model lanes
+  - merges secondary-only source candidates into the inspect candidate set
+  - exposes `extraction_summary` alongside `panel_summary`
+- current meaning:
+  - model disagreement is no longer limited to verdict disagreement
+  - secondary discoveries are no longer silently dropped before judgment
+  - extraction divergence now forces controller review instead of being hidden
+    behind an otherwise stable panel verdict
+  - the route remains inspect-only and non-persistent
+
+## 2026-04-18 - Conversation Runtime P0 correction judgment
+
+- extended the single-lane conversation inspect route so source-related
+  correction proposals now also receive bounded AI-assisted review
+- current implementation now returns:
+  - `correction_judgments`
+  - `correction_summary`
+  - operational advice that distinguishes review-worthy corrections from weak ones
+- current meaning:
+  - conversation runtime no longer treats corrections as extraction-only debris
+  - correction proposals can now participate in the same inspect-only
+    AI-assisted loop as source candidates
+  - this still does not create accepted correction state or persistence
+
+## 2026-04-18 - Conversation Runtime P0 panel correction review
+
+- extended the conversation panel inspect route so source-related correction
+  proposals now also receive dual-lane review
+- current implementation now returns:
+  - `primary_correction_judgments`
+  - `secondary_correction_judgments`
+  - `correction_panel_summary`
+- current meaning:
+  - correction proposals are no longer single-lane-only on the conversation surface
+  - stable correction-review consensus can now surface `review_corrections`
+  - malformed secondary correction output still degrades to a truthful mixed review state
+
+## 2026-04-18 - Conversation Runtime P0 controller packet
+
+- added a compact `controller_packet` to the conversation inspect responses
+- current implementation now exposes:
+  - `review_mode`
+  - `actionable_source_object_keys`
+  - `actionable_correction_targets`
+  - `reason_tags`
+- current meaning:
+  - controller-facing consumers no longer need to read the full inspect
+    payload just to find the bounded next action
+  - the new packet remains derived/advisory and does not replace the fuller
+    truth-boundary-rich response body
+
 ## 2026-04-18 - Worker model switching standard added
 
 - added a portable worker model-switching standard so every worker skill can
@@ -3080,6 +3247,51 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   and worker-skill integration:
   - `IKE_AI_Native_Direction_Design_Review_Pack_2026-04-18.md`
   - `review-for IKE_AI_Native_Direction_Design_Review_Pack_2026-04-18.md`
+- absorbed `claude` and `chatgpt` review feedback for the AI-native direction
+  pack and tightened the Phase 0 boundary:
+  - clarified Direction A vs Direction B as independent tracks
+  - made intent classification explicitly LLM-assisted and bounded
+  - constrained `CorrectionEvent` to source-related corrections only
+  - required a new conversation-runtime module rather than more `feeds.py`
+  - added a concrete worker manifest example
+- added:
+  - `IKE_AI_NATIVE_DIRECTION_DESIGN_REVIEW_ABSORPTION_2026-04-18.md`
+  - `IKE_AI_Native_Direction_Lean_Review_Pack_2026-04-18.md`
 - prepared a design review entry for the new conversation-runtime Phase 0:
   - `IKE_CONVERSATION_RUNTIME_P0_DESIGN_REVIEW_PACK_2026-04-18.md`
   - `review-for IKE_CONVERSATION_RUNTIME_P0_DESIGN_REVIEW_PACK_2026-04-18.md`
+- landed the first inspect-only conversation-runtime implementation slice:
+  - new module: `services/api/conversation_runtime/p0.py`
+  - new route: `POST /api/conversation-runtime/segments/inspect`
+  - new focused proof: `services/api/tests/test_conversation_runtime_route.py`
+- result docs:
+  - `IKE_CONVERSATION_RUNTIME_P0_IMPLEMENTATION_RESULT_2026-04-18.md`
+  - `review-for IKE_CONVERSATION_RUNTIME_P0_IMPLEMENTATION_RESULT_2026-04-18.md`
+- validation:
+  - `54 tests OK`
+  - compile passed
+- continued `Conversation Runtime P0` beyond first landing:
+  - extracted shared `source_semantics` so conversation runtime no longer
+    depends on `feeds.py` private identity helpers
+  - moved single-lane candidate judgment execution onto shared
+    `feeds.ai_judgment` substrate
+  - added panel extraction-divergence visibility and secondary-only candidate
+    preservation
+  - added bounded single-lane and panel correction review
+  - added compact `controller_packet` for bounded controller consumption
+  - absorbed review feedback with trust/boundary hardening:
+    - `CorrectionEvent` now explicitly carries proposed / review-gated /
+      not-absorbed state
+    - `controller_packet` now explicitly declares advisory / non-canonical
+      status
+    - noisy `other` no-action fallback proof now exists
+  - extracted contract seams:
+    - `conversation_runtime/contracts.py`
+    - `feeds/source_contracts.py`
+  - added bounded context-noise hardening:
+    - long conversation text now uses a bounded prompt window
+    - truncation is recorded in inspect notes
+    - mixed-intent panel disagreement is explicitly proven to fall back to
+      `manual_review`
+    - conversation-derived evidence snippets now preserve head+tail context
+      when truncation occurs

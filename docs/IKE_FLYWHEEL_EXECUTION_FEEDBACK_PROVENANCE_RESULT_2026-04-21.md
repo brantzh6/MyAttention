@@ -125,3 +125,38 @@ The implementation is minimal, bounded, and maintains the inspect-only contract 
 - `20260421T060852-7a9a5dc1`: `qwen-bailian-coding / glm-5`, aborted after long no-output wait.
 - `20260421T061546-e50646df`: `z-ai / glm-5.1`, failed with provider `429 Rate limit reached for requests`.
 - `20260421T062156-4ae63ff8`: `qwen-bailian-coding / glm-5`, succeeded; prompt delivery verified.
+
+---
+
+## Review Absorption
+
+Absorption doc:
+
+- [D:\code\MyAttention\docs\IKE_FLYWHEEL_EXECUTION_FEEDBACK_PROVENANCE_REVIEW_ABSORPTION_2026-04-22.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_EXECUTION_FEEDBACK_PROVENANCE_REVIEW_ABSORPTION_2026-04-22.md)
+
+Review convergence:
+
+- Kimi: `accept`
+- Claude: `accept`
+- ChatGPT: `accept_with_changes`
+- Gemini: `accept`
+
+Controller judgment: `accept`.
+
+Accepted scope: provenance annotation only.
+
+Explicit non-claims:
+
+- not verified provenance
+- not trusted worker identity
+- not artifact verification
+- not packet/run binding validation
+- not automatic execution-loop closure
+
+Deferred debt:
+
+- partial-provenance hardening test
+- future verified-provenance model
+- backend `flywheel.py` decomposition
+- frontend `flywheel-inspect-panel.tsx` decomposition
+- avoid adding more manual workflow form fields to this bridge

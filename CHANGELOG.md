@@ -8,6 +8,73 @@
 
 ### Added
 
+- 2026-04-21: Absorbed review for the flywheel execution-feedback bridge.
+  The slice remains accepted with changes: direction is correct and bounded,
+  while worker-result provenance, route-level test depth, and frontend panel
+  thickness are now explicit follow-up debt rather than blockers.
+- 2026-04-20: Added a bounded flywheel execution-feedback bridge. The
+  conversation runtime now exposes
+  `POST /api/conversation-runtime/flywheel/execution-feedback/inspect`, and
+  the evolution flywheel panel can paste manual worker results back into an
+  inspect-only reflection surface that yields bounded knowledge/evolution
+  candidates without auto-absorption or auto-redelegation.
+- 2026-04-20: Added review artifact identity governance. IKE now treats
+  duplicate review filenames, `%20`/space drift, and ambiguous write-back
+  paths as controller-governance debt. A canonical review tree was introduced
+  at `docs/reviews/{active,absorbed,archive}`, and new active review nodes now
+  use `review_for_<RESULT_BASENAME>.md` as the antigravity-friendly write-back
+  target.
+- 2026-04-20: Added flywheel frontend preview wiring. The existing
+  manual-decision panel can now call the backend task-packet preview route,
+  render the returned inspect-only preview, and copy a backend-generated
+  preview packet. The slice remains non-canonical, manual, and supplementary.
+- 2026-04-20: Absorbed review for the flywheel task-packet preview backend
+  slice. The packet remains accepted with bounded debt, and the default next
+  step is now to wire the existing manual-decision frontend surface to this
+  backend preview route instead of continuing to expand backend preview
+  semantics.
+- 2026-04-20: Added a bounded controller-facing flywheel task-packet preview
+  route at `POST /api/conversation-runtime/flywheel/task-packet/preview`.
+  Manual decision input can now be compressed into an inspect-only backend
+  preview containing packet intent, suggested lane, suggested next step,
+  normalized selected label groups, and a bounded controller packet. The
+  slice remains non-canonical, does not persist state, and does not trigger
+  workflow execution.
+- 2026-04-20: Absorbed review for the flywheel manual decision bridge packet.
+  The slice is accepted with narrow residual debt, and the default next-step
+  policy is now to stop stacking more same-panel clipboard bridges and move
+  toward a controller-facing or truth-facing flywheel surface.
+- 2026-04-19: Added a bounded manual decision bridge on top of the flywheel
+  inspect frontend. The evolution-page flywheel panel can now generate a
+  compact copyable next-step decision packet from the current inspect result,
+  current manual absorption selections, and reviewer note. This remains
+  inspect-only, non-canonical, and manual; it does not add persistence or
+  workflow semantics.
+- 2026-04-19: Added a visible web AI-entry surface for the bounded flywheel
+  inspect bridge. The evolution page now includes a dedicated manual-input
+  panel that sends conversation text, topic, and task intent into
+  `POST /api/conversation-runtime/flywheel/inspect` and renders compact
+  inspect-only source / knowledge / evolution candidates. This does not add
+  persistence or workflow semantics, but it does make the information →
+  knowledge → evolution bridge visible in product surface. The slice was
+  delivered through delegated coding/review/test lanes rather than
+  controller-only implementation.
+- 2026-04-19: Added a bounded manual-review bridge on top of the flywheel
+  inspect frontend surface. The evolution-page flywheel panel can now produce
+  a compact copyable review packet for human review of source / knowledge /
+  evolution candidates. This does not introduce persistence or automation; it
+  remains a non-canonical human-review aid.
+- 2026-04-19: Closed review absorption for the flywheel manual-review bridge
+  packet and accepted it as a bounded human-review aid. One returned review
+  input was explicitly rejected because it reviewed the wrong packet
+  (`P0 intent trace`) rather than the current flywheel bridge slice.
+
+- 2026-04-19: Added an `AgentSDLC` adaptation layer for IKE. The project
+  operating contract now explicitly includes lifecycle governance stages,
+  default project classification, automatic high-risk escalation surfaces,
+  and a concrete delegated model-routing matrix for `claude-worker` and
+  OpenClaw. This converts prior chat-only coordination rules into durable
+  project-level execution policy.
 - 2026-04-19: Added a milestone design for worker/runtime rollout. The plan
   is now explicitly staged: first make the development worker environment
   usable, then validate the single-shot delegated loop, and only then install
@@ -1937,3 +2004,39 @@
       `manual_review`
     - conversation-derived evidence snippets now preserve head+tail context
       when truncation occurs
+- adapted `AgentSDLC` into project-level collaboration rules instead of an
+  absorb-or-discard choice:
+  - `AGENTS.md` now carries lifecycle governance, risk escalation, and
+    delegated model-routing defaults
+  - `docs/IKE_AGENT_SDLC_ADAPTATION_AND_DELEGATION_MATRIX_2026-04-19.md`
+    records the active routing matrix
+  - `docs/IKE_AGENT_SDLC_STAGED_ADOPTION_BACKLOG_2026-04-19.md` preserves
+    useful-but-not-yet-active concepts for later phases
+- closed the first real development worker flywheel:
+  - fixed `claude-worker` one-shot result normalization so artifact-backed
+    structured output is recovered into `final.json`
+  - used delegated `review`, `coding`, and `test` packets through the
+    development worker runtime
+  - landed a bounded test-only patch in
+    `services/api/tests/test_feeds_source_discovery_route.py`
+  - confirmed the post-fix focused suite returns `97/97` passing tests
+- added a bounded `flywheel worker packet bridge` to the evolution UI so
+  backend preview can be turned into manual `coding` / `review` / `test`
+  packets without introducing automation or persistence
+- opened `IKE_CLAUDE_WORKER_PROMPT_DELIVERY_REGRESSION_NOTE_2026-04-20` to
+  isolate the latest worker task-mode blocker from flywheel product semantics
+- accepted the execution-feedback provenance bridge after multi-review:
+  - worker feedback can now carry caller-provided run/provider/model/artifact
+    annotation
+  - provenance remains unverified and inspect-only
+  - added review absorption doc:
+    `docs/IKE_FLYWHEEL_EXECUTION_FEEDBACK_PROVENANCE_REVIEW_ABSORPTION_2026-04-22.md`
+- added the first manual loop-closure scenario note and extracted the
+  execution-feedback provenance UI into a dedicated frontend component without
+  changing backend semantics
+- executed one real manual loop closure:
+  - Qwen flywheel inspect
+  - task-packet preview
+  - `claude-worker / glm-5` read-only worker step
+  - Qwen execution-feedback inspect with caller-provided provenance
+  - documented in `docs/IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_RESULT_2026-04-22.md`

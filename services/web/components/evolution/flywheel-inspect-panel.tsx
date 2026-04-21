@@ -3,6 +3,10 @@
 import { useState } from 'react'
 import { Loader2, AlertTriangle, ChevronDown, ChevronRight, BrainCircuit, Copy, Check } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
+import {
+  ExecutionFeedbackProvenanceDisplay,
+  ExecutionFeedbackProvenanceInputs,
+} from './execution-feedback-provenance'
 import type {
   FlywheelExecutionFeedbackInspectResponse,
   FlywheelInspectResponse,
@@ -394,6 +398,10 @@ export function FlywheelInspectPanel() {
     setExecutionFeedbackError(null)
     setExecutionFeedbackResult(null)
     setExecutionFeedbackCopied(false)
+    setWorkerRunId('')
+    setWorkerProvider('')
+    setWorkerModel('')
+    setWorkerArtifactRef('')
     try {
       const data = await apiClient.inspectFlywheel({
         conversation_text: conversationText.trim(),
@@ -1333,51 +1341,16 @@ export function FlywheelInspectPanel() {
               </div>
             </div>
 
-            {/* Caller-provided provenance fields (optional, inspect-only) */}
-            <div className="rounded-md border border-dashed bg-muted/20 px-3 py-2">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-xs font-medium text-muted-foreground">Worker 来源信息 (可选, inspect-only)</span>
-                <span className="text-[10px] text-muted-foreground/60">— 此信息为调用方提供, 未经验证</span>
-              </div>
-              <div className="grid gap-2 md:grid-cols-4">
-                <div>
-                  <label className="text-[10px] text-muted-foreground mb-0.5 block">run_id</label>
-                  <input
-                    value={workerRunId}
-                    onChange={(e) => setWorkerRunId(e.target.value)}
-                    placeholder="如: run-abc123"
-                    className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground mb-0.5 block">provider</label>
-                  <input
-                    value={workerProvider}
-                    onChange={(e) => setWorkerProvider(e.target.value)}
-                    placeholder="如: claude-worker"
-                    className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground mb-0.5 block">model</label>
-                  <input
-                    value={workerModel}
-                    onChange={(e) => setWorkerModel(e.target.value)}
-                    placeholder="如: claude-opus-4.6"
-                    className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground mb-0.5 block">artifact_ref</label>
-                  <input
-                    value={workerArtifactRef}
-                    onChange={(e) => setWorkerArtifactRef(e.target.value)}
-                    placeholder="如: artifact-ref-xyz"
-                    className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
-                  />
-                </div>
-              </div>
-            </div>
+            <ExecutionFeedbackProvenanceInputs
+              workerRunId={workerRunId}
+              workerProvider={workerProvider}
+              workerModel={workerModel}
+              workerArtifactRef={workerArtifactRef}
+              onWorkerRunIdChange={setWorkerRunId}
+              onWorkerProviderChange={setWorkerProvider}
+              onWorkerModelChange={setWorkerModel}
+              onWorkerArtifactRefChange={setWorkerArtifactRef}
+            />
 
             <button
               type="button"
@@ -1404,44 +1377,7 @@ export function FlywheelInspectPanel() {
                   </div>
                 </div>
 
-                {/* Provenance display (inspect-only, not verified) */}
-                {executionFeedbackResult.provenance && (
-                  (executionFeedbackResult.provenance.worker_run_id ||
-                   executionFeedbackResult.provenance.worker_provider ||
-                   executionFeedbackResult.provenance.worker_model ||
-                   executionFeedbackResult.provenance.worker_artifact_ref) && (
-                    <div className="rounded-md border border-dashed bg-amber-50/30 px-3 py-2">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="text-xs font-medium text-muted-foreground">Worker 来源信息</span>
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">
-                          inspect-only / caller-provided / 未验证
-                        </span>
-                      </div>
-                      <div className="grid gap-1.5 md:grid-cols-4 text-xs">
-                        {executionFeedbackResult.provenance.worker_run_id && (
-                          <div className="text-muted-foreground">
-                            <span className="font-medium">run_id:</span> {executionFeedbackResult.provenance.worker_run_id}
-                          </div>
-                        )}
-                        {executionFeedbackResult.provenance.worker_provider && (
-                          <div className="text-muted-foreground">
-                            <span className="font-medium">provider:</span> {executionFeedbackResult.provenance.worker_provider}
-                          </div>
-                        )}
-                        {executionFeedbackResult.provenance.worker_model && (
-                          <div className="text-muted-foreground">
-                            <span className="font-medium">model:</span> {executionFeedbackResult.provenance.worker_model}
-                          </div>
-                        )}
-                        {executionFeedbackResult.provenance.worker_artifact_ref && (
-                          <div className="text-muted-foreground">
-                            <span className="font-medium">artifact_ref:</span> {executionFeedbackResult.provenance.worker_artifact_ref}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                )}
+                <ExecutionFeedbackProvenanceDisplay provenance={executionFeedbackResult.provenance} />
 
                 <div className="grid gap-2 md:grid-cols-2">
                   <div className="rounded-md border bg-muted/20 px-3 py-2">

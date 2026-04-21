@@ -1,5 +1,187 @@
 # MyAttention 项目工作进度
 
+## 2026-04-20 - Flywheel execution feedback bridge added
+
+- added a bounded execution-result return path to the flywheel
+- backend route:
+  - `POST /api/conversation-runtime/flywheel/execution-feedback/inspect`
+- frontend:
+  - the evolution flywheel panel can now accept pasted worker results
+  - it then reflects them into inspect-only flywheel feedback candidates
+- current meaning:
+  - the short-term manual flywheel no longer stops at worker packet generation
+  - worker output can now re-enter the flywheel as AI-assisted reflection
+  - this remains manual, non-canonical, and non-persistent
+
+## 2026-04-21 - Flywheel execution feedback bridge review absorbed
+
+- absorbed review for the flywheel execution-feedback bridge
+- accepted the architectural direction and recorded bounded debt instead of reopening the slice
+- most important recorded debts are now:
+  - weak worker-result provenance
+  - lighter route-level test surface than neighboring flywheel slices
+  - panel/file thickness in `flywheel-inspect-panel.tsx`
+- current meaning:
+  - the execution-feedback bridge is accepted as the current manual return path
+  - the next step should be provenance or decomposition, not automation
+
+## 2026-04-20 - Review artifact governance and canonical review path added
+
+- absorbed the latest `AgentSDLC` governance ideas that fit current IKE stage:
+  - pipeline discipline
+  - review artifact identity
+- added:
+  - `docs/reviews/active/`
+  - `docs/reviews/absorbed/`
+  - `docs/reviews/archive/`
+- established canonical no-space review filenames:
+  - `review_for_<RESULT_BASENAME>.md`
+- created the first canonical active review file for:
+  - `IKE_FLYWHEEL_WORKER_PACKET_BRIDGE_RESULT_2026-04-20`
+- current meaning:
+  - future antigravity write-back should target one stable file
+  - review-file drift is now treated as project governance debt, not user error
+
+## 2026-04-19 - Flywheel AI entry frontend surfaced
+
+- exposed the bounded flywheel inspect bridge through a visible web entry on
+  the evolution page
+- added:
+  - typed flywheel request/response support in `services/web/lib/api-client.ts`
+  - a new `services/web/components/evolution/flywheel-inspect-panel.tsx`
+  - evolution page integration above the existing dashboard
+- this node was pushed through the delegated dev worker flywheel:
+  - coding: `qwen3.6-plus`
+  - review: `kimi-k2.5`
+  - test: `qwen3.6-plus`
+- current meaning:
+  - manual information input now has a visible AI entry
+  - that entry already flows into the bounded inspect-only flywheel bridge
+  - the delegated coding/review/test loop has now produced a real mainline UI
+    slice, not just tooling patches
+
+## 2026-04-19 - Flywheel manual review bridge added
+
+- extended the flywheel inspect frontend so it now exposes a compact manual
+  review bridge instead of stopping at inspect display only
+- the evolution page can now produce a copyable review packet containing:
+  - topic
+  - task intent
+  - segment intent
+  - suggested next step
+  - controller reason tags
+  - compact knowledge/evolution/source labels
+- current meaning:
+  - the frontend flywheel is now closer to a usable information ->
+    knowledge/evolution handoff
+  - it still remains manual, inspect-only, and non-canonical
+
+## 2026-04-19 - Flywheel manual review bridge accepted
+
+- absorbed review for the flywheel manual-review bridge packet
+- accepted the packet as a bounded human-review aid
+- explicitly rejected one mis-scoped review input that was actually reviewing
+  the older `P0 intent trace` packet instead of the current flywheel bridge
+- current meaning:
+  - the flywheel frontend bridge is now an accepted mainline slice
+  - further work should move to the next flywheel-supporting decision rather
+    than keep polishing this same panel by default
+
+## 2026-04-19 - Flywheel manual decision bridge added
+
+- extended the flywheel frontend again so it now exposes a compact manual
+  decision bridge after the existing manual absorption surface
+- the panel can now produce a copyable next-step decision packet containing:
+  - topic
+  - task intent
+  - selected knowledge / evolution / source labels
+  - suggested next step
+  - controller reason tags
+  - reviewer note
+- the delegated loop for this node closed as:
+  - coding: `qwen3.6-plus`
+  - review: `kimi-k2.5`
+  - test: `qwen3.6-plus`
+- a tiny controller-side defensive patch was then applied to guard copied
+  packet generation against stale selection indices
+- current meaning:
+  - the short-term flywheel now visibly reaches the human next-step decision
+    layer
+  - the surface still remains inspect-only, non-canonical, and manual
+
+## 2026-04-20 - Flywheel manual decision bridge review absorbed
+
+- absorbed review for the flywheel manual-decision bridge packet
+- accepted:
+  - `claude`
+  - `gemini`
+  - `chatgpt` with narrowing
+- current meaning:
+  - the slice is accepted with narrow residual debt
+  - the current panel should stop growing by default
+  - the next mainline move should shift toward a controller-facing or
+    truth-facing flywheel surface, not another same-panel clipboard bridge
+
+## 2026-04-20 - Flywheel task-packet preview backend slice added
+
+- added a bounded controller-facing flywheel preview route:
+  - `POST /api/conversation-runtime/flywheel/task-packet/preview`
+- this route now compresses manual decision input into an inspect-only backend
+  packet containing:
+  - `task_packet_summary`
+  - `packet_intent`
+  - `suggested_lane`
+  - `suggested_next_step`
+  - `selected_label_groups`
+  - `controller_packet`
+- the node was delivered through delegated coding/review/test:
+  - coding: `glm-5`
+  - review: `kimi-k2.5`
+  - test: `qwen3.6-plus`
+- controller then absorbed only a bounded no-op cleanup and two low-cost
+  proofs (`advisory_scope`, whitespace-only label fallback)
+- current meaning:
+  - the flywheel now has a controller-facing backend bridge after the accepted
+    manual decision bridge
+  - this remains inspect-only and non-canonical
+
+## 2026-04-20 - Flywheel task-packet preview review absorbed
+
+- absorbed review for the flywheel task-packet preview backend slice
+- accepted the slice with bounded residual debt
+- recorded the main follow-up decision:
+  - next step should be wiring the existing manual-decision frontend surface
+    to this backend preview route
+  - next step should not be more backend semantic expansion
+
+## 2026-04-20 - Flywheel frontend preview wiring added
+
+- wired the existing flywheel manual-decision frontend surface to the backend
+  task-packet preview route
+- the panel can now request a backend preview and render/copy the returned
+  inspect-only packet
+- the backend preview remains supplementary and does not replace the existing
+  manual review / absorption / decision paths
+- delegated review requested two small UX guards and both were absorbed:
+  - disable preview when nothing is selected
+  - show loading state in the preview area
+- current meaning:
+  - the flywheel now has a visible end-to-end path from manual decision
+    surface to backend preview surface
+  - this still remains manual and non-canonical
+
+## 2026-04-19 - AgentSDLC adaptation and delegation matrix added
+
+- absorbed the usable `AgentSDLC` governance rules into the IKE project-level
+  operating contract
+- `AGENTS.md` now explicitly includes:
+  - lifecycle governance stages
+  - default L2/C/R2/T2 classification
+  - automatic R3 escalation surfaces
+  - default delegated model routing for coding, review, and testing
+- added:
+  - [D:\code\MyAttention\docs\IKE_AGENT_SDLC_ADAPTATION_AND_DELEGATION_MATRIX_2026-04-19.md](/D:/code/MyAttention/docs/IKE_AGENT_SDLC_ADAPTATION_AND_DELEGATION_MATRIX_2026-04-19.md)
+
 ## 2026-04-19 - Worker environment milestone design added
 
 - formalized the staged environment plan:
@@ -3295,3 +3477,58 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
       `manual_review`
     - conversation-derived evidence snippets now preserve head+tail context
       when truncation occurs
+- adapted `AgentSDLC` into project-level controller rules instead of treating it
+  as all-or-nothing:
+  - `AGENTS.md` now carries lifecycle governance, risk escalation, and
+    delegated model-routing defaults
+  - `IKE_AGENT_SDLC_ADAPTATION_AND_DELEGATION_MATRIX_2026-04-19.md` records
+    the active worker/model routing matrix
+  - `IKE_AGENT_SDLC_STAGED_ADOPTION_BACKLOG_2026-04-19.md` preserves
+    useful-but-not-yet-absorbed concepts for later phases
+- closed the first real development worker flywheel:
+  - repaired `claude-worker` one-shot result normalization so structured model
+    output is recovered from artifact-backed `stdout.txt`
+  - used delegated `review` and `test` packets to inspect the active
+    `Conversation Runtime P0` slice
+  - used delegated `coding` to fix stale provider-aware default-model
+    assertions in `services/api/tests/test_feeds_source_discovery_route.py`
+  - used delegated `review` on that patch and delegated `test` to confirm the
+    post-fix slice returns `97/97` focused tests passing
+- pushed the flywheel UI one step further:
+  - the evolution panel now includes a bounded `worker packet bridge`
+  - backend preview can now be compressed into manual `coding` / `review` /
+    `test` packets for development-time delegation
+  - current `claude-worker` task-mode prompt-delivery regression is tracked
+    separately as a support-track blocker
+- accepted the execution-feedback provenance slice after Kimi, Claude,
+  ChatGPT, and Gemini review:
+  - result:
+    `docs/IKE_FLYWHEEL_EXECUTION_FEEDBACK_PROVENANCE_RESULT_2026-04-21.md`
+  - absorption:
+    `docs/IKE_FLYWHEEL_EXECUTION_FEEDBACK_PROVENANCE_REVIEW_ABSORPTION_2026-04-22.md`
+  - accepted claim: pasted worker feedback can carry caller-provided,
+    unverified provenance annotation
+  - rejected claim: this is not verified provenance, trusted worker identity,
+    artifact verification, packet/run binding, or runtimeized execution-loop
+    completion
+  - next constraint: stop expanding the bridge surface unless the next task is
+    decomposition or an end-to-end manual-loop closure scenario
+- started the next non-review convergence step:
+  - added `docs/IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_SCENARIO_2026-04-22.md`
+    to pin the manual information -> knowledge -> evolution -> worker ->
+    feedback loop shape
+  - extracted execution-feedback provenance UI into
+    `services/web/components/evolution/execution-feedback-provenance.tsx`
+  - kept semantics unchanged: provenance remains caller-provided,
+    unverified, inspect-only annotation
+  - next review should wait for either an end-to-end scenario result or a
+    larger bounded decomposition result
+- completed one real manual loop closure run:
+  - result:
+    `docs/IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_RESULT_2026-04-22.md`
+  - Qwen performed flywheel inspect and execution-feedback inspect
+  - `claude-worker / qwen-bailian-coding / glm-5` performed the delegated
+    read-only worker step
+  - outcome: manual AI-assisted flywheel can close once end-to-end, but this is
+    still not verified provenance, persistence, scheduling, or trusted runtime
+    closure

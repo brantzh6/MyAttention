@@ -36,7 +36,9 @@ Before scanning this long handoff, start with:
 - [D:\code\MyAttention\docs\CURRENT_AGENT_HARNESS_INDEX_2026-04-10.md](/D:/code/MyAttention/docs/CURRENT_AGENT_HARNESS_INDEX_2026-04-10.md)
 - [D:\code\MyAttention\docs\IKE_MILESTONE_POLICY_2026-04-17.md](/D:/code/MyAttention/docs/IKE_MILESTONE_POLICY_2026-04-17.md)
 - [D:\code\MyAttention\docs\IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md](/D:/code/MyAttention/docs/IKE_DOCUMENT_COMPRESSION_AND_ACTIVE_SURFACE_POLICY_2026-04-11.md)
+- [D:\code\MyAttention\docs\IKE_REVIEW_ARTIFACT_IDENTITY_AND_GOVERNANCE_POLICY_2026-04-20.md](/D:/code/MyAttention/docs/IKE_REVIEW_ARTIFACT_IDENTITY_AND_GOVERNANCE_POLICY_2026-04-20.md)
 - [D:\code\MyAttention\docs\IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md](/D:/code/MyAttention/docs/IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md)
+- [D:\code\MyAttention\docs\IKE_AGENT_SDLC_ADAPTATION_AND_DELEGATION_MATRIX_2026-04-19.md](/D:/code/MyAttention/docs/IKE_AGENT_SDLC_ADAPTATION_AND_DELEGATION_MATRIX_2026-04-19.md)
 - [D:\code\MyAttention\docs\IKE_WORKER_SKILL_CONTRACT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_WORKER_SKILL_CONTRACT_2026-04-18.md)
 - [D:\code\MyAttention\docs\IKE_WORKER_SKILL_PHASE_JUDGMENT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_WORKER_SKILL_PHASE_JUDGMENT_2026-04-18.md)
 
@@ -122,6 +124,101 @@ This section overrides older runtime phase notes below when they conflict.
       - the active controller packet is now a next-phase selection decision,
         not another `P0` implementation packet
         - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_NEXT_PHASE_SELECTION_PACKET_2026-04-19.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_NEXT_PHASE_SELECTION_PACKET_2026-04-19.md)
+      - a bounded flywheel inspect bridge is now already present at:
+        - `POST /api/conversation-runtime/flywheel/inspect`
+      - a minimal web AI-entry surface is now also visible on the evolution
+        page and routes manual conversation input into the flywheel inspect
+        bridge
+      - this frontend slice was pushed through delegated coding/review/test,
+        not controller-only coding
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_AI_ENTRY_FRONTEND_RESULT_2026-04-19.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_AI_ENTRY_FRONTEND_RESULT_2026-04-19.md)
+      - the flywheel frontend now also includes a bounded manual-review bridge
+        that exposes a compact copyable review packet for human knowledge /
+        evolution review
+      - this remains inspect-only and non-canonical; it does not introduce
+        persistence or workflow semantics
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_MANUAL_REVIEW_BRIDGE_RESULT_2026-04-19.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_MANUAL_REVIEW_BRIDGE_RESULT_2026-04-19.md)
+      - review absorption is now complete and the packet is accepted
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_MANUAL_REVIEW_BRIDGE_REVIEW_ABSORPTION_2026-04-19.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_MANUAL_REVIEW_BRIDGE_REVIEW_ABSORPTION_2026-04-19.md)
+      - the flywheel frontend now also includes a bounded manual-decision
+        bridge after the existing manual absorption surface
+      - that bridge can generate a compact next-step decision packet for human
+        methodology/alignment discussion without adding persistence or workflow
+      - this node was also pushed through delegated coding/review/test, with a
+        tiny controller-side defensive patch absorbed after review
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_MANUAL_DECISION_BRIDGE_RESULT_2026-04-19.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_MANUAL_DECISION_BRIDGE_RESULT_2026-04-19.md)
+      - review absorption is now complete
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_MANUAL_DECISION_BRIDGE_REVIEW_ABSORPTION_2026-04-20.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_MANUAL_DECISION_BRIDGE_REVIEW_ABSORPTION_2026-04-20.md)
+      - current default next step:
+        - do not continue stacking same-panel clipboard bridges
+        - move toward a controller-facing or truth-facing flywheel surface
+      - a bounded controller-facing flywheel task-packet preview route is now
+        present at:
+        - `POST /api/conversation-runtime/flywheel/task-packet/preview`
+      - it compresses manual decision input into an inspect-only backend packet:
+        - `task_packet_summary`
+        - `packet_intent`
+        - `suggested_lane`
+        - `suggested_next_step`
+        - `selected_label_groups`
+        - `controller_packet`
+      - this node has already gone through delegated coding/review/test, and
+        controller absorbed only one no-op removal plus two bounded test proofs
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_TASK_PACKET_PREVIEW_RESULT_2026-04-20.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_TASK_PACKET_PREVIEW_RESULT_2026-04-20.md)
+      - review absorption is now complete
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_TASK_PACKET_PREVIEW_REVIEW_ABSORPTION_2026-04-20.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_TASK_PACKET_PREVIEW_REVIEW_ABSORPTION_2026-04-20.md)
+      - current default next step:
+        - do not keep growing backend preview semantics
+        - wire the existing manual-decision frontend surface to this backend
+          preview route
+      - that frontend wiring slice is now materially landed:
+        - the existing flywheel manual-decision panel can request a backend
+          task-packet preview and render/copy the returned inspect-only packet
+      - this remains supplementary and does not replace existing local
+        review/absorption/decision paths
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_FRONTEND_PREVIEW_WIRING_RESULT_2026-04-20.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_FRONTEND_PREVIEW_WIRING_RESULT_2026-04-20.md)
+      - the same flywheel panel now also exposes a bounded worker packet bridge
+        on top of backend preview
+      - it can generate copyable manual `coding` / `review` / `test` packets
+        for development-time delegation
+      - this remains inspect-only and manual; it does not auto-run tasks
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_PACKET_BRIDGE_RESULT_2026-04-20.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_PACKET_BRIDGE_RESULT_2026-04-20.md)
+      - canonical review write-back target now lives under:
+        - [D:\code\MyAttention\docs\reviews\active\review_for_IKE_FLYWHEEL_WORKER_PACKET_BRIDGE_RESULT_2026-04-20.md](/D:/code/MyAttention/docs/reviews/active/review_for_IKE_FLYWHEEL_WORKER_PACKET_BRIDGE_RESULT_2026-04-20.md)
+      - the earlier `claude-worker` prompt-delivery regression has now been
+        independently fixed and verified; keep the regression note as support
+        history, not as the active blocker for this slice
+      - the flywheel now also exposes a bounded execution-feedback bridge
+      - manual worker results can be pasted back into:
+        - `POST /api/conversation-runtime/flywheel/execution-feedback/inspect`
+      - the route reflects worker output into inspect-only:
+        - `feedback_summary`
+        - bounded knowledge delta candidates
+        - bounded evolution trigger candidates
+        - advisory operational/controller packet
+      - the frontend evolution panel now surfaces this manual feedback-return step
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_EXECUTION_FEEDBACK_BRIDGE_RESULT_2026-04-20.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_EXECUTION_FEEDBACK_BRIDGE_RESULT_2026-04-20.md)
+      - canonical review write-back target now lives under:
+        - [D:\code\MyAttention\docs\reviews\active\review_for_IKE_FLYWHEEL_EXECUTION_FEEDBACK_BRIDGE_RESULT_2026-04-20.md](/D:/code/MyAttention/docs/reviews/active/review_for_IKE_FLYWHEEL_EXECUTION_FEEDBACK_BRIDGE_RESULT_2026-04-20.md)
+      - review absorption is now complete
+      - reference:
+        - [D:\code\MyAttention\docs\IKE_FLYWHEEL_EXECUTION_FEEDBACK_BRIDGE_REVIEW_ABSORPTION_2026-04-21.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_EXECUTION_FEEDBACK_BRIDGE_REVIEW_ABSORPTION_2026-04-21.md)
+      - current controller judgment:
+        - `accept_with_changes`
+      - current default next step:
+        - do not auto-redelegate
+        - do not promote execution feedback into formal truth
+        - prefer bounded provenance strengthening or panel decomposition
 - the worker skill support track is now also explicit:
   - `claude-worker` is the first concrete implementation, but IKE still needs
     the formal skill contract and loader policy
@@ -161,6 +258,11 @@ This section overrides older runtime phase notes below when they conflict.
   - development worker environment smoke test completed under
     `CLAUDE_WORKER_HOME`, and a bounded coding packet returned a doc-only
     patch in the `claude-worker` source repo
+  - project-level collaboration constraints now explicitly absorb
+    `AgentSDLC` lifecycle gates and the current `claude-worker` / OpenClaw
+    model-routing matrix
+  - reference:
+    - [D:\code\MyAttention\docs\IKE_AGENT_SDLC_ADAPTATION_AND_DELEGATION_MATRIX_2026-04-19.md](/D:/code/MyAttention/docs/IKE_AGENT_SDLC_ADAPTATION_AND_DELEGATION_MATRIX_2026-04-19.md)
 
 - active project mainline is now:
   - `Source Intelligence V1`
@@ -2567,3 +2669,56 @@ Current `R1-A2` note:
   - source candidates can already reuse existing judgment substrate
   - `CorrectionEvent` remains source-scoped only
   - current review focus should be temporary reuse of `feeds.py` private helpers
+
+## 2026-04-19 Dev Worker Flywheel Closed
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_DEV_WORKER_FLYWHEEL_RESULT_2026-04-19.md](/D:/code/MyAttention/docs/IKE_DEV_WORKER_FLYWHEEL_RESULT_2026-04-19.md)
+- current controller judgment:
+  - development-time `claude-worker` one-shot delegation is now a real active lane
+  - `coding -> review -> test` has been proven on a bounded live project patch
+  - the first delegated coding patch fixed stale provider-aware default-model assertions in
+    `services/api/tests/test_feeds_source_discovery_route.py`
+  - post-fix delegated validation returned `97/97 tests OK`
+  - `AgentSDLC` material should now be treated by staged adoption:
+    - absorb now when it improves the active flywheel
+    - preserve for later when valuable but currently too heavy
+
+## 2026-04-22 Execution Feedback Provenance Accepted
+
+- durable result:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_EXECUTION_FEEDBACK_PROVENANCE_RESULT_2026-04-21.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_EXECUTION_FEEDBACK_PROVENANCE_RESULT_2026-04-21.md)
+- review absorption:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_EXECUTION_FEEDBACK_PROVENANCE_REVIEW_ABSORPTION_2026-04-22.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_EXECUTION_FEEDBACK_PROVENANCE_REVIEW_ABSORPTION_2026-04-22.md)
+- current controller judgment:
+  - accepted as provenance annotation only
+  - provenance remains caller-provided and unverified
+  - no automatic absorption, no trusted execution callback, no artifact verification
+  - manual flywheel bridge is now sufficient for an end-to-end scenario demonstration
+  - do not keep adding bridge fields; next work should be loop closure documentation or decomposition
+
+## 2026-04-22 Manual Loop Closure Scenario Started
+
+- scenario document:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_SCENARIO_2026-04-22.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_SCENARIO_2026-04-22.md)
+- frontend decomposition:
+  - [D:\code\MyAttention\services\web\components\evolution\execution-feedback-provenance.tsx](/D:/code/MyAttention/services/web/components/evolution/execution-feedback-provenance.tsx)
+- current controller judgment:
+  - current bridge stack is sufficient for a manual end-to-end flywheel scenario
+  - provenance UI is now a separate component, but semantics are unchanged
+  - next review point should be after an end-to-end scenario result or a larger bounded decomposition, not after this small cleanup
+
+## 2026-04-22 Manual Loop Closure Executed
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_RESULT_2026-04-22.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_RESULT_2026-04-22.md)
+- runtime artifacts:
+  - `D:\code\MyAttention\.runtime\flywheel-loop-demo-2026-04-22\`
+- worker run:
+  - `20260421T164215-398e1412`
+- current controller judgment:
+  - the manual AI-assisted flywheel can close once end-to-end
+  - Qwen participated in inspect and feedback reflection
+  - `claude-worker / glm-5` participated as delegated worker
+  - this remains manual and inspect-only
+  - next review point is now meaningful; likely review focus should be whether to accept this as the manual-loop milestone and move to decomposition

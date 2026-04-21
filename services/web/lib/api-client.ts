@@ -144,6 +144,134 @@ export interface ConversationMessage {
   created_at: string
 }
 
+// Flywheel inspect types
+export interface FlywheelKnowledgeDeltaCandidate {
+  delta_type: string
+  label: string
+  content: string
+  provenance_note: string
+  trust_state: string
+  proposal_state: string
+  review_gate: string
+  absorption_state: string
+}
+
+export interface FlywheelEvolutionTriggerCandidate {
+  trigger_type: string
+  label: string
+  rationale: string
+  provenance_note: string
+  trust_state: string
+  proposal_state: string
+  review_gate: string
+  absorption_state: string
+}
+
+export interface FlywheelOperationalAdvice {
+  suggested_next_step: string
+  controller_notes: string[]
+}
+
+export interface FlywheelControllerPacket {
+  review_mode: string
+  actionable_source_object_keys: string[]
+  actionable_correction_targets: string[]
+  reason_tags: string[]
+  advisory_scope: string
+  truth_status: string
+}
+
+export interface FlywheelInspectResponse {
+  topic: string
+  task_intent: string
+  provider: string
+  model: string
+  segment_intent: string
+  source_candidates: Array<{ id?: string; name?: string; type?: string; url?: string; category?: string; tags?: string[] }>
+  correction_events: Array<{ target_scope: string; target_ref: string; correction_content: string }>
+  knowledge_delta_candidates: FlywheelKnowledgeDeltaCandidate[]
+  evolution_trigger_candidates: FlywheelEvolutionTriggerCandidate[]
+  extraction_summary: string
+  operational_advice: FlywheelOperationalAdvice
+  controller_packet: FlywheelControllerPacket
+  notes: string[]
+  truth_boundary: string[]
+  promotion_state: string
+}
+
+// Task-packet preview types (inspect-only, non-canonical)
+export interface SelectedLabelGroup {
+  label_type: 'knowledge' | 'evolution' | 'source'
+  labels: string[]
+  count: number
+}
+
+export interface TaskPacketPreviewRequest {
+  topic: string
+  task_intent: string
+  selected_knowledge_labels: string[]
+  selected_evolution_labels: string[]
+  selected_source_labels: string[]
+  reviewer_note?: string
+  explicit_non_canonical?: boolean
+}
+
+export interface TaskPacketPreviewResponse {
+  task_packet_summary: string
+  packet_intent: string
+  suggested_lane: string
+  suggested_next_step: string
+  selected_label_groups: SelectedLabelGroup[]
+  controller_packet: FlywheelControllerPacket
+  truth_boundary: string[]
+  promotion_state: string
+  notes: string[]
+}
+
+export interface FlywheelExecutionFeedbackInspectRequest {
+  topic: string
+  task_intent: string
+  worker_lane: string
+  task_packet_summary: string
+  execution_feedback_text: string
+  execution_status_hint?: string
+  provider?: string
+  model?: string
+  // Caller-provided provenance (inspect-only, not verified)
+  worker_run_id?: string
+  worker_provider?: string
+  worker_model?: string
+  worker_artifact_ref?: string
+}
+
+export interface FlywheelWorkerProvenance {
+  worker_run_id: string
+  worker_provider: string
+  worker_model: string
+  worker_artifact_ref: string
+  provenance_source: string
+  verified: boolean
+}
+
+export interface FlywheelExecutionFeedbackInspectResponse {
+  topic: string
+  task_intent: string
+  worker_lane: string
+  execution_status_hint: string
+  provider: string
+  model: string
+  feedback_intent: string
+  feedback_summary: string
+  knowledge_delta_candidates: FlywheelKnowledgeDeltaCandidate[]
+  evolution_trigger_candidates: FlywheelEvolutionTriggerCandidate[]
+  operational_advice: FlywheelOperationalAdvice
+  controller_packet: FlywheelControllerPacket
+  truth_boundary: string[]
+  promotion_state: string
+  notes: string[]
+  provenance: FlywheelWorkerProvenance
+}
+
 export const apiClient = {
   async bootstrapRuntimeProjectSurface(data: {
     project_key: string
@@ -604,6 +732,52 @@ export const apiClient = {
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Inspection failed' }))
       throw new Error(err.detail || 'Failed to inspect observation')
+    }
+    return res.json()
+  },
+
+  async inspectFlywheel(data: {
+    conversation_text: string
+    topic: string
+    task_intent?: string
+    thread_id?: string
+    provider?: string
+    model?: string
+  }): Promise<FlywheelInspectResponse> {
+    const res = await fetch(`${API_URL}/api/conversation-runtime/flywheel/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Flywheel inspection failed' }))
+      throw new Error(err.detail || 'Flywheel inspection failed')
+    }
+    return res.json()
+  },
+
+  async previewTaskPacket(data: TaskPacketPreviewRequest): Promise<TaskPacketPreviewResponse> {
+    const res = await fetch(`${API_URL}/api/conversation-runtime/flywheel/task-packet/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Task-packet preview failed' }))
+      throw new Error(err.detail || 'Task-packet preview failed')
+    }
+    return res.json()
+  },
+
+  async inspectExecutionFeedback(data: FlywheelExecutionFeedbackInspectRequest): Promise<FlywheelExecutionFeedbackInspectResponse> {
+    const res = await fetch(`${API_URL}/api/conversation-runtime/flywheel/execution-feedback/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Execution feedback inspection failed' }))
+      throw new Error(err.detail || 'Execution feedback inspection failed')
     }
     return res.json()
   },

@@ -1,0 +1,1600 @@
+'use client'
+
+import { useState } from 'react'
+import { Loader2, AlertTriangle, ChevronDown, ChevronRight, BrainCircuit, Copy, Check } from 'lucide-react'
+import { apiClient } from '@/lib/api-client'
+import type {
+  FlywheelExecutionFeedbackInspectResponse,
+  FlywheelInspectResponse,
+  TaskPacketPreviewResponse,
+} from '@/lib/api-client'
+
+type SectionKey = 'extraction' | 'knowledge' | 'triggers' | 'sources' | 'advice' | 'controller'
+type WorkerLane = 'coding' | 'review' | 'test'
+
+function CollapsibleSection({ title, open, defaultOpen = false, children }: {
+  title: string
+  open: boolean
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [expanded, setExpanded] = useState(defaultOpen)
+  const isForced = open
+
+  if (!isForced && !expanded) {
+    return (
+      <button
+        type="button"
+        onClick={() => setExpanded(true)}
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-muted-foreground hover:bg-muted"
+      >
+        <ChevronRight className="h-3.5 w-3.5" />
+        {title}
+      </button>
+    )
+  }
+
+  return (
+    <div className="rounded-lg border bg-background/50">
+      <button
+        type="button"
+        onClick={() => !isForced && setExpanded(false)}
+        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium hover:bg-muted"
+      >
+        <ChevronDown className="h-3.5 w-3.5" />
+        {title}
+      </button>
+      <div className="px-3 pb-3 pt-1">{children}</div>
+    </div>
+  )
+}
+
+function buildReviewPacket(r: FlywheelInspectResponse): string {
+  const provider = r.provider || '(未指定)'
+  const model = r.model || '(默认)'
+  const reviewMode = r.controller_packet?.review_mode || '(未知)'
+  const truthStatus = r.controller_packet?.truth_status || '(未知)'
+  const reasonTags = r.controller_packet?.reason_tags || []
+  const knowledgeDeltas = r.knowledge_delta_candidates || []
+  const evolutionTriggers = r.evolution_trigger_candidates || []
+  const sourceCandidates = r.source_candidates || []
+  const lines: string[] = []
+  lines.push('=== Flywheel 手动审查包 (Inspect-Only) ===')
+  lines.push('')
+  lines.push(`主题: ${r.topic}`)
+  lines.push(`任务意图: ${r.task_intent || '(未指定)'}`)
+  lines.push(`意图分段: ${r.segment_intent || '(未识别)'}`)
+  lines.push('')
+
+  if (r.operational_advice?.suggested_next_step && r.operational_advice.suggested_next_step !== 'no_action') {
+    lines.push(`建议下一步: ${r.operational_advice.suggested_next_step}`)
+  } else {
+    lines.push('建议下一步: 无')
+  }
+  lines.push('')
+
+  if (reasonTags.length) {
+    lines.push('原因标签:')
+    reasonTags.forEach((t) => lines.push(`  - ${t}`))
+    lines.push('')
+  }
+
+  if (knowledgeDeltas.length) {
+    lines.push('知识增量标签:')
+    knowledgeDeltas.forEach((d) => lines.push(`  - [${d.delta_type}] ${d.label}`))
+    lines.push('')
+  }
+
+  if (evolutionTriggers.length) {
+    lines.push('进化触发标签:')
+    evolutionTriggers.forEach((t) => lines.push(`  - [${t.trigger_type}] ${t.label}`))
+    lines.push('')
+  }
+
+  if (sourceCandidates.length) {
+    lines.push('来源候选标识:')
+    sourceCandidates.forEach((s) => {
+      const parts = [s.name || s.id || '未命名']
+      if (s.type) parts.push(`(${s.type})`)
+      if (s.url) parts.push(s.url)
+      lines.push(`  - ${parts.join(' ')}`)
+    })
+    lines.push('')
+  }
+
+  lines.push(`Provider: ${provider} | Model: ${model}`)
+  lines.push(`审查模式: ${reviewMode}`)
+  lines.push(`事实状态: ${truthStatus}`)
+  lines.push('')
+  lines.push('--- 此包仅供手动审查参考，非规范事实，未经持久化 ---')
+  return lines.join('\n')
+}
+
+function buildDecisionPacket(params: {
+  topic: string
+  taskIntent: string
+  selectedKnowledge: string[]
+  selectedTriggers: string[]
+  selectedSources: string[]
+  suggestedNextStep: string
+  reasonTags: string[]
+  reviewerNote: string
+}): string {
+  const lines: string[] = []
+  lines.push('=== Flywheel 手动决策桥接包 (Decision Bridge) ===')
+  lines.push('')
+  lines.push(`主题: ${params.topic}`)
+  lines.push(`任务意图: ${params.taskIntent}`)
+  lines.push('')
+
+  if (params.selectedKnowledge.length || params.selectedTriggers.length || params.selectedSources.length) {
+    lines.push('--- 已选候选项 ---')
+    if (params.selectedKnowledge.length) {
+      lines.push('')
+      lines.push('[知识增量]')
+      params.selectedKnowledge.forEach((l) => lines.push(`  - ${l}`))
+    }
+    if (params.selectedTriggers.length) {
+      lines.push('')
+      lines.push('[进化触发]')
+      params.selectedTriggers.forEach((l) => lines.push(`  - ${l}`))
+    }
+    if (params.selectedSources.length) {
+      lines.push('')
+      lines.push('[来源]')
+      params.selectedSources.forEach((l) => lines.push(`  - ${l}`))
+    }
+    lines.push('')
+  }
+
+  lines.push(`建议下一步: ${params.suggestedNextStep || '无'}`)
+
+  if (params.reasonTags.length) {
+    lines.push('')
+    lines.push('原因标签:')
+    params.reasonTags.forEach((t) => lines.push(`  - ${t}`))
+  }
+
+  if (params.reviewerNote.trim()) {
+    lines.push('')
+    lines.push('审查备注:')
+    lines.push(`  ${params.reviewerNote.trim()}`)
+  }
+
+  lines.push('')
+  lines.push('--- 此包仅用于手动决策/对齐讨论，非规范事实，未经持久化，不构成自动执行指令 ---')
+  return lines.join('\n')
+}
+
+function buildAbsorptionPacket(params: {
+  topic: string
+  taskIntent: string
+  selectedKnowledge: string[]
+  selectedTriggers: string[]
+  selectedSources: string[]
+  suggestedNextStep: string
+  reasonTags: string[]
+  reviewerNote: string
+}): string {
+  const lines: string[] = []
+  lines.push('=== Flywheel 手动吸收包 (Manual Absorption) ===')
+  lines.push('')
+  lines.push(`主题: ${params.topic}`)
+  lines.push(`任务意图: ${params.taskIntent}`)
+  lines.push('')
+
+  lines.push('--- 选中候选项 (按族分组) ---')
+
+  if (params.selectedKnowledge.length) {
+    lines.push('')
+    lines.push('[知识增量]')
+    params.selectedKnowledge.forEach((label) => lines.push(`  - ${label}`))
+  }
+
+  if (params.selectedTriggers.length) {
+    lines.push('')
+    lines.push('[进化触发]')
+    params.selectedTriggers.forEach((label) => lines.push(`  - ${label}`))
+  }
+
+  if (params.selectedSources.length) {
+    lines.push('')
+    lines.push('[来源]')
+    params.selectedSources.forEach((label) => lines.push(`  - ${label}`))
+  }
+
+  if (!params.selectedKnowledge.length && !params.selectedTriggers.length && !params.selectedSources.length) {
+    lines.push('  (无选中项)')
+  }
+
+  lines.push('')
+  lines.push(`建议下一步: ${params.suggestedNextStep || '无'}`)
+
+  if (params.reasonTags.length) {
+    lines.push('')
+    lines.push('原因标签:')
+    params.reasonTags.forEach((t) => lines.push(`  - ${t}`))
+  }
+
+  if (params.reviewerNote.trim()) {
+    lines.push('')
+    lines.push('审查备注:')
+    lines.push(`  ${params.reviewerNote.trim()}`)
+  }
+
+  lines.push('')
+  lines.push('--- 非规范 / 仅手动吸收，未经持久化，不构成规范事实 ---')
+  return lines.join('\n')
+}
+
+function buildWorkerPacket(
+  lane: WorkerLane,
+  topic: string,
+  taskIntent: string,
+  preview: TaskPacketPreviewResponse,
+  result: FlywheelInspectResponse,
+): string {
+  const heading = lane === 'coding'
+    ? '=== Worker Packet: Coding ==='
+    : lane === 'review'
+    ? '=== Worker Packet: Review ==='
+    : '=== Worker Packet: Test ==='
+
+  const instruction = lane === 'coding'
+    ? 'INSTRUCTION: 根据此 packet 执行编码实现。严格遵循 suggested_next_step，仅在 selected_label_groups 标注的范围内改动。'
+    : lane === 'review'
+    ? 'INSTRUCTION: 根据此 packet 执行代码/设计审查。重点检查 trust_boundary 标注的区域，确认变更与 topic 意图对齐。'
+    : 'INSTRUCTION: 根据此 packet 编写/执行测试。覆盖 suggested_next_step 涉及的逻辑，验证 selected_label_groups 标注的行为。'
+
+  const lines: string[] = []
+  lines.push(heading)
+  lines.push('')
+  lines.push(`topic: ${topic}`)
+  lines.push(`task_intent: ${taskIntent || '(未指定)'}`)
+  lines.push(`suggested_lane: ${preview.suggested_lane}`)
+  lines.push(`suggested_next_step: ${preview.suggested_next_step}`)
+  lines.push('')
+  lines.push(instruction)
+  lines.push('')
+
+  if (preview.selected_label_groups.length) {
+    lines.push('[selected_label_groups]')
+    preview.selected_label_groups.forEach((g) => {
+      lines.push(`  ${g.label_type} (${g.count}):`)
+      g.labels.forEach((l) => lines.push(`    - ${l}`))
+    })
+    lines.push('')
+  }
+
+  if (preview.truth_boundary.length) {
+    lines.push('[trust_boundary]')
+    preview.truth_boundary.forEach((b) => lines.push(`  - ${b}`))
+    lines.push('')
+  }
+
+  if (preview.controller_packet) {
+    const cp = preview.controller_packet
+    lines.push(`[controller] review_mode=${cp.review_mode} truth_status=${cp.truth_status}`)
+    if (cp.reason_tags.length) {
+      cp.reason_tags.forEach((t) => lines.push(`  - reason: ${t}`))
+    }
+    lines.push('')
+  }
+
+  const trustNote = lane === 'coding'
+    ? '此包为手动生成的工作指令，非自动执行。编码前请确认 trust_boundary 内约束。'
+    : lane === 'review'
+    ? '此包为手动生成的审查指令，非规范事实。审查请独立验证 trust_boundary 内声明。'
+    : '此包为手动生成的测试指令，非规范事实。测试范围以 selected_label_groups 为界。'
+  lines.push(`--- ${trustNote} ---`)
+  return lines.join('\n')
+}
+
+function buildExecutionFeedbackPacket(
+  feedback: FlywheelExecutionFeedbackInspectResponse,
+  packetSummary: string,
+): string {
+  const lines: string[] = []
+  lines.push('=== Flywheel Execution Feedback Packet (Inspect-Only) ===')
+  lines.push('')
+  lines.push(`topic: ${feedback.topic}`)
+  lines.push(`task_intent: ${feedback.task_intent || '(未指定)'}`)
+  lines.push(`worker_lane: ${feedback.worker_lane}`)
+  lines.push(`execution_status_hint: ${feedback.execution_status_hint}`)
+  lines.push(`feedback_intent: ${feedback.feedback_intent}`)
+  lines.push(`task_packet_summary: ${packetSummary}`)
+  lines.push(`feedback_summary: ${feedback.feedback_summary || '(无)'}`)
+  lines.push('')
+
+  if (feedback.knowledge_delta_candidates.length) {
+    lines.push('[knowledge_delta_candidates]')
+    feedback.knowledge_delta_candidates.forEach((d) => {
+      lines.push(`  - [${d.delta_type}] ${d.label}: ${d.content}`)
+    })
+    lines.push('')
+  }
+
+  if (feedback.evolution_trigger_candidates.length) {
+    lines.push('[evolution_trigger_candidates]')
+    feedback.evolution_trigger_candidates.forEach((t) => {
+      lines.push(`  - [${t.trigger_type}] ${t.label}: ${t.rationale}`)
+    })
+    lines.push('')
+  }
+
+  lines.push(`suggested_next_step: ${feedback.operational_advice?.suggested_next_step || 'no_action'}`)
+  if (feedback.controller_packet?.reason_tags?.length) {
+    lines.push('reason_tags:')
+    feedback.controller_packet.reason_tags.forEach((tag) => lines.push(`  - ${tag}`))
+  }
+  lines.push('')
+  lines.push('--- 此包为执行结果的 inspect-only 反思压缩，非规范事实，未自动吸收，未自动重新派发 ---')
+  return lines.join('\n')
+}
+
+export function FlywheelInspectPanel() {
+  const [conversationText, setConversationText] = useState('')
+  const [topic, setTopic] = useState('')
+  const [taskIntent, setTaskIntent] = useState('')
+  const [provider, setProvider] = useState('qwen')
+  const [model, setModel] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<FlywheelInspectResponse | null>(null)
+  const [openSections, setOpenSections] = useState<Set<SectionKey>>(new Set())
+  const [copied, setCopied] = useState(false)
+
+  // Absorption state
+  const [selectedKnowledge, setSelectedKnowledge] = useState<Set<number>>(new Set())
+  const [selectedTriggers, setSelectedTriggers] = useState<Set<number>>(new Set())
+  const [selectedSources, setSelectedSources] = useState<Set<number>>(new Set())
+  const [reviewerNote, setReviewerNote] = useState('')
+  const [absorptionCopied, setAbsorptionCopied] = useState(false)
+  const [decisionCopied, setDecisionCopied] = useState(false)
+
+  // Backend task-packet preview state
+  const [taskPreviewLoading, setTaskPreviewLoading] = useState(false)
+  const [taskPreviewResult, setTaskPreviewResult] = useState<TaskPacketPreviewResponse | null>(null)
+  const [taskPreviewError, setTaskPreviewError] = useState<string | null>(null)
+  const [taskPreviewCopied, setTaskPreviewCopied] = useState(false)
+
+  // Worker-ready packet state (derived from taskPreviewResult)
+  const [workerLane, setWorkerLane] = useState<WorkerLane>('coding')
+  const [workerCopiedMap, setWorkerCopiedMap] = useState<Record<WorkerLane, boolean>>({ coding: false, review: false, test: false })
+  const [executionFeedbackText, setExecutionFeedbackText] = useState('')
+  const [executionStatusHint, setExecutionStatusHint] = useState('neutral')
+  const [executionFeedbackLoading, setExecutionFeedbackLoading] = useState(false)
+  const [executionFeedbackError, setExecutionFeedbackError] = useState<string | null>(null)
+  const [executionFeedbackResult, setExecutionFeedbackResult] = useState<FlywheelExecutionFeedbackInspectResponse | null>(null)
+  const [executionFeedbackCopied, setExecutionFeedbackCopied] = useState(false)
+  // Caller-provided provenance fields (inspect-only, not verified)
+  const [workerRunId, setWorkerRunId] = useState('')
+  const [workerProvider, setWorkerProvider] = useState('')
+  const [workerModel, setWorkerModel] = useState('')
+  const [workerArtifactRef, setWorkerArtifactRef] = useState('')
+  const selectedPreviewCount =
+    selectedKnowledge.size + selectedTriggers.size + selectedSources.size
+
+  const handleSubmit = async () => {
+    if (!conversationText.trim() || !topic.trim()) return
+    setLoading(true)
+    setError(null)
+    setResult(null)
+    setSelectedKnowledge(new Set())
+    setSelectedTriggers(new Set())
+    setSelectedSources(new Set())
+    setReviewerNote('')
+    setAbsorptionCopied(false)
+    setDecisionCopied(false)
+    setTaskPreviewResult(null)
+    setTaskPreviewError(null)
+    setTaskPreviewCopied(false)
+    setExecutionFeedbackText('')
+    setExecutionStatusHint('neutral')
+    setExecutionFeedbackError(null)
+    setExecutionFeedbackResult(null)
+    setExecutionFeedbackCopied(false)
+    try {
+      const data = await apiClient.inspectFlywheel({
+        conversation_text: conversationText.trim(),
+        topic: topic.trim(),
+        task_intent: taskIntent.trim() || undefined,
+        provider: provider.trim() || 'qwen',
+        model: model.trim() || undefined,
+      })
+      setResult(data)
+      setOpenSections(new Set<SectionKey>(['extraction', 'knowledge', 'sources']))
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '提交失败')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleSection = (key: SectionKey) => {
+    setOpenSections(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const copyReviewPacket = async () => {
+    if (!result) return
+    const text = buildReviewPacket(result)
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }
+  }
+
+  const copyAbsorptionPacket = async () => {
+    if (!result) return
+    const safeKnowledge = Array.from(selectedKnowledge).filter(
+      (i) => i >= 0 && i < result.knowledge_delta_candidates.length,
+    )
+    const safeTriggers = Array.from(selectedTriggers).filter(
+      (i) => i >= 0 && i < result.evolution_trigger_candidates.length,
+    )
+    const safeSources = Array.from(selectedSources).filter(
+      (i) => i >= 0 && i < result.source_candidates.length,
+    )
+    const text = buildAbsorptionPacket({
+      topic: result.topic,
+      taskIntent: result.task_intent || '(未指定)',
+      selectedKnowledge: safeKnowledge.map((i) => {
+        const d = result.knowledge_delta_candidates[i]
+        return `[${d.delta_type}] ${d.label}`
+      }),
+      selectedTriggers: safeTriggers.map((i) => {
+        const t = result.evolution_trigger_candidates[i]
+        return `[${t.trigger_type}] ${t.label}`
+      }),
+      selectedSources: safeSources.map((i) => {
+        const s = result.source_candidates[i]
+        return s.name || s.id || '未命名'
+      }),
+      suggestedNextStep: result.operational_advice?.suggested_next_step !== 'no_action'
+        ? (result.operational_advice?.suggested_next_step || '无')
+        : '无',
+      reasonTags: result.controller_packet?.reason_tags || [],
+      reviewerNote,
+    })
+    try {
+      await navigator.clipboard.writeText(text)
+      setAbsorptionCopied(true)
+      setTimeout(() => setAbsorptionCopied(false), 1500)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setAbsorptionCopied(true)
+      setTimeout(() => setAbsorptionCopied(false), 1500)
+    }
+  }
+
+  const copyDecisionPacket = async () => {
+    if (!result) return
+    const safeKnowledge = Array.from(selectedKnowledge).filter(
+      (i) => i >= 0 && i < result.knowledge_delta_candidates.length,
+    )
+    const safeTriggers = Array.from(selectedTriggers).filter(
+      (i) => i >= 0 && i < result.evolution_trigger_candidates.length,
+    )
+    const safeSources = Array.from(selectedSources).filter(
+      (i) => i >= 0 && i < result.source_candidates.length,
+    )
+    const text = buildDecisionPacket({
+      topic: result.topic,
+      taskIntent: result.task_intent || '(未指定)',
+      selectedKnowledge: safeKnowledge.map((i) => {
+        const d = result.knowledge_delta_candidates[i]
+        return d ? `[${d.delta_type}] ${d.label}` : ''
+      }).filter(Boolean),
+      selectedTriggers: safeTriggers.map((i) => {
+        const t = result.evolution_trigger_candidates[i]
+        return t ? `[${t.trigger_type}] ${t.label}` : ''
+      }).filter(Boolean),
+      selectedSources: safeSources.map((i) => {
+        const s = result.source_candidates[i]
+        return s ? (s.name || s.id || '未命名') : ''
+      }).filter(Boolean),
+      suggestedNextStep: result.operational_advice?.suggested_next_step !== 'no_action'
+        ? (result.operational_advice?.suggested_next_step || '无')
+        : '无',
+      reasonTags: result.controller_packet?.reason_tags || [],
+      reviewerNote,
+    })
+    try {
+      await navigator.clipboard.writeText(text)
+      setDecisionCopied(true)
+      setTimeout(() => setDecisionCopied(false), 1500)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setDecisionCopied(true)
+      setTimeout(() => setDecisionCopied(false), 1500)
+    }
+  }
+
+  const requestTaskPreview = async () => {
+    if (!result) return
+    setTaskPreviewLoading(true)
+    setTaskPreviewError(null)
+    setTaskPreviewResult(null)
+    setTaskPreviewCopied(false)
+    try {
+      const safeKnowledge = Array.from(selectedKnowledge).filter(
+        (i) => i >= 0 && i < result.knowledge_delta_candidates.length,
+      )
+      const safeTriggers = Array.from(selectedTriggers).filter(
+        (i) => i >= 0 && i < result.evolution_trigger_candidates.length,
+      )
+      const safeSources = Array.from(selectedSources).filter(
+        (i) => i >= 0 && i < result.source_candidates.length,
+      )
+      const data = await apiClient.previewTaskPacket({
+        topic: result.topic.trim(),
+        task_intent: (result.task_intent || '').trim() || 'manual decision preview',
+        selected_knowledge_labels: safeKnowledge.map((i) => {
+          const d = result.knowledge_delta_candidates[i]
+          return d ? `[${d.delta_type}] ${d.label}` : ''
+        }).filter(Boolean),
+        selected_evolution_labels: safeTriggers.map((i) => {
+          const t = result.evolution_trigger_candidates[i]
+          return t ? `[${t.trigger_type}] ${t.label}` : ''
+        }).filter(Boolean),
+        selected_source_labels: safeSources.map((i) => {
+          const s = result.source_candidates[i]
+          return s ? (s.name || s.id || '未命名') : ''
+        }).filter(Boolean),
+        reviewer_note: reviewerNote.trim() || undefined,
+        explicit_non_canonical: true,
+      })
+      setTaskPreviewResult(data)
+    } catch (e) {
+      setTaskPreviewError(e instanceof Error ? e.message : '后端预览失败')
+    } finally {
+      setTaskPreviewLoading(false)
+    }
+  }
+
+  const copyTaskPreviewPacket = async () => {
+    if (!taskPreviewResult) return
+    const r = taskPreviewResult
+    const lines: string[] = []
+    lines.push('=== Task Packet Preview (Backend, Inspect-Only) ===')
+    lines.push('')
+    lines.push(`摘要: ${r.task_packet_summary}`)
+    lines.push(`意图: ${r.packet_intent}`)
+    lines.push(`建议处理通道: ${r.suggested_lane}`)
+    lines.push(`建议下一步: ${r.suggested_next_step}`)
+    lines.push('')
+    if (r.selected_label_groups.length) {
+      lines.push('--- 已选标签组 ---')
+      r.selected_label_groups.forEach((g) => {
+        lines.push(`[${g.label_type}] (${g.count})`)
+        g.labels.forEach((l) => lines.push(`  - ${l}`))
+      })
+      lines.push('')
+    }
+    if (r.controller_packet) {
+      lines.push(`审查模式: ${r.controller_packet.review_mode}`)
+      lines.push(`事实状态: ${r.controller_packet.truth_status}`)
+      lines.push(`建议范围: ${r.controller_packet.advisory_scope}`)
+      if (r.controller_packet.reason_tags.length) {
+        lines.push('原因标签:')
+        r.controller_packet.reason_tags.forEach((t) => lines.push(`  - ${t}`))
+      }
+    }
+    lines.push('')
+    lines.push('--- 此包为后端生成，仅供手动审查参考，非规范事实，未经持久化 ---')
+    const text = lines.join('\n')
+    try {
+      await navigator.clipboard.writeText(text)
+      setTaskPreviewCopied(true)
+      setTimeout(() => setTaskPreviewCopied(false), 1500)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setTaskPreviewCopied(true)
+      setTimeout(() => setTaskPreviewCopied(false), 1500)
+    }
+  }
+
+  const copyWorkerPacket = async (lane: WorkerLane) => {
+    if (!taskPreviewResult || !result) return
+    const text = buildWorkerPacket(lane, result.topic, result.task_intent || '(未指定)', taskPreviewResult, result)
+    try {
+      await navigator.clipboard.writeText(text)
+      setWorkerCopiedMap(prev => ({ ...prev, [lane]: true }))
+      setTimeout(() => setWorkerCopiedMap(prev => ({ ...prev, [lane]: false })), 1500)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setWorkerCopiedMap(prev => ({ ...prev, [lane]: true }))
+      setTimeout(() => setWorkerCopiedMap(prev => ({ ...prev, [lane]: false })), 1500)
+    }
+  }
+
+  const requestExecutionFeedbackInspect = async () => {
+    if (!taskPreviewResult || !result || !executionFeedbackText.trim()) return
+    setExecutionFeedbackLoading(true)
+    setExecutionFeedbackError(null)
+    setExecutionFeedbackResult(null)
+    setExecutionFeedbackCopied(false)
+    try {
+      const data = await apiClient.inspectExecutionFeedback({
+        topic: result.topic.trim(),
+        task_intent: (result.task_intent || '').trim() || 'manual execution feedback',
+        worker_lane: workerLane,
+        task_packet_summary: taskPreviewResult.task_packet_summary,
+        execution_feedback_text: executionFeedbackText.trim(),
+        execution_status_hint: executionStatusHint,
+        provider: provider.trim() || 'qwen',
+        model: model.trim() || undefined,
+        // Pass caller-provided provenance (optional, not verified)
+        worker_run_id: workerRunId.trim() || undefined,
+        worker_provider: workerProvider.trim() || undefined,
+        worker_model: workerModel.trim() || undefined,
+        worker_artifact_ref: workerArtifactRef.trim() || undefined,
+      })
+      setExecutionFeedbackResult(data)
+    } catch (e) {
+      setExecutionFeedbackError(e instanceof Error ? e.message : '执行反馈探测失败')
+    } finally {
+      setExecutionFeedbackLoading(false)
+    }
+  }
+
+  const copyExecutionFeedbackPacket = async () => {
+    if (!executionFeedbackResult || !taskPreviewResult) return
+    const text = buildExecutionFeedbackPacket(executionFeedbackResult, taskPreviewResult.task_packet_summary)
+    try {
+      await navigator.clipboard.writeText(text)
+      setExecutionFeedbackCopied(true)
+      setTimeout(() => setExecutionFeedbackCopied(false), 1500)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      ta.style.position = 'fixed'
+      ta.style.left = '-9999px'
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+      setExecutionFeedbackCopied(true)
+      setTimeout(() => setExecutionFeedbackCopied(false), 1500)
+    }
+  }
+
+  const toggleSelect = (family: 'knowledge' | 'triggers' | 'sources', index: number) => {
+    if (family === 'knowledge') {
+      setSelectedKnowledge(prev => {
+        const next = new Set(prev)
+        if (next.has(index)) next.delete(index)
+        else next.add(index)
+        return next
+      })
+    } else if (family === 'triggers') {
+      setSelectedTriggers(prev => {
+        const next = new Set(prev)
+        if (next.has(index)) next.delete(index)
+        else next.add(index)
+        return next
+      })
+    } else {
+      setSelectedSources(prev => {
+        const next = new Set(prev)
+        if (next.has(index)) next.delete(index)
+        else next.add(index)
+        return next
+      })
+    }
+  }
+
+  const isSectionOpen = (key: SectionKey) => openSections.has(key)
+
+  const hasAnyAbsorptionSelection = selectedKnowledge.size > 0 || selectedTriggers.size > 0 || selectedSources.size > 0
+
+  return (
+    <div className="rounded-2xl border bg-card p-6 shadow-sm">
+      <div className="flex items-center gap-2 mb-4">
+        <BrainCircuit className="h-4 w-4 text-muted-foreground" />
+        <h3 className="text-sm font-semibold">Flywheel 探测面板</h3>
+      </div>
+
+      {/* Input form */}
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">对话内容 *</label>
+          <textarea
+            value={conversationText}
+            onChange={e => setConversationText(e.target.value)}
+            placeholder="粘贴一段对话文本..."
+            rows={4}
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">主题 *</label>
+            <input
+              value={topic}
+              onChange={e => setTopic(e.target.value)}
+              placeholder="如：source intelligence"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">任务意图</label>
+            <input
+              value={taskIntent}
+              onChange={e => setTaskIntent(e.target.value)}
+              placeholder="如：研究新来源"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Provider</label>
+            <input
+              value={provider}
+              onChange={e => setProvider(e.target.value)}
+              placeholder="qwen"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Model</label>
+            <input
+              value={model}
+              onChange={e => setModel(e.target.value)}
+              placeholder="留空使用默认模型"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading || !conversationText.trim() || !topic.trim()}
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          提交探测
+        </button>
+      </div>
+
+      {/* Error state */}
+      {error && (
+        <div className="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      {/* Truth boundary banner */}
+      {result && (
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          此结果为探测模式（inspect-only），不会持久化任何数据，不构成规范事实。
+        </div>
+      )}
+
+      {/* Manual review bridge */}
+      {result && (
+        <div className="mt-4 rounded-lg border bg-card/80">
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold">手动审查包</span>
+              <span className="text-[10px] text-muted-foreground">Review Packet — 仅供手动审查</span>
+            </div>
+            <button
+              type="button"
+              onClick={copyReviewPacket}
+              className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
+              title="复制审查包到剪贴板"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3 w-3 text-green-600" />
+                  <span className="text-green-600">已复制</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" />
+                  <span>复制</span>
+                </>
+              )}
+            </button>
+          </div>
+          <div className="px-3 py-2 space-y-1.5 text-xs">
+            <div className="grid grid-cols-[80px_1fr] gap-x-2">
+              <span className="text-muted-foreground shrink-0">主题</span>
+              <span className="font-medium truncate">{result.topic}</span>
+            </div>
+            <div className="grid grid-cols-[80px_1fr] gap-x-2">
+              <span className="text-muted-foreground shrink-0">任务意图</span>
+              <span>{result.task_intent || '(未指定)'}</span>
+            </div>
+            <div className="grid grid-cols-[80px_1fr] gap-x-2">
+              <span className="text-muted-foreground shrink-0">意图分段</span>
+              <span>{result.segment_intent || '(未识别)'}</span>
+            </div>
+            {result.operational_advice?.suggested_next_step && result.operational_advice.suggested_next_step !== 'no_action' && (
+              <div className="grid grid-cols-[80px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">建议下一步</span>
+                <span className="font-medium">{result.operational_advice.suggested_next_step}</span>
+              </div>
+            )}
+            {result.controller_packet?.reason_tags?.length > 0 && (
+              <div className="grid grid-cols-[80px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">原因标签</span>
+                <div className="flex flex-wrap gap-1">
+                  {result.controller_packet.reason_tags.map((tag, i) => (
+                    <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.knowledge_delta_candidates?.length > 0 && (
+              <div className="grid grid-cols-[80px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">知识增量</span>
+                <div className="flex flex-wrap gap-1">
+                  {result.knowledge_delta_candidates.map((d, i) => (
+                    <span key={i} className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">[{d.delta_type}] {d.label}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.evolution_trigger_candidates?.length > 0 && (
+              <div className="grid grid-cols-[80px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">进化触发</span>
+                <div className="flex flex-wrap gap-1">
+                  {result.evolution_trigger_candidates.map((t, i) => (
+                    <span key={i} className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-700">[{t.trigger_type}] {t.label}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {result.source_candidates?.length > 0 && (
+              <div className="grid grid-cols-[80px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">来源候选</span>
+                <div className="space-y-0.5">
+                  {result.source_candidates.map((s, i) => (
+                    <div key={i} className="text-muted-foreground">
+                      <span className="h-1 w-1 rounded-full bg-muted-foreground inline-block mr-1" />
+                      {s.name || s.id || '未命名'}
+                      {s.type && <span className="text-[10px] text-muted-foreground/60"> · {s.type}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Manual absorption surface */}
+      {result && (
+        <div className="mt-4 rounded-lg border border-dashed bg-muted/30">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-dashed">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold">手动吸收</span>
+              <span className="text-[10px] text-muted-foreground">Absorption — 选择候选项并生成紧凑吸收包</span>
+            </div>
+            <button
+              type="button"
+              onClick={copyAbsorptionPacket}
+              disabled={!hasAnyAbsorptionSelection && !reviewerNote.trim()}
+              className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title="复制吸收包到剪贴板"
+            >
+              {absorptionCopied ? (
+                <>
+                  <Check className="h-3 w-3 text-green-600" />
+                  <span className="text-green-600">已复制</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" />
+                  <span>复制吸收包</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="px-3 py-2 space-y-3">
+            {/* Knowledge delta checkboxes */}
+            {result.knowledge_delta_candidates.length > 0 && (
+              <div>
+                <div className="text-[11px] font-medium text-muted-foreground mb-1">知识增量候选</div>
+                <div className="space-y-0.5">
+                  {result.knowledge_delta_candidates.map((d, i) => (
+                    <label key={i} className="flex items-start gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedKnowledge.has(i)}
+                        onChange={() => toggleSelect('knowledge', i)}
+                        className="mt-0.5 h-3.5 w-3.5 rounded border-muted-foreground/30 accent-primary"
+                      />
+                      <span className="text-xs">
+                        <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">{d.delta_type}</span>
+                        {' '}{d.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Evolution trigger checkboxes */}
+            {result.evolution_trigger_candidates.length > 0 && (
+              <div>
+                <div className="text-[11px] font-medium text-muted-foreground mb-1">进化触发候选</div>
+                <div className="space-y-0.5">
+                  {result.evolution_trigger_candidates.map((t, i) => (
+                    <label key={i} className="flex items-start gap-2 cursor-pointer">
+                      <input
+                      type="checkbox"
+                      checked={selectedTriggers.has(i)}
+                      onChange={() => toggleSelect('triggers', i)}
+                      className="mt-0.5 h-3.5 w-3.5 rounded border-muted-foreground/30 accent-primary"
+                    />
+                    <span className="text-xs">
+                      <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">{t.trigger_type}</span>
+                      {' '}{t.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Source checkboxes */}
+          {result.source_candidates.length > 0 && (
+            <div>
+              <div className="text-[11px] font-medium text-muted-foreground mb-1">来源候选</div>
+              <div className="space-y-0.5">
+                {result.source_candidates.map((s, i) => (
+                  <label key={i} className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedSources.has(i)}
+                      onChange={() => toggleSelect('sources', i)}
+                      className="mt-0.5 h-3.5 w-3.5 rounded border-muted-foreground/30 accent-primary"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {s.name || s.id || '未命名'}
+                      {s.type && <span className="text-[10px] text-muted-foreground/60"> · {s.type}</span>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Reviewer note */}
+          <div>
+            <label className="text-[11px] font-medium text-muted-foreground mb-1 block">审查备注</label>
+            <textarea
+              value={reviewerNote}
+              onChange={e => setReviewerNote(e.target.value)}
+              placeholder="简短备注（可选）..."
+              rows={2}
+              maxLength={500}
+              className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+            />
+          </div>
+        </div>
+      </div>
+    )}
+
+      {/* Manual decision bridge */}
+      {result && (
+        <div className="mt-4 rounded-lg border border-dashed bg-muted/20">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-dashed">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold">手动决策桥接</span>
+              <span className="text-[10px] text-muted-foreground">Decision Bridge — 生成紧凑决策包供对齐讨论</span>
+            </div>
+            <button
+              type="button"
+              onClick={copyDecisionPacket}
+              className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
+              title="复制决策包到剪贴板"
+            >
+              {decisionCopied ? (
+                <>
+                  <Check className="h-3 w-3 text-green-600" />
+                  <span className="text-green-600">已复制</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" />
+                  <span>复制决策包</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="px-3 py-2 space-y-1.5 text-xs">
+            <div className="grid grid-cols-[80px_1fr] gap-x-2">
+              <span className="text-muted-foreground shrink-0">主题</span>
+              <span className="font-medium truncate">{result.topic}</span>
+            </div>
+            <div className="grid grid-cols-[80px_1fr] gap-x-2">
+              <span className="text-muted-foreground shrink-0">任务意图</span>
+              <span>{result.task_intent || '(未指定)'}</span>
+            </div>
+            {result.operational_advice?.suggested_next_step && result.operational_advice.suggested_next_step !== 'no_action' && (
+              <div className="grid grid-cols-[80px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">建议下一步</span>
+                <span className="font-medium">{result.operational_advice.suggested_next_step}</span>
+              </div>
+            )}
+            {result.controller_packet?.reason_tags?.length > 0 && (
+              <div className="grid grid-cols-[80px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">原因标签</span>
+                <div className="flex flex-wrap gap-1">
+                  {result.controller_packet.reason_tags.map((tag, i) => (
+                    <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{tag}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(selectedKnowledge.size > 0 || selectedTriggers.size > 0 || selectedSources.size > 0) && (
+              <div className="grid grid-cols-[80px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">已选项</span>
+                <div className="flex flex-wrap gap-1">
+                  {Array.from(selectedKnowledge).map((i) => {
+                    const d = result.knowledge_delta_candidates[i]
+                    return d ? <span key={`k${i}`} className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">[{d.delta_type}] {d.label}</span> : null
+                  })}
+                  {Array.from(selectedTriggers).map((i) => {
+                    const t = result.evolution_trigger_candidates[i]
+                    return t ? <span key={`t${i}`} className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-700">[{t.trigger_type}] {t.label}</span> : null
+                  })}
+                  {Array.from(selectedSources).map((i) => {
+                    const s = result.source_candidates[i]
+                    return s ? <span key={`s${i}`} className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{s.name || s.id || '未命名'}</span> : null
+                  })}
+                </div>
+              </div>
+            )}
+            {reviewerNote.trim() && (
+              <div className="grid grid-cols-[80px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">审查备注</span>
+                <span className="text-muted-foreground truncate">{reviewerNote.trim()}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Backend task-packet preview */}
+      {result && (
+        <div className="mt-4 rounded-lg border bg-muted/20">
+          <div className="flex items-center justify-between px-3 py-2 border-b">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold">后端任务包预览</span>
+              <span className="text-[10px] text-muted-foreground">Task-Packet Preview — 后端生成，仅供审查参考</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={requestTaskPreview}
+                disabled={taskPreviewLoading || selectedPreviewCount === 0}
+                className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {taskPreviewLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                请求预览
+              </button>
+              {taskPreviewResult && (
+                <button
+                  type="button"
+                  onClick={copyTaskPreviewPacket}
+                  className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
+                  title="复制预览包到剪贴板"
+                >
+                  {taskPreviewCopied ? (
+                    <>
+                      <Check className="h-3 w-3 text-green-600" />
+                      <span className="text-green-600">已复制</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      <span>复制</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {taskPreviewError && (
+            <div className="px-3 py-2 flex items-start gap-2 text-sm text-red-700">
+              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+              {taskPreviewError}
+            </div>
+          )}
+
+          {taskPreviewLoading && (
+            <div className="px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              正在请求后端任务包预览...
+            </div>
+          )}
+
+          {taskPreviewResult && (
+            <div className="px-3 py-2 space-y-1.5 text-xs">
+              <div className="grid grid-cols-[90px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">摘要</span>
+                <span className="font-medium truncate">{taskPreviewResult.task_packet_summary}</span>
+              </div>
+              <div className="grid grid-cols-[90px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">意图</span>
+                <span>{taskPreviewResult.packet_intent}</span>
+              </div>
+              <div className="grid grid-cols-[90px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">建议处理通道</span>
+                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{taskPreviewResult.suggested_lane}</span>
+              </div>
+              {taskPreviewResult.suggested_next_step && (
+                <div className="grid grid-cols-[90px_1fr] gap-x-2">
+                  <span className="text-muted-foreground shrink-0">建议下一步</span>
+                  <span>{taskPreviewResult.suggested_next_step}</span>
+                </div>
+              )}
+              {taskPreviewResult.selected_label_groups.length > 0 && (
+                <div className="grid grid-cols-[90px_1fr] gap-x-2">
+                  <span className="text-muted-foreground shrink-0">已选标签组</span>
+                  <div className="flex flex-wrap gap-1">
+                    {taskPreviewResult.selected_label_groups.map((g, i) => (
+                      <span key={i} className="rounded bg-muted px-1.5 py-0.5 text-[10px]">[{g.label_type}] {g.count}项</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {taskPreviewResult.controller_packet?.reason_tags?.length > 0 && (
+                <div className="grid grid-cols-[90px_1fr] gap-x-2">
+                  <span className="text-muted-foreground shrink-0">原因标签</span>
+                  <div className="flex flex-wrap gap-1">
+                    {taskPreviewResult.controller_packet.reason_tags.map((tag, i) => (
+                      <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-[90px_1fr] gap-x-2">
+                <span className="text-muted-foreground shrink-0">事实状态</span>
+                <span className="text-muted-foreground">{taskPreviewResult.promotion_state}</span>
+              </div>
+            </div>
+          )}
+
+          {!taskPreviewResult && !taskPreviewError && !taskPreviewLoading && (
+            <div className="px-3 py-2 text-xs text-muted-foreground">
+              {selectedPreviewCount === 0
+                ? '请先选择至少一个知识/进化/来源项，再请求后端预览'
+                : '点击「请求预览」从后端获取规范化任务包预览'}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Worker-ready packet bridge (requires taskPreviewResult) */}
+      {result && taskPreviewResult && (
+        <div className="mt-4 rounded-lg border border-dashed bg-muted/20">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-dashed">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold">Worker Packet Bridge</span>
+              <span className="text-[10px] text-muted-foreground">基于后端预览生成 coding / review / test 手动包</span>
+            </div>
+          </div>
+
+          {/* Lane selector tabs */}
+          <div className="px-3 pt-2 flex gap-1">
+            {(['coding', 'review', 'test'] as WorkerLane[]).map((l) => (
+              <button
+                key={l}
+                type="button"
+                onClick={() => setWorkerLane(l)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  workerLane === l
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background text-muted-foreground hover:bg-muted'
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+            <div className="flex-1" />
+            <button
+              type="button"
+              onClick={() => copyWorkerPacket(workerLane)}
+              className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
+              title={`复制 ${workerLane} packet`}
+            >
+              {workerCopiedMap[workerLane] ? (
+                <>
+                  <Check className="h-3 w-3 text-green-600" />
+                  <span className="text-green-600">已复制</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" />
+                  <span>复制</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Packet preview text */}
+          <div className="px-3 pb-3 pt-2">
+            <pre className="rounded-md border bg-background p-2 text-[11px] leading-relaxed whitespace-pre-wrap break-words font-mono text-muted-foreground max-h-64 overflow-y-auto">
+              {buildWorkerPacket(workerLane, result.topic, result.task_intent || '(未指定)', taskPreviewResult, result)}
+            </pre>
+          </div>
+
+          <div className="mx-3 mb-3 rounded-md border bg-background p-3 space-y-3 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="font-medium">执行反馈回流</div>
+                <div className="text-[11px] text-muted-foreground">
+                  手工粘贴 worker 结果，生成 inspect-only execution feedback preview
+                </div>
+              </div>
+              {executionFeedbackResult && (
+                <button
+                  type="button"
+                  onClick={copyExecutionFeedbackPacket}
+                  className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
+                >
+                  {executionFeedbackCopied ? (
+                    <>
+                      <Check className="h-3 w-3 text-green-600" />
+                      <span className="text-green-600">已复制</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      <span>复制反馈包</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-[160px_1fr]">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">执行状态提示</label>
+                <select
+                  value={executionStatusHint}
+                  onChange={(e) => setExecutionStatusHint(e.target.value)}
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="neutral">neutral</option>
+                  <option value="accept">accept</option>
+                  <option value="accept_with_changes">accept_with_changes</option>
+                  <option value="reject">reject</option>
+                  <option value="blocked">blocked</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">worker 执行反馈 *</label>
+                <textarea
+                  value={executionFeedbackText}
+                  onChange={(e) => setExecutionFeedbackText(e.target.value)}
+                  placeholder="粘贴 coding / review / test 的结果摘要..."
+                  rows={5}
+                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            {/* Caller-provided provenance fields (optional, inspect-only) */}
+            <div className="rounded-md border border-dashed bg-muted/20 px-3 py-2">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-medium text-muted-foreground">Worker 来源信息 (可选, inspect-only)</span>
+                <span className="text-[10px] text-muted-foreground/60">— 此信息为调用方提供, 未经验证</span>
+              </div>
+              <div className="grid gap-2 md:grid-cols-4">
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-0.5 block">run_id</label>
+                  <input
+                    value={workerRunId}
+                    onChange={(e) => setWorkerRunId(e.target.value)}
+                    placeholder="如: run-abc123"
+                    className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-0.5 block">provider</label>
+                  <input
+                    value={workerProvider}
+                    onChange={(e) => setWorkerProvider(e.target.value)}
+                    placeholder="如: claude-worker"
+                    className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-0.5 block">model</label>
+                  <input
+                    value={workerModel}
+                    onChange={(e) => setWorkerModel(e.target.value)}
+                    placeholder="如: claude-opus-4.6"
+                    className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] text-muted-foreground mb-0.5 block">artifact_ref</label>
+                  <input
+                    value={workerArtifactRef}
+                    onChange={(e) => setWorkerArtifactRef(e.target.value)}
+                    placeholder="如: artifact-ref-xyz"
+                    className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={requestExecutionFeedbackInspect}
+              disabled={executionFeedbackLoading || !executionFeedbackText.trim()}
+              className="inline-flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {executionFeedbackLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              探测执行反馈
+            </button>
+
+            {executionFeedbackError && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {executionFeedbackError}
+              </div>
+            )}
+
+            {executionFeedbackResult && (
+              <div className="space-y-2">
+                <div className="rounded-md border bg-muted/30 px-3 py-2">
+                  <div className="font-medium">反馈摘要</div>
+                  <div className="mt-1 text-muted-foreground">
+                    {executionFeedbackResult.feedback_summary || '(无摘要)'}
+                  </div>
+                </div>
+
+                {/* Provenance display (inspect-only, not verified) */}
+                {executionFeedbackResult.provenance && (
+                  (executionFeedbackResult.provenance.worker_run_id ||
+                   executionFeedbackResult.provenance.worker_provider ||
+                   executionFeedbackResult.provenance.worker_model ||
+                   executionFeedbackResult.provenance.worker_artifact_ref) && (
+                    <div className="rounded-md border border-dashed bg-amber-50/30 px-3 py-2">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">Worker 来源信息</span>
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">
+                          inspect-only / caller-provided / 未验证
+                        </span>
+                      </div>
+                      <div className="grid gap-1.5 md:grid-cols-4 text-xs">
+                        {executionFeedbackResult.provenance.worker_run_id && (
+                          <div className="text-muted-foreground">
+                            <span className="font-medium">run_id:</span> {executionFeedbackResult.provenance.worker_run_id}
+                          </div>
+                        )}
+                        {executionFeedbackResult.provenance.worker_provider && (
+                          <div className="text-muted-foreground">
+                            <span className="font-medium">provider:</span> {executionFeedbackResult.provenance.worker_provider}
+                          </div>
+                        )}
+                        {executionFeedbackResult.provenance.worker_model && (
+                          <div className="text-muted-foreground">
+                            <span className="font-medium">model:</span> {executionFeedbackResult.provenance.worker_model}
+                          </div>
+                        )}
+                        {executionFeedbackResult.provenance.worker_artifact_ref && (
+                          <div className="text-muted-foreground">
+                            <span className="font-medium">artifact_ref:</span> {executionFeedbackResult.provenance.worker_artifact_ref}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                )}
+
+                <div className="grid gap-2 md:grid-cols-2">
+                  <div className="rounded-md border bg-muted/20 px-3 py-2">
+                    <div className="font-medium">建议下一步</div>
+                    <div className="mt-1 text-muted-foreground">
+                      {executionFeedbackResult.operational_advice?.suggested_next_step || 'no_action'}
+                    </div>
+                  </div>
+                  <div className="rounded-md border bg-muted/20 px-3 py-2">
+                    <div className="font-medium">反馈意图</div>
+                    <div className="mt-1 text-muted-foreground">
+                      {executionFeedbackResult.feedback_intent}
+                    </div>
+                  </div>
+                </div>
+
+                {executionFeedbackResult.knowledge_delta_candidates.length > 0 && (
+                  <div className="rounded-md border bg-background px-3 py-2">
+                    <div className="mb-2 font-medium">知识反馈候选</div>
+                    <div className="flex flex-wrap gap-1">
+                      {executionFeedbackResult.knowledge_delta_candidates.map((d, i) => (
+                        <span key={i} className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">
+                          [{d.delta_type}] {d.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {executionFeedbackResult.evolution_trigger_candidates.length > 0 && (
+                  <div className="rounded-md border bg-background px-3 py-2">
+                    <div className="mb-2 font-medium">进化反馈候选</div>
+                    <div className="flex flex-wrap gap-1">
+                      {executionFeedbackResult.evolution_trigger_candidates.map((t, i) => (
+                        <span key={i} className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-700">
+                          [{t.trigger_type}] {t.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Results */}
+      {result && (
+        <div className="mt-4 space-y-3">
+          {/* Extraction summary */}
+          <CollapsibleSection title="提取摘要" open={isSectionOpen('extraction')} defaultOpen>
+            <p className="text-sm text-muted-foreground">{result.extraction_summary || '无摘要'}</p>
+            {result.segment_intent && result.segment_intent !== 'other' && (
+              <p className="mt-2 text-xs">
+                <span className="text-muted-foreground">意图识别：</span>
+                <span className="font-medium">{result.segment_intent}</span>
+              </p>
+            )}
+          </CollapsibleSection>
+
+          {/* Knowledge delta candidates */}
+          <CollapsibleSection title={`知识增量候选 (${result.knowledge_delta_candidates.length})`} open={isSectionOpen('knowledge')}>
+            {result.knowledge_delta_candidates.length === 0 ? (
+              <p className="text-xs text-muted-foreground">无候选</p>
+            ) : (
+              <ul className="space-y-2">
+                {result.knowledge_delta_candidates.map((d, i) => (
+                  <li key={i} className="rounded-md border bg-background p-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{d.delta_type}</span>
+                      <span className="font-medium">{d.label}</span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground">{d.content}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CollapsibleSection>
+
+          {/* Evolution trigger candidates */}
+          <CollapsibleSection title={`进化触发候选 (${result.evolution_trigger_candidates.length})`} open={isSectionOpen('triggers')}>
+            {result.evolution_trigger_candidates.length === 0 ? (
+              <p className="text-xs text-muted-foreground">无候选</p>
+            ) : (
+              <ul className="space-y-2">
+                {result.evolution_trigger_candidates.map((t, i) => (
+                  <li key={i} className="rounded-md border bg-background p-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{t.trigger_type}</span>
+                      <span className="font-medium">{t.label}</span>
+                    </div>
+                    {t.rationale && <p className="mt-1 text-muted-foreground">{t.rationale}</p>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CollapsibleSection>
+
+          {/* Source candidates */}
+          <CollapsibleSection title={`来源候选 (${result.source_candidates.length})`} open={isSectionOpen('sources')}>
+            {result.source_candidates.length === 0 ? (
+              <p className="text-xs text-muted-foreground">无来源候选</p>
+            ) : (
+              <ul className="space-y-1">
+                {result.source_candidates.map((s, i) => (
+                  <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="h-1 w-1 rounded-full bg-muted-foreground" />
+                    {s.name || s.id || '未命名'}
+                    {s.type && <span className="text-[10px] text-muted-foreground/60">· {s.type}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CollapsibleSection>
+
+          {/* Operational advice */}
+          <CollapsibleSection title="操作建议" open={isSectionOpen('advice')}>
+            {result.operational_advice.suggested_next_step !== 'no_action' && (
+              <p className="text-sm font-medium">{result.operational_advice.suggested_next_step}</p>
+            )}
+            {result.operational_advice.controller_notes.length > 0 && (
+              <ul className="mt-1 space-y-1">
+                {result.operational_advice.controller_notes.map((n, i) => (
+                  <li key={i} className="text-xs text-muted-foreground">· {n}</li>
+                ))}
+              </ul>
+            )}
+            {result.operational_advice.suggested_next_step === 'no_action' && result.operational_advice.controller_notes.length === 0 && (
+              <p className="text-xs text-muted-foreground">无操作建议</p>
+            )}
+          </CollapsibleSection>
+
+          {/* Controller packet */}
+          <CollapsibleSection title="控制器数据包" open={isSectionOpen('controller')}>
+            <div className="space-y-1 text-xs">
+              <p>
+                <span className="text-muted-foreground">审查模式：</span>{result.controller_packet.review_mode}
+              </p>
+              <p>
+                <span className="text-muted-foreground">事实状态：</span>{result.controller_packet.truth_status}
+              </p>
+              {result.controller_packet.reason_tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {result.controller_packet.reason_tags.map((tag, i) => (
+                    <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{tag}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        </div>
+      )}
+    </div>
+  )
+}

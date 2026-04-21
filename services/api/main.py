@@ -12,7 +12,7 @@ import logging
 import os
 from pathlib import Path
 
-from routers import brains, chat, feeds, models, settings, rag, conversations, memories, system, evolution, testing, feishu, ike_v0
+from routers import brains, chat, feeds, models, settings, rag, conversations, memories, system, evolution, testing, feishu, ike_v0, conversation_runtime
 
 
 def configure_runtime_logging() -> None:
@@ -188,6 +188,7 @@ app.include_router(testing.router, prefix="/api/testing", tags=["ai-testing"])
 app.include_router(feishu.router, prefix="/api", tags=["feishu"])
 app.include_router(brains.router, prefix="/api/brains", tags=["brains"])
 app.include_router(ike_v0.router, prefix="/api", tags=["ike-v0"])
+app.include_router(conversation_runtime.router, prefix="/api", tags=["conversation-runtime"])
 
 
 @app.get("/health")

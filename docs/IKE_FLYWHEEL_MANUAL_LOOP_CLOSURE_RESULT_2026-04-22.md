@@ -160,3 +160,22 @@ Accept this as proof that the manual AI-assisted flywheel can close once end-to-
 
 Do not claim trusted runtime closure. The next implementation step should be bounded decomposition before any new bridge capability.
 
+---
+
+## Review Absorption
+
+Absorption doc:
+
+- [D:\code\MyAttention\docs\IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_REVIEW_ABSORPTION_2026-04-22.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_REVIEW_ABSORPTION_2026-04-22.md)
+
+Review convergence:
+
+- Claude: `accept`
+- ChatGPT: `accept_with_changes`
+- Gemini: `accept_with_changes`
+
+Controller judgment: `accept_with_changes`.
+
+Accepted as: short-term manual flywheel closure milestone.
+
+Required next phase: structural decomposition, not more bridge fields.

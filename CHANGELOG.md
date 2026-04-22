@@ -2040,3 +2040,7 @@
   - `claude-worker / glm-5` read-only worker step
   - Qwen execution-feedback inspect with caller-provided provenance
   - documented in `docs/IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_RESULT_2026-04-22.md`
+- absorbed manual-loop closure review as `accept_with_changes`; next work is
+  decomposition-first and must not add bridge fields
+- split backend flywheel runtime responsibilities into bounded modules while
+  preserving existing route imports and inspect-only semantics

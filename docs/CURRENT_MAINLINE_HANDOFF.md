@@ -2722,3 +2722,27 @@ Current `R1-A2` note:
   - `claude-worker / glm-5` participated as delegated worker
   - this remains manual and inspect-only
   - next review point is now meaningful; likely review focus should be whether to accept this as the manual-loop milestone and move to decomposition
+
+## 2026-04-22 Manual Loop Closure Accepted
+
+- review absorption:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_REVIEW_ABSORPTION_2026-04-22.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_REVIEW_ABSORPTION_2026-04-22.md)
+- current controller judgment:
+  - accepted with changes as short-term manual flywheel closure milestone
+  - no blocker to continue
+  - do not add more bridge fields
+  - next implementation should be decomposition-first:
+    - backend: split `flywheel.py` responsibilities
+    - frontend: continue extracting panel subcomponents
+    - preserve current route behavior and inspect-only semantics
+
+## 2026-04-22 Backend Flywheel Decomposition Phase 1
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_BACKEND_DECOMPOSITION_RESULT_2026-04-22.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_BACKEND_DECOMPOSITION_RESULT_2026-04-22.md)
+- current controller judgment:
+  - `conversation_runtime/flywheel.py` is now a compatibility facade
+  - implementation moved into `flywheel_inspect.py`, `task_packet_preview.py`, and `execution_feedback.py`
+  - public router imports are preserved
+  - 36 focused conversation/flywheel tests pass
+  - next structural target is frontend panel decomposition or shared candidate-helper extraction

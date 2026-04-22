@@ -3532,3 +3532,21 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - outcome: manual AI-assisted flywheel can close once end-to-end, but this is
     still not verified provenance, persistence, scheduling, or trusted runtime
     closure
+- absorbed manual-loop closure review:
+  - absorption:
+    `docs/IKE_FLYWHEEL_MANUAL_LOOP_CLOSURE_REVIEW_ABSORPTION_2026-04-22.md`
+  - controller judgment: `accept_with_changes`
+  - accepted as the short-term manual flywheel closure milestone
+  - next implementation mandate: structural decomposition, not new bridge
+    fields
+- completed backend decomposition phase 1:
+  - result:
+    `docs/IKE_FLYWHEEL_BACKEND_DECOMPOSITION_RESULT_2026-04-22.md`
+  - split `conversation_runtime/flywheel.py` into:
+    - `flywheel_inspect.py`
+    - `task_packet_preview.py`
+    - `execution_feedback.py`
+  - preserved router imports through a compatibility facade
+  - validation: 36 conversation/flywheel tests OK
+  - worker run `20260422T011922-6291c782` produced the patch but did not
+    return structured final output; controller aborted it and validated locally

@@ -89,3 +89,23 @@ passed
 `accept_with_changes`
 
 Accept this as backend decomposition phase 1. The next decomposition step should target the frontend panel or extract shared flywheel candidate helpers.
+
+---
+
+## Review Absorption
+
+Absorption doc:
+
+- [D:\code\MyAttention\docs\IKE_FLYWHEEL_BACKEND_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-23.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_BACKEND_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-23.md)
+
+Review convergence:
+
+- Claude: `accept`
+- ChatGPT: `accept_with_changes`
+- Gemini: `accept`
+
+Controller judgment: `accept_with_changes`.
+
+Accepted as: backend flywheel decomposition phase 1.
+
+Required next phase: frontend decomposition, with shared helper and controller-packet semantic debt tracked rather than expanded.

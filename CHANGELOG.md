@@ -2044,3 +2044,7 @@
   decomposition-first and must not add bridge fields
 - split backend flywheel runtime responsibilities into bounded modules while
   preserving existing route imports and inspect-only semantics
+- absorbed backend decomposition review as `accept_with_changes`; next mainline
+  implementation target is frontend panel decomposition, not new bridge semantics
+- extracted frontend flywheel panel helpers into bounded modules for collapsible
+  UI, packet builders, and clipboard fallback without changing flywheel semantics

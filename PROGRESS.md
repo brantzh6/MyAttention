@@ -3550,3 +3550,21 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - validation: 36 conversation/flywheel tests OK
   - worker run `20260422T011922-6291c782` produced the patch but did not
     return structured final output; controller aborted it and validated locally
+- absorbed backend decomposition review:
+  - absorption:
+    `docs/IKE_FLYWHEEL_BACKEND_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-23.md`
+  - review convergence: Claude `accept`, ChatGPT `accept_with_changes`, Gemini `accept`
+  - controller judgment: `accept_with_changes`
+  - next target: frontend decomposition of `flywheel-inspect-panel.tsx`
+  - process correction: review files must be read by checking file size/write time
+    and Python `utf-8-sig` content after the canonical marker before concluding empty
+- completed frontend decomposition phase 1:
+  - result:
+    `docs/IKE_FLYWHEEL_FRONTEND_DECOMPOSITION_RESULT_2026-04-23.md`
+  - extracted:
+    - `services/web/components/evolution/collapsible-section.tsx`
+    - `services/web/components/evolution/flywheel-packet-builders.ts`
+    - `services/web/components/evolution/clipboard.ts`
+  - `flywheel-inspect-panel.tsx` reduced from about 65 KB to about 51 KB
+  - backend tests still pass
+  - Next.js build reached compile/type/lint successfully, but final SWC/static-worker stage failed on this machine because the Windows paging file is too small

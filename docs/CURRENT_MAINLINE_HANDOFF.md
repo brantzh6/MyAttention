@@ -2746,3 +2746,32 @@ Current `R1-A2` note:
   - public router imports are preserved
   - 36 focused conversation/flywheel tests pass
   - next structural target is frontend panel decomposition or shared candidate-helper extraction
+
+## 2026-04-23 Backend Decomposition Review Absorbed
+
+- absorption:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_BACKEND_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-23.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_BACKEND_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-23.md)
+- controller judgment:
+  - accepted with changes
+  - no blocker to continue
+  - next implementation should be frontend decomposition, not new bridge semantics
+  - track but do not expand:
+    - shared candidate helper debt
+    - `ConversationControllerPacket` semantic debt
+    - facade `LLMAdapter` compatibility shim
+    - worker lifecycle reliability
+- process correction:
+  - canonical review files must be read with size/write-time verification and Python `utf-8-sig` extraction after the write-back marker
+
+## 2026-04-23 Frontend Decomposition Phase 1
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_FRONTEND_DECOMPOSITION_RESULT_2026-04-23.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_FRONTEND_DECOMPOSITION_RESULT_2026-04-23.md)
+- controller judgment:
+  - bounded helper extraction is complete
+  - `flywheel-inspect-panel.tsx` still owns orchestration, but no longer owns collapsible UI, packet-text builders, or repeated clipboard fallback logic
+  - next structural target should be presentational section extraction:
+    - task-preview section
+    - worker-packet bridge section
+    - execution-feedback section
+  - no new bridge semantics were introduced

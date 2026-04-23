@@ -2048,3 +2048,5 @@
   implementation target is frontend panel decomposition, not new bridge semantics
 - extracted frontend flywheel panel helpers into bounded modules for collapsible
   UI, packet builders, and clipboard fallback without changing flywheel semantics
+- decomposed the flywheel runtime UI into explicit task-preview, worker-packet,
+  and execution-feedback sections while preserving the current manual loop

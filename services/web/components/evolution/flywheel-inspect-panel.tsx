@@ -5,6 +5,9 @@ import { Loader2, AlertTriangle, BrainCircuit, Copy, Check } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import { copyTextToClipboard } from './clipboard'
 import { CollapsibleSection } from './collapsible-section'
+import { ExecutionFeedbackSection } from './execution-feedback-section'
+import { WorkerPacketBridgeSection } from './worker-packet-bridge-section'
+import { TaskPreviewSection } from './task-preview-section'
 import {
   buildAbsorptionPacket,
   buildDecisionPacket,
@@ -14,10 +17,6 @@ import {
   buildWorkerPacket,
   type WorkerLane,
 } from './flywheel-packet-builders'
-import {
-  ExecutionFeedbackProvenanceDisplay,
-  ExecutionFeedbackProvenanceInputs,
-} from './execution-feedback-provenance'
 import type {
   FlywheelExecutionFeedbackInspectResponse,
   FlywheelInspectResponse,
@@ -702,311 +701,57 @@ export function FlywheelInspectPanel() {
         </div>
       )}
 
-      {/* Backend task-packet preview */}
-      {result && (
-        <div className="mt-4 rounded-lg border bg-muted/20">
-          <div className="flex items-center justify-between px-3 py-2 border-b">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold">后端任务包预览</span>
-              <span className="text-[10px] text-muted-foreground">Task-Packet Preview — 后端生成，仅供审查参考</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={requestTaskPreview}
-                disabled={taskPreviewLoading || selectedPreviewCount === 0}
-                className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {taskPreviewLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-                请求预览
-              </button>
-              {taskPreviewResult && (
-                <button
-                  type="button"
-                  onClick={copyTaskPreviewPacket}
-                  className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
-                  title="复制预览包到剪贴板"
-                >
-                  {taskPreviewCopied ? (
-                    <>
-                      <Check className="h-3 w-3 text-green-600" />
-                      <span className="text-green-600">已复制</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3 w-3" />
-                      <span>复制</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
 
-          {taskPreviewError && (
-            <div className="px-3 py-2 flex items-start gap-2 text-sm text-red-700">
-              <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-              {taskPreviewError}
-            </div>
-          )}
+{/* Backend task-packet preview */}
+{result && (
+  <TaskPreviewSection
+    taskPreviewLoading={taskPreviewLoading}
+    taskPreviewError={taskPreviewError}
+    taskPreviewResult={taskPreviewResult}
+    taskPreviewCopied={taskPreviewCopied}
+    selectedPreviewCount={selectedPreviewCount}
+    onRequestPreview={requestTaskPreview}
+    onCopyPreview={copyTaskPreviewPacket}
+  />
+)}
 
-          {taskPreviewLoading && (
-            <div className="px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              正在请求后端任务包预览...
-            </div>
-          )}
 
-          {taskPreviewResult && (
-            <div className="px-3 py-2 space-y-1.5 text-xs">
-              <div className="grid grid-cols-[90px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">摘要</span>
-                <span className="font-medium truncate">{taskPreviewResult.task_packet_summary}</span>
-              </div>
-              <div className="grid grid-cols-[90px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">意图</span>
-                <span>{taskPreviewResult.packet_intent}</span>
-              </div>
-              <div className="grid grid-cols-[90px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">建议处理通道</span>
-                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{taskPreviewResult.suggested_lane}</span>
-              </div>
-              {taskPreviewResult.suggested_next_step && (
-                <div className="grid grid-cols-[90px_1fr] gap-x-2">
-                  <span className="text-muted-foreground shrink-0">建议下一步</span>
-                  <span>{taskPreviewResult.suggested_next_step}</span>
-                </div>
-              )}
-              {taskPreviewResult.selected_label_groups.length > 0 && (
-                <div className="grid grid-cols-[90px_1fr] gap-x-2">
-                  <span className="text-muted-foreground shrink-0">已选标签组</span>
-                  <div className="flex flex-wrap gap-1">
-                    {taskPreviewResult.selected_label_groups.map((g, i) => (
-                      <span key={i} className="rounded bg-muted px-1.5 py-0.5 text-[10px]">[{g.label_type}] {g.count}项</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {taskPreviewResult.controller_packet?.reason_tags?.length > 0 && (
-                <div className="grid grid-cols-[90px_1fr] gap-x-2">
-                  <span className="text-muted-foreground shrink-0">原因标签</span>
-                  <div className="flex flex-wrap gap-1">
-                    {taskPreviewResult.controller_packet.reason_tags.map((tag, i) => (
-                      <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div className="grid grid-cols-[90px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">事实状态</span>
-                <span className="text-muted-foreground">{taskPreviewResult.promotion_state}</span>
-              </div>
-            </div>
-          )}
 
-          {!taskPreviewResult && !taskPreviewError && !taskPreviewLoading && (
-            <div className="px-3 py-2 text-xs text-muted-foreground">
-              {selectedPreviewCount === 0
-                ? '请先选择至少一个知识/进化/来源项，再请求后端预览'
-                : '点击「请求预览」从后端获取规范化任务包预览'}
-            </div>
-          )}
-        </div>
-      )}
+{/* Worker-ready packet bridge (requires taskPreviewResult) */}
+{result && taskPreviewResult && (
+  <WorkerPacketBridgeSection
+    result={result}
+    taskPreviewResult={taskPreviewResult}
+    workerLane={workerLane}
+    onWorkerLaneChange={setWorkerLane}
+    onCopyWorkerPacket={copyWorkerPacket}
+    workerCopiedMap={workerCopiedMap}
+    executionFeedbackSection={
+      <ExecutionFeedbackSection
+        executionStatusHint={executionStatusHint}
+        onExecutionStatusHintChange={setExecutionStatusHint}
+        executionFeedbackText={executionFeedbackText}
+        onExecutionFeedbackTextChange={setExecutionFeedbackText}
+        workerRunId={workerRunId}
+        workerProvider={workerProvider}
+        workerModel={workerModel}
+        workerArtifactRef={workerArtifactRef}
+        onWorkerRunIdChange={setWorkerRunId}
+        onWorkerProviderChange={setWorkerProvider}
+        onWorkerModelChange={setWorkerModel}
+        onWorkerArtifactRefChange={setWorkerArtifactRef}
+        executionFeedbackLoading={executionFeedbackLoading}
+        executionFeedbackError={executionFeedbackError}
+        executionFeedbackResult={executionFeedbackResult}
+        executionFeedbackCopied={executionFeedbackCopied}
+        onRequestInspect={requestExecutionFeedbackInspect}
+        onCopyPacket={copyExecutionFeedbackPacket}
+        taskPreviewResult={taskPreviewResult}
+      />
+    }
+  />
+)}
 
-      {/* Worker-ready packet bridge (requires taskPreviewResult) */}
-      {result && taskPreviewResult && (
-        <div className="mt-4 rounded-lg border border-dashed bg-muted/20">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-dashed">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold">Worker Packet Bridge</span>
-              <span className="text-[10px] text-muted-foreground">基于后端预览生成 coding / review / test 手动包</span>
-            </div>
-          </div>
-
-          {/* Lane selector tabs */}
-          <div className="px-3 pt-2 flex gap-1">
-            {(['coding', 'review', 'test'] as WorkerLane[]).map((l) => (
-              <button
-                key={l}
-                type="button"
-                onClick={() => setWorkerLane(l)}
-                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-                  workerLane === l
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-background text-muted-foreground hover:bg-muted'
-                }`}
-              >
-                {l}
-              </button>
-            ))}
-            <div className="flex-1" />
-            <button
-              type="button"
-              onClick={() => copyWorkerPacket(workerLane)}
-              className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
-              title={`复制 ${workerLane} packet`}
-            >
-              {workerCopiedMap[workerLane] ? (
-                <>
-                  <Check className="h-3 w-3 text-green-600" />
-                  <span className="text-green-600">已复制</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3 w-3" />
-                  <span>复制</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Packet preview text */}
-          <div className="px-3 pb-3 pt-2">
-            <pre className="rounded-md border bg-background p-2 text-[11px] leading-relaxed whitespace-pre-wrap break-words font-mono text-muted-foreground max-h-64 overflow-y-auto">
-              {buildWorkerPacket(workerLane, result.topic, result.task_intent || '(未指定)', taskPreviewResult, result)}
-            </pre>
-          </div>
-
-          <div className="mx-3 mb-3 rounded-md border bg-background p-3 space-y-3 text-xs">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <div className="font-medium">执行反馈回流</div>
-                <div className="text-[11px] text-muted-foreground">
-                  手工粘贴 worker 结果，生成 inspect-only execution feedback preview
-                </div>
-              </div>
-              {executionFeedbackResult && (
-                <button
-                  type="button"
-                  onClick={copyExecutionFeedbackPacket}
-                  className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
-                >
-                  {executionFeedbackCopied ? (
-                    <>
-                      <Check className="h-3 w-3 text-green-600" />
-                      <span className="text-green-600">已复制</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-3 w-3" />
-                      <span>复制反馈包</span>
-                    </>
-                  )}
-                </button>
-              )}
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-[160px_1fr]">
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">执行状态提示</label>
-                <select
-                  value={executionStatusHint}
-                  onChange={(e) => setExecutionStatusHint(e.target.value)}
-                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="neutral">neutral</option>
-                  <option value="accept">accept</option>
-                  <option value="accept_with_changes">accept_with_changes</option>
-                  <option value="reject">reject</option>
-                  <option value="blocked">blocked</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">worker 执行反馈 *</label>
-                <textarea
-                  value={executionFeedbackText}
-                  onChange={(e) => setExecutionFeedbackText(e.target.value)}
-                  placeholder="粘贴 coding / review / test 的结果摘要..."
-                  rows={5}
-                  className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            </div>
-
-            <ExecutionFeedbackProvenanceInputs
-              workerRunId={workerRunId}
-              workerProvider={workerProvider}
-              workerModel={workerModel}
-              workerArtifactRef={workerArtifactRef}
-              onWorkerRunIdChange={setWorkerRunId}
-              onWorkerProviderChange={setWorkerProvider}
-              onWorkerModelChange={setWorkerModel}
-              onWorkerArtifactRefChange={setWorkerArtifactRef}
-            />
-
-            <button
-              type="button"
-              onClick={requestExecutionFeedbackInspect}
-              disabled={executionFeedbackLoading || !executionFeedbackText.trim()}
-              className="inline-flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-50"
-            >
-              {executionFeedbackLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              探测执行反馈
-            </button>
-
-            {executionFeedbackError && (
-              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                {executionFeedbackError}
-              </div>
-            )}
-
-            {executionFeedbackResult && (
-              <div className="space-y-2">
-                <div className="rounded-md border bg-muted/30 px-3 py-2">
-                  <div className="font-medium">反馈摘要</div>
-                  <div className="mt-1 text-muted-foreground">
-                    {executionFeedbackResult.feedback_summary || '(无摘要)'}
-                  </div>
-                </div>
-
-                <ExecutionFeedbackProvenanceDisplay provenance={executionFeedbackResult.provenance} />
-
-                <div className="grid gap-2 md:grid-cols-2">
-                  <div className="rounded-md border bg-muted/20 px-3 py-2">
-                    <div className="font-medium">建议下一步</div>
-                    <div className="mt-1 text-muted-foreground">
-                      {executionFeedbackResult.operational_advice?.suggested_next_step || 'no_action'}
-                    </div>
-                  </div>
-                  <div className="rounded-md border bg-muted/20 px-3 py-2">
-                    <div className="font-medium">反馈意图</div>
-                    <div className="mt-1 text-muted-foreground">
-                      {executionFeedbackResult.feedback_intent}
-                    </div>
-                  </div>
-                </div>
-
-                {executionFeedbackResult.knowledge_delta_candidates.length > 0 && (
-                  <div className="rounded-md border bg-background px-3 py-2">
-                    <div className="mb-2 font-medium">知识反馈候选</div>
-                    <div className="flex flex-wrap gap-1">
-                      {executionFeedbackResult.knowledge_delta_candidates.map((d, i) => (
-                        <span key={i} className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">
-                          [{d.delta_type}] {d.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {executionFeedbackResult.evolution_trigger_candidates.length > 0 && (
-                  <div className="rounded-md border bg-background px-3 py-2">
-                    <div className="mb-2 font-medium">进化反馈候选</div>
-                    <div className="flex flex-wrap gap-1">
-                      {executionFeedbackResult.evolution_trigger_candidates.map((t, i) => (
-                        <span key={i} className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-700">
-                          [{t.trigger_type}] {t.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Results */}
       {result && (

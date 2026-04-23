@@ -2775,3 +2775,13 @@ Current `R1-A2` note:
     - worker-packet bridge section
     - execution-feedback section
   - no new bridge semantics were introduced
+
+## 2026-04-23 Frontend Section Decomposition
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_FRONTEND_SECTION_DECOMPOSITION_RESULT_2026-04-23.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_FRONTEND_SECTION_DECOMPOSITION_RESULT_2026-04-23.md)
+- current controller judgment:
+  - the three main manual flywheel UI lanes are now explicit bounded sections
+  - `flywheel-inspect-panel.tsx` is now substantially thinner and acts more like an orchestrator
+  - this is the first point where the runtime surface is visibly organized around the loop itself
+  - next checkpoint can evaluate whether this is sufficient for a phase-level milestone review

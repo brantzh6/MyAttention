@@ -3566,5 +3566,13 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
     - `services/web/components/evolution/flywheel-packet-builders.ts`
     - `services/web/components/evolution/clipboard.ts`
   - `flywheel-inspect-panel.tsx` reduced from about 65 KB to about 51 KB
+- completed frontend section decomposition:
+  - result:
+    `docs/IKE_FLYWHEEL_FRONTEND_SECTION_DECOMPOSITION_RESULT_2026-04-23.md`
+  - extracted:
+    - `services/web/components/evolution/task-preview-section.tsx`
+    - `services/web/components/evolution/worker-packet-bridge-section.tsx`
+    - `services/web/components/evolution/execution-feedback-section.tsx`
+  - `flywheel-inspect-panel.tsx` reduced further to about 38 KB
   - backend tests still pass
-  - Next.js build reached compile/type/lint successfully, but final SWC/static-worker stage failed on this machine because the Windows paging file is too small
+  - Next.js production build now completes successfully

@@ -251,6 +251,9 @@ export interface FlywheelWorkerProvenance {
   worker_artifact_ref: string
   provenance_source: string
   verified: boolean
+  completeness_status: string
+  provided_fields: string[]
+  missing_fields: string[]
 }
 
 export interface FlywheelExecutionFeedbackInspectResponse {

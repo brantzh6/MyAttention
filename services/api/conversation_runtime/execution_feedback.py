@@ -30,6 +30,13 @@ from feeds.ai_judgment import (
     parse_ai_judgment_payload,
 )
 
+REQUIRED_PROVENANCE_FIELDS = (
+    "worker_run_id",
+    "worker_provider",
+    "worker_model",
+    "worker_artifact_ref",
+)
+
 
 def _execution_feedback_truth_boundary() -> List[str]:
     return [
@@ -40,7 +47,29 @@ def _execution_feedback_truth_boundary() -> List[str]:
         "promotion state is fixed to inspect_only; no automatic promotion",
         "worker provenance is caller-provided and not verified by this endpoint",
         "provenance fields (worker_run_id, worker_provider, worker_model, worker_artifact_ref) are inspect-only context",
+        "provenance completeness indicates observability quality only, not truth quality",
     ]
+
+
+def _derive_provenance_completeness(
+    body: FlywheelExecutionFeedbackInspectRequest,
+) -> tuple[str, List[str], List[str]]:
+    values = {
+        "worker_run_id": body.worker_run_id.strip(),
+        "worker_provider": body.worker_provider.strip(),
+        "worker_model": body.worker_model.strip(),
+        "worker_artifact_ref": body.worker_artifact_ref.strip(),
+    }
+    provided_fields = [field for field, value in values.items() if value]
+    missing_fields = [field for field in REQUIRED_PROVENANCE_FIELDS if field not in provided_fields]
+
+    if len(provided_fields) == len(REQUIRED_PROVENANCE_FIELDS):
+        status = "complete"
+    elif provided_fields:
+        status = "partial"
+    else:
+        status = "missing"
+    return status, provided_fields, missing_fields
 
 
 def _build_execution_feedback_prompt(
@@ -130,6 +159,7 @@ def _build_execution_feedback_controller_packet(
     knowledge_deltas: List[KnowledgeDeltaCandidate],
     evolution_triggers: List[EvolutionTriggerCandidate],
     operational_advice: ConversationOperationalAdvice,
+    provenance_completeness: str,
 ) -> ConversationControllerPacket:
     reason_tags: List[str] = []
     if knowledge_deltas:
@@ -140,6 +170,7 @@ def _build_execution_feedback_controller_packet(
         reason_tags.append("manual_review_required")
     if not reason_tags:
         reason_tags.append("no_action")
+    reason_tags.append(f"provenance_{provenance_completeness}")
     return ConversationControllerPacket(
         review_mode=operational_advice.suggested_next_step,
         actionable_source_object_keys=[],
@@ -182,10 +213,14 @@ async def run_execution_feedback_inspect(
         evolution_triggers=evolution_triggers,
         feedback_intent=feedback_intent,
     )
+    provenance_completeness, provided_fields, missing_fields = _derive_provenance_completeness(
+        body
+    )
     controller_packet = _build_execution_feedback_controller_packet(
         knowledge_deltas=knowledge_deltas,
         evolution_triggers=evolution_triggers,
         operational_advice=operational_advice,
+        provenance_completeness=provenance_completeness,
     )
 
     # Build caller-provided provenance (inspect-only, not verified)
@@ -196,6 +231,9 @@ async def run_execution_feedback_inspect(
         worker_artifact_ref=body.worker_artifact_ref,
         provenance_source="caller_provided",
         verified=False,
+        completeness_status=provenance_completeness,
+        provided_fields=provided_fields,
+        missing_fields=missing_fields,
     )
 
     notes = [
@@ -207,7 +245,12 @@ async def run_execution_feedback_inspect(
         f"evolution_trigger_candidates={len(evolution_triggers)}",
         f"provenance_source=caller_provided",
         f"provenance_verified=false",
+        f"provenance_completeness={provenance_completeness}",
     ]
+    if provided_fields:
+        notes.append(f"provenance_provided_fields={','.join(provided_fields)}")
+    if missing_fields:
+        notes.append(f"provenance_missing_fields={','.join(missing_fields)}")
 
     truth_boundary = flywheel_truth_boundary()
     truth_boundary.extend(_execution_feedback_truth_boundary())

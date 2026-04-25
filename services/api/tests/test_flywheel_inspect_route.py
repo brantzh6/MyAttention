@@ -878,15 +878,28 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertEqual(data["provenance"]["worker_artifact_ref"], "artifact-ref-xyz")
         self.assertEqual(data["provenance"]["provenance_source"], "caller_provided")
         self.assertEqual(data["provenance"]["verified"], False)
+        self.assertEqual(data["provenance"]["completeness_status"], "complete")
+        self.assertEqual(
+            data["provenance"]["provided_fields"],
+            ["worker_run_id", "worker_provider", "worker_model", "worker_artifact_ref"],
+        )
+        self.assertEqual(data["provenance"]["missing_fields"], [])
 
         # Verify notes indicate unverified provenance
         self.assertIn("provenance_source=caller_provided", data["notes"])
         self.assertIn("provenance_verified=false", data["notes"])
+        self.assertIn("provenance_completeness=complete", data["notes"])
+        self.assertIn(
+            "provenance_provided_fields=worker_run_id,worker_provider,worker_model,worker_artifact_ref",
+            data["notes"],
+        )
+        self.assertIn("provenance_complete", data["controller_packet"]["reason_tags"])
 
         # Verify truth boundary includes provenance disclaimer
         truth_text = " ".join(data["truth_boundary"]).lower()
         self.assertIn("caller-provided", truth_text)
         self.assertIn("not verified by this endpoint", truth_text)
+        self.assertIn("observability quality", truth_text)
 
         self.assertEqual(data["promotion_state"], "inspect_only")
 
@@ -936,10 +949,22 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertEqual(data["provenance"]["worker_artifact_ref"], "")
         self.assertEqual(data["provenance"]["provenance_source"], "caller_provided")
         self.assertEqual(data["provenance"]["verified"], False)
+        self.assertEqual(data["provenance"]["completeness_status"], "missing")
+        self.assertEqual(data["provenance"]["provided_fields"], [])
+        self.assertEqual(
+            data["provenance"]["missing_fields"],
+            ["worker_run_id", "worker_provider", "worker_model", "worker_artifact_ref"],
+        )
 
         # Notes still indicate provenance source
         self.assertIn("provenance_source=caller_provided", data["notes"])
         self.assertIn("provenance_verified=false", data["notes"])
+        self.assertIn("provenance_completeness=missing", data["notes"])
+        self.assertIn(
+            "provenance_missing_fields=worker_run_id,worker_provider,worker_model,worker_artifact_ref",
+            data["notes"],
+        )
+        self.assertIn("provenance_missing", data["controller_packet"]["reason_tags"])
 
         self.assertEqual(data["promotion_state"], "inspect_only")
 

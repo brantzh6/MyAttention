@@ -312,6 +312,9 @@ class WorkerProvenance(BaseModel):
     worker_artifact_ref: str = ""
     provenance_source: str = "caller_provided"
     verified: bool = False
+    completeness_status: str = "missing"
+    provided_fields: List[str] = []
+    missing_fields: List[str] = []
 
 
 class FlywheelExecutionFeedbackInspectResponse(BaseModel):

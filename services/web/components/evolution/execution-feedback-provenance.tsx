@@ -88,6 +88,13 @@ export function ExecutionFeedbackProvenanceDisplay({
 }) {
   if (!hasProvenanceValue(provenance)) return null
 
+  const completenessTone =
+    provenance.completeness_status === 'complete'
+      ? 'bg-green-100 text-green-700'
+      : provenance.completeness_status === 'partial'
+      ? 'bg-amber-100 text-amber-700'
+      : 'bg-red-100 text-red-700'
+
   return (
     <div className="rounded-md border border-dashed bg-amber-50/30 px-3 py-2">
       <div className="mb-1.5 flex items-center gap-2">
@@ -95,7 +102,15 @@ export function ExecutionFeedbackProvenanceDisplay({
         <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">
           inspect-only / caller-provided / unverified
         </span>
+        <span className={`rounded px-1.5 py-0.5 text-[10px] ${completenessTone}`}>
+          completeness: {provenance.completeness_status}
+        </span>
       </div>
+      {provenance.missing_fields.length > 0 && (
+        <div className="mb-2 text-[11px] text-muted-foreground">
+          missing: {provenance.missing_fields.join(', ')}
+        </div>
+      )}
       <div className="grid gap-1.5 text-xs md:grid-cols-4">
         {provenance.worker_run_id && (
           <div className="text-muted-foreground">

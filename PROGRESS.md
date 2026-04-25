@@ -3576,3 +3576,13 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - `flywheel-inspect-panel.tsx` reduced further to about 38 KB
   - backend tests still pass
   - Next.js production build now completes successfully
+- absorbed frontend section decomposition review:
+  - absorption:
+    `docs/IKE_FLYWHEEL_FRONTEND_SECTION_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-25.md`
+  - review convergence:
+    - Claude `accept`
+    - Gemini `accept_with_changes`
+    - ChatGPT review discarded for this node because it returned stale backend content
+  - controller judgment: `accept_with_changes`
+  - accepted as a phase-level checkpoint for the flywheel runtime surface
+  - next mainline target: flywheel runtime state convergence

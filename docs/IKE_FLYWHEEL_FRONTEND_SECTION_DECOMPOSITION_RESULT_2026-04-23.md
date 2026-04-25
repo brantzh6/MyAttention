@@ -66,3 +66,23 @@ success
 `accept_with_changes`
 
 Accept this as frontend section decomposition. The next checkpoint should judge whether the flywheel runtime surface is now clear enough for a phase-level milestone review.
+
+---
+
+## Review Absorption
+
+Absorption doc:
+
+- [D:\code\MyAttention\docs\IKE_FLYWHEEL_FRONTEND_SECTION_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-25.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_FRONTEND_SECTION_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-25.md)
+
+Review convergence:
+
+- Claude: `accept`
+- ChatGPT: `not_applicable` for this node because the returned content was a stale backend review
+- Gemini: `accept_with_changes`
+
+Controller judgment: `accept_with_changes`.
+
+Accepted as: a phase-level checkpoint for the flywheel runtime surface.
+
+Required next phase: state convergence, not new bridge capability.

@@ -2785,3 +2785,13 @@ Current `R1-A2` note:
   - `flywheel-inspect-panel.tsx` is now substantially thinner and acts more like an orchestrator
   - this is the first point where the runtime surface is visibly organized around the loop itself
   - next checkpoint can evaluate whether this is sufficient for a phase-level milestone review
+
+## 2026-04-25 Frontend Checkpoint Review Absorbed
+
+- absorption:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_FRONTEND_SECTION_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-25.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_FRONTEND_SECTION_DECOMPOSITION_REVIEW_ABSORPTION_2026-04-25.md)
+- controller judgment:
+  - accepted with changes as a phase-level checkpoint
+  - current runtime surface is clear enough for phase review
+  - next implementation target is state convergence, not more bridge semantics
+  - keep upstream manual review / absorption / decision surfaces as secondary extraction work after state convergence

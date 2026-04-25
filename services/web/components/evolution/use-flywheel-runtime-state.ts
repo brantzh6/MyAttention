@@ -17,7 +17,7 @@ type CopyFlagKey =
   | 'taskPreviewCopied'
   | 'executionFeedbackCopied'
 
-type StringFieldKey =
+export type StringFieldKey =
   | 'conversationText'
   | 'topic'
   | 'taskIntent'
@@ -31,7 +31,7 @@ type StringFieldKey =
   | 'workerModel'
   | 'workerArtifactRef'
 
-type SelectionFamily = 'knowledge' | 'triggers' | 'sources'
+export type SelectionFamily = 'knowledge' | 'triggers' | 'sources'
 
 export type FlywheelRuntimeState = {
   conversationText: string

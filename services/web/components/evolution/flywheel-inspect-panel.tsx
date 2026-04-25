@@ -1,27 +1,30 @@
 'use client'
 
 import { Loader2, AlertTriangle, BrainCircuit, Copy, Check } from 'lucide-react'
-import { apiClient } from '@/lib/api-client'
-import { copyTextToClipboard } from './clipboard'
 import { CollapsibleSection } from './collapsible-section'
 import { ExecutionFeedbackSection } from './execution-feedback-section'
 import { WorkerPacketBridgeSection } from './worker-packet-bridge-section'
 import { TaskPreviewSection } from './task-preview-section'
-import {
-  useFlywheelRuntimeState,
-  type SectionKey,
-} from './use-flywheel-runtime-state'
-import {
-  buildAbsorptionPacket,
-  buildDecisionPacket,
-  buildExecutionFeedbackPacket,
-  buildReviewPacket,
-  buildTaskPreviewPacket,
-  buildWorkerPacket,
-  type WorkerLane,
-} from './flywheel-packet-builders'
+import { useFlywheelRuntimeController } from './use-flywheel-runtime-controller'
 export function FlywheelInspectPanel() {
-  const { state, dispatch } = useFlywheelRuntimeState()
+  const {
+    state,
+    selectedPreviewCount,
+    hasAnyAbsorptionSelection,
+    isSectionOpen,
+    handleSubmit,
+    toggleSelect,
+    setField,
+    setWorkerLane,
+    copyReviewPacket,
+    copyAbsorptionPacket,
+    copyDecisionPacket,
+    requestTaskPreview,
+    copyTaskPreviewPacket,
+    copyWorkerPacket,
+    requestExecutionFeedbackInspect,
+    copyExecutionFeedbackPacket,
+  } = useFlywheelRuntimeController()
   const {
     conversationText,
     topic,
@@ -31,7 +34,6 @@ export function FlywheelInspectPanel() {
     loading,
     error,
     result,
-    openSections,
     copied,
     selectedKnowledge,
     selectedTriggers,
@@ -56,204 +58,6 @@ export function FlywheelInspectPanel() {
     workerModel,
     workerArtifactRef,
   } = state
-  const selectedPreviewCount =
-    selectedKnowledge.size + selectedTriggers.size + selectedSources.size
-
-  const handleSubmit = async () => {
-    if (!conversationText.trim() || !topic.trim()) return
-    dispatch({ type: 'startInspect' })
-    try {
-      const data = await apiClient.inspectFlywheel({
-        conversation_text: conversationText.trim(),
-        topic: topic.trim(),
-        task_intent: taskIntent.trim() || undefined,
-        provider: provider.trim() || 'qwen',
-        model: model.trim() || undefined,
-      })
-      dispatch({ type: 'inspectSuccess', result: data })
-    } catch (e) {
-      dispatch({ type: 'inspectError', error: e instanceof Error ? e.message : '????' })
-    }
-  }
-
-  const toggleSection = (key: SectionKey) => {
-    dispatch({ type: 'toggleSection', key })
-  }
-
-  const copyReviewPacket = async () => {
-    if (!result) return
-    const text = buildReviewPacket(result)
-    await copyTextToClipboard(text)
-    dispatch({ type: 'setCopyFlag', key: 'copied', value: true })
-    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'copied', value: false }), 1500)
-  }
-
-  const copyAbsorptionPacket = async () => {
-    if (!result) return
-    const safeKnowledge = Array.from(selectedKnowledge).filter(
-      (i) => i >= 0 && i < result.knowledge_delta_candidates.length,
-    )
-    const safeTriggers = Array.from(selectedTriggers).filter(
-      (i) => i >= 0 && i < result.evolution_trigger_candidates.length,
-    )
-    const safeSources = Array.from(selectedSources).filter(
-      (i) => i >= 0 && i < result.source_candidates.length,
-    )
-    const text = buildAbsorptionPacket({
-      topic: result.topic,
-      taskIntent: result.task_intent || '(未指定)',
-      selectedKnowledge: safeKnowledge.map((i) => {
-        const d = result.knowledge_delta_candidates[i]
-        return `[${d.delta_type}] ${d.label}`
-      }),
-      selectedTriggers: safeTriggers.map((i) => {
-        const t = result.evolution_trigger_candidates[i]
-        return `[${t.trigger_type}] ${t.label}`
-      }),
-      selectedSources: safeSources.map((i) => {
-        const s = result.source_candidates[i]
-        return s.name || s.id || '未命名'
-      }),
-      suggestedNextStep: result.operational_advice?.suggested_next_step !== 'no_action'
-        ? (result.operational_advice?.suggested_next_step || '无')
-        : '无',
-      reasonTags: result.controller_packet?.reason_tags || [],
-      reviewerNote,
-    })
-    await copyTextToClipboard(text)
-    dispatch({ type: 'setCopyFlag', key: 'absorptionCopied', value: true })
-    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'absorptionCopied', value: false }), 1500)
-  }
-
-  const copyDecisionPacket = async () => {
-    if (!result) return
-    const safeKnowledge = Array.from(selectedKnowledge).filter(
-      (i) => i >= 0 && i < result.knowledge_delta_candidates.length,
-    )
-    const safeTriggers = Array.from(selectedTriggers).filter(
-      (i) => i >= 0 && i < result.evolution_trigger_candidates.length,
-    )
-    const safeSources = Array.from(selectedSources).filter(
-      (i) => i >= 0 && i < result.source_candidates.length,
-    )
-    const text = buildDecisionPacket({
-      topic: result.topic,
-      taskIntent: result.task_intent || '(未指定)',
-      selectedKnowledge: safeKnowledge.map((i) => {
-        const d = result.knowledge_delta_candidates[i]
-        return d ? `[${d.delta_type}] ${d.label}` : ''
-      }).filter(Boolean),
-      selectedTriggers: safeTriggers.map((i) => {
-        const t = result.evolution_trigger_candidates[i]
-        return t ? `[${t.trigger_type}] ${t.label}` : ''
-      }).filter(Boolean),
-      selectedSources: safeSources.map((i) => {
-        const s = result.source_candidates[i]
-        return s ? (s.name || s.id || '未命名') : ''
-      }).filter(Boolean),
-      suggestedNextStep: result.operational_advice?.suggested_next_step !== 'no_action'
-        ? (result.operational_advice?.suggested_next_step || '无')
-        : '无',
-      reasonTags: result.controller_packet?.reason_tags || [],
-      reviewerNote,
-    })
-    await copyTextToClipboard(text)
-    dispatch({ type: 'setCopyFlag', key: 'decisionCopied', value: true })
-    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'decisionCopied', value: false }), 1500)
-  }
-
-  const requestTaskPreview = async () => {
-    if (!result) return
-    dispatch({ type: 'startTaskPreview' })
-    try {
-      const safeKnowledge = Array.from(selectedKnowledge).filter(
-        (i) => i >= 0 && i < result.knowledge_delta_candidates.length,
-      )
-      const safeTriggers = Array.from(selectedTriggers).filter(
-        (i) => i >= 0 && i < result.evolution_trigger_candidates.length,
-      )
-      const safeSources = Array.from(selectedSources).filter(
-        (i) => i >= 0 && i < result.source_candidates.length,
-      )
-      const data = await apiClient.previewTaskPacket({
-        topic: result.topic.trim(),
-        task_intent: (result.task_intent || '').trim() || 'manual decision preview',
-        selected_knowledge_labels: safeKnowledge.map((i) => {
-          const d = result.knowledge_delta_candidates[i]
-          return d ? `[${d.delta_type}] ${d.label}` : ''
-        }).filter(Boolean),
-        selected_evolution_labels: safeTriggers.map((i) => {
-          const t = result.evolution_trigger_candidates[i]
-          return t ? `[${t.trigger_type}] ${t.label}` : ''
-        }).filter(Boolean),
-        selected_source_labels: safeSources.map((i) => {
-          const s = result.source_candidates[i]
-          return s ? (s.name || s.id || '???') : ''
-        }).filter(Boolean),
-        reviewer_note: reviewerNote.trim() || undefined,
-        explicit_non_canonical: true,
-      })
-      dispatch({ type: 'taskPreviewSuccess', result: data })
-    } catch (e) {
-      dispatch({ type: 'taskPreviewError', error: e instanceof Error ? e.message : '??????' })
-    }
-  }
-
-  const copyTaskPreviewPacket = async () => {
-    if (!taskPreviewResult) return
-    const text = buildTaskPreviewPacket(taskPreviewResult)
-    await copyTextToClipboard(text)
-    dispatch({ type: 'setCopyFlag', key: 'taskPreviewCopied', value: true })
-    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'taskPreviewCopied', value: false }), 1500)
-  }
-
-  const copyWorkerPacket = async (lane: WorkerLane) => {
-    if (!taskPreviewResult || !result) return
-    const text = buildWorkerPacket(lane, result.topic, result.task_intent || '(未指定)', taskPreviewResult, result)
-    await copyTextToClipboard(text)
-    dispatch({ type: 'setWorkerCopied', lane, value: true })
-    setTimeout(() => dispatch({ type: 'setWorkerCopied', lane, value: false }), 1500)
-  }
-
-  const requestExecutionFeedbackInspect = async () => {
-    if (!taskPreviewResult || !result || !executionFeedbackText.trim()) return
-    dispatch({ type: 'startExecutionFeedback' })
-    try {
-      const data = await apiClient.inspectExecutionFeedback({
-        topic: result.topic.trim(),
-        task_intent: (result.task_intent || '').trim() || 'manual execution feedback',
-        worker_lane: workerLane,
-        task_packet_summary: taskPreviewResult.task_packet_summary,
-        execution_feedback_text: executionFeedbackText.trim(),
-        execution_status_hint: executionStatusHint,
-        provider: provider.trim() || 'qwen',
-        model: model.trim() || undefined,
-        worker_run_id: workerRunId.trim() || undefined,
-        worker_provider: workerProvider.trim() || undefined,
-        worker_model: workerModel.trim() || undefined,
-        worker_artifact_ref: workerArtifactRef.trim() || undefined,
-      })
-      dispatch({ type: 'executionFeedbackSuccess', result: data })
-    } catch (e) {
-      dispatch({ type: 'executionFeedbackError', error: e instanceof Error ? e.message : '????????' })
-    }
-  }
-
-  const copyExecutionFeedbackPacket = async () => {
-    if (!executionFeedbackResult || !taskPreviewResult) return
-    const text = buildExecutionFeedbackPacket(executionFeedbackResult, taskPreviewResult.task_packet_summary)
-    await copyTextToClipboard(text)
-    dispatch({ type: 'setCopyFlag', key: 'executionFeedbackCopied', value: true })
-    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'executionFeedbackCopied', value: false }), 1500)
-  }
-
-  const toggleSelect = (family: 'knowledge' | 'triggers' | 'sources', index: number) => {
-    dispatch({ type: 'toggleSelection', family, index })
-  }
-
-  const isSectionOpen = (key: SectionKey) => openSections.has(key)
-
-  const hasAnyAbsorptionSelection = selectedKnowledge.size > 0 || selectedTriggers.size > 0 || selectedSources.size > 0
 
   return (
     <div className="rounded-2xl border bg-card p-6 shadow-sm">
@@ -268,7 +72,7 @@ export function FlywheelInspectPanel() {
           <label className="text-xs text-muted-foreground mb-1 block">对话内容 *</label>
           <textarea
             value={conversationText}
-            onChange={e => dispatch({ type: 'setStringField', field: 'conversationText', value: e.target.value })}
+            onChange={e => setField('conversationText', e.target.value)}
             placeholder="粘贴一段对话文本..."
             rows={4}
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
@@ -280,7 +84,7 @@ export function FlywheelInspectPanel() {
             <label className="text-xs text-muted-foreground mb-1 block">主题 *</label>
             <input
               value={topic}
-              onChange={e => dispatch({ type: 'setStringField', field: 'topic', value: e.target.value })}
+              onChange={e => setField('topic', e.target.value)}
               placeholder="如：source intelligence"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -289,7 +93,7 @@ export function FlywheelInspectPanel() {
             <label className="text-xs text-muted-foreground mb-1 block">任务意图</label>
             <input
               value={taskIntent}
-              onChange={e => dispatch({ type: 'setStringField', field: 'taskIntent', value: e.target.value })}
+              onChange={e => setField('taskIntent', e.target.value)}
               placeholder="如：研究新来源"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -301,7 +105,7 @@ export function FlywheelInspectPanel() {
             <label className="text-xs text-muted-foreground mb-1 block">Provider</label>
             <input
               value={provider}
-              onChange={e => dispatch({ type: 'setStringField', field: 'provider', value: e.target.value })}
+              onChange={e => setField('provider', e.target.value)}
               placeholder="qwen"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -310,7 +114,7 @@ export function FlywheelInspectPanel() {
             <label className="text-xs text-muted-foreground mb-1 block">Model</label>
             <input
               value={model}
-              onChange={e => dispatch({ type: 'setStringField', field: 'model', value: e.target.value })}
+              onChange={e => setField('model', e.target.value)}
               placeholder="留空使用默认模型"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -540,7 +344,7 @@ export function FlywheelInspectPanel() {
             <label className="text-[11px] font-medium text-muted-foreground mb-1 block">审查备注</label>
             <textarea
               value={reviewerNote}
-              onChange={e => dispatch({ type: 'setStringField', field: 'reviewerNote', value: e.target.value })}
+              onChange={e => setField('reviewerNote', e.target.value)}
               placeholder="简短备注（可选）..."
               rows={2}
               maxLength={500}
@@ -655,23 +459,23 @@ export function FlywheelInspectPanel() {
     result={result}
     taskPreviewResult={taskPreviewResult}
     workerLane={workerLane}
-    onWorkerLaneChange={(lane) => dispatch({ type: 'setWorkerLane', lane })}
+    onWorkerLaneChange={setWorkerLane}
     onCopyWorkerPacket={copyWorkerPacket}
     workerCopiedMap={workerCopiedMap}
     executionFeedbackSection={
       <ExecutionFeedbackSection
         executionStatusHint={executionStatusHint}
-        onExecutionStatusHintChange={(value) => dispatch({ type: 'setStringField', field: 'executionStatusHint', value })}
+        onExecutionStatusHintChange={(value) => setField('executionStatusHint', value)}
         executionFeedbackText={executionFeedbackText}
-        onExecutionFeedbackTextChange={(value) => dispatch({ type: 'setStringField', field: 'executionFeedbackText', value })}
+        onExecutionFeedbackTextChange={(value) => setField('executionFeedbackText', value)}
         workerRunId={workerRunId}
         workerProvider={workerProvider}
         workerModel={workerModel}
         workerArtifactRef={workerArtifactRef}
-        onWorkerRunIdChange={(value) => dispatch({ type: 'setStringField', field: 'workerRunId', value })}
-        onWorkerProviderChange={(value) => dispatch({ type: 'setStringField', field: 'workerProvider', value })}
-        onWorkerModelChange={(value) => dispatch({ type: 'setStringField', field: 'workerModel', value })}
-        onWorkerArtifactRefChange={(value) => dispatch({ type: 'setStringField', field: 'workerArtifactRef', value })}
+        onWorkerRunIdChange={(value) => setField('workerRunId', value)}
+        onWorkerProviderChange={(value) => setField('workerProvider', value)}
+        onWorkerModelChange={(value) => setField('workerModel', value)}
+        onWorkerArtifactRefChange={(value) => setField('workerArtifactRef', value)}
         executionFeedbackLoading={executionFeedbackLoading}
         executionFeedbackError={executionFeedbackError}
         executionFeedbackResult={executionFeedbackResult}

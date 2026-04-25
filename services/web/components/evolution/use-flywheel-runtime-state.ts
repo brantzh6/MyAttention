@@ -16,6 +16,7 @@ type CopyFlagKey =
   | 'decisionCopied'
   | 'taskPreviewCopied'
   | 'executionFeedbackCopied'
+  | 'loopPacketCopied'
 
 export type StringFieldKey =
   | 'conversationText'
@@ -54,6 +55,7 @@ export type FlywheelRuntimeState = {
   taskPreviewResult: TaskPacketPreviewResponse | null
   taskPreviewError: string | null
   taskPreviewCopied: boolean
+  loopPacketCopied: boolean
   workerLane: WorkerLane
   workerCopiedMap: Record<WorkerLane, boolean>
   executionFeedbackText: string
@@ -106,6 +108,7 @@ const initialState: FlywheelRuntimeState = {
   taskPreviewResult: null,
   taskPreviewError: null,
   taskPreviewCopied: false,
+  loopPacketCopied: false,
   workerLane: 'coding',
   workerCopiedMap: { coding: false, review: false, test: false },
   executionFeedbackText: '',
@@ -167,6 +170,7 @@ function reducer(state: FlywheelRuntimeState, action: Action): FlywheelRuntimeSt
         taskPreviewResult: null,
         taskPreviewError: null,
         taskPreviewCopied: false,
+        loopPacketCopied: false,
         workerLane: 'coding',
         workerCopiedMap: { coding: false, review: false, test: false },
         executionFeedbackText: '',

@@ -25,6 +25,7 @@ export function FlywheelInspectPanel() {
     requestTaskPreview,
     copyTaskPreviewPacket,
     copyWorkerPacket,
+    copyLoopPacket,
     requestExecutionFeedbackInspect,
     copyExecutionFeedbackPacket,
   } = useFlywheelRuntimeController()
@@ -48,6 +49,7 @@ export function FlywheelInspectPanel() {
     taskPreviewResult,
     taskPreviewError,
     taskPreviewCopied,
+    loopPacketCopied,
     workerLane,
     workerCopiedMap,
     executionFeedbackText,
@@ -207,7 +209,9 @@ export function FlywheelInspectPanel() {
           workerLane={workerLane}
           onWorkerLaneChange={setWorkerLane}
           onCopyWorkerPacket={copyWorkerPacket}
+          onCopyLoopPacket={copyLoopPacket}
           workerCopiedMap={workerCopiedMap}
+          loopPacketCopied={loopPacketCopied}
           executionFeedbackSection={
             <ExecutionFeedbackSection
               executionStatusHint={executionStatusHint}

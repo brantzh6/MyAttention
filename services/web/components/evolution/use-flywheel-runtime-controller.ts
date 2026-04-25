@@ -6,6 +6,7 @@ import {
   buildAbsorptionPacket,
   buildDecisionPacket,
   buildExecutionFeedbackPacket,
+  buildLoopPacket,
   buildReviewPacket,
   buildTaskPreviewPacket,
   buildWorkerPacket,
@@ -33,7 +34,15 @@ export function useFlywheelRuntimeController() {
 
   const isSectionOpen = (key: SectionKey) => state.openSections.has(key)
 
-  const resetCopyFlag = (key: 'copied' | 'absorptionCopied' | 'decisionCopied' | 'taskPreviewCopied' | 'executionFeedbackCopied') => {
+  const resetCopyFlag = (
+    key:
+      | 'copied'
+      | 'absorptionCopied'
+      | 'decisionCopied'
+      | 'taskPreviewCopied'
+      | 'executionFeedbackCopied'
+      | 'loopPacketCopied',
+  ) => {
     setTimeout(() => dispatch({ type: 'setCopyFlag', key, value: false }), COPY_RESET_DELAY_MS)
   }
 
@@ -226,6 +235,21 @@ export function useFlywheelRuntimeController() {
     resetWorkerCopied(lane)
   }
 
+  const copyLoopPacket = async () => {
+    if (!state.taskPreviewResult || !state.result) return
+    await copyTextToClipboard(
+      buildLoopPacket(
+        state.workerLane,
+        state.result.topic,
+        state.result.task_intent || '(未指定)',
+        state.taskPreviewResult,
+        state.result,
+      ),
+    )
+    dispatch({ type: 'setCopyFlag', key: 'loopPacketCopied', value: true })
+    resetCopyFlag('loopPacketCopied')
+  }
+
   const requestExecutionFeedbackInspect = async () => {
     if (!state.taskPreviewResult || !state.result || !state.executionFeedbackText.trim()) return
     dispatch({ type: 'startExecutionFeedback' })
@@ -280,6 +304,7 @@ export function useFlywheelRuntimeController() {
     requestTaskPreview,
     copyTaskPreviewPacket,
     copyWorkerPacket,
+    copyLoopPacket,
     requestExecutionFeedbackInspect,
     copyExecutionFeedbackPacket,
   }

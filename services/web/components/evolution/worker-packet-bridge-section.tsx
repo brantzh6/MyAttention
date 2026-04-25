@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { buildWorkerPacket, type WorkerLane } from './flywheel-packet-builders'
+import { LoopPacketSection } from './loop-packet-section'
 import type {
   FlywheelInspectResponse,
   TaskPacketPreviewResponse,
@@ -14,7 +15,9 @@ type WorkerPacketBridgeSectionProps = {
   workerLane: WorkerLane
   onWorkerLaneChange: (lane: WorkerLane) => void
   onCopyWorkerPacket: (lane: WorkerLane) => void
+  onCopyLoopPacket: () => void
   workerCopiedMap: Record<WorkerLane, boolean>
+  loopPacketCopied: boolean
   executionFeedbackSection: ReactNode
 }
 
@@ -24,7 +27,9 @@ export function WorkerPacketBridgeSection({
   workerLane,
   onWorkerLaneChange,
   onCopyWorkerPacket,
+  onCopyLoopPacket,
   workerCopiedMap,
+  loopPacketCopied,
   executionFeedbackSection,
 }: WorkerPacketBridgeSectionProps) {
   return (
@@ -85,6 +90,14 @@ export function WorkerPacketBridgeSection({
           )}
         </pre>
       </div>
+
+      <LoopPacketSection
+        result={result}
+        taskPreviewResult={taskPreviewResult}
+        workerLane={workerLane}
+        loopPacketCopied={loopPacketCopied}
+        onCopyLoopPacket={onCopyLoopPacket}
+      />
 
       {executionFeedbackSection}
     </div>

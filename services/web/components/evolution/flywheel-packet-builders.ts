@@ -289,6 +289,57 @@ export function buildExecutionFeedbackPacket(
   return lines.join('\n')
 }
 
+
+export function buildLoopPacket(
+  lane: WorkerLane,
+  topic: string,
+  taskIntent: string,
+  preview: TaskPacketPreviewResponse,
+  result: FlywheelInspectResponse,
+): string {
+  const lines: string[] = []
+  lines.push('=== Flywheel End-to-End Loop Packet (Manual, Inspect-Only) ===')
+  lines.push('')
+  lines.push('[loop_context]')
+  lines.push(`topic: ${topic}`)
+  lines.push(`task_intent: ${taskIntent || '(???)'}`)
+  lines.push(`worker_lane: ${lane}`)
+  lines.push(`task_packet_summary: ${preview.task_packet_summary}`)
+  lines.push(`packet_intent: ${preview.packet_intent}`)
+  lines.push(`suggested_next_step: ${preview.suggested_next_step}`)
+  lines.push('')
+  lines.push('[forward_packet]')
+  lines.push(buildWorkerPacket(lane, topic, taskIntent, preview, result))
+  lines.push('')
+  lines.push('[return_protocol]')
+  lines.push('After the worker completes, return one bounded result packet with these fields:')
+  lines.push('  - summary')
+  lines.push('  - files_changed')
+  lines.push('  - why_this_solution')
+  lines.push('  - validation_run')
+  lines.push('  - known_risks')
+  lines.push('  - recommendation')
+  lines.push('')
+  lines.push('[required_provenance_fields_for_feedback_return]')
+  lines.push('  - worker_run_id')
+  lines.push('  - worker_provider')
+  lines.push('  - worker_model')
+  lines.push('  - worker_artifact_ref')
+  lines.push('')
+  lines.push('[feedback_return_instructions]')
+  lines.push('1. Paste the worker result into the execution feedback surface.')
+  lines.push('2. Fill the provenance fields above if available.')
+  lines.push('3. Choose execution_status_hint based on the worker conclusion.')
+  lines.push('4. Run inspect-only execution feedback reflection; do not auto-promote.')
+  lines.push('')
+  lines.push('[truth_boundary]')
+  lines.push('  - this loop packet is manual and inspect-only')
+  lines.push('  - it does not create canonical truth by itself')
+  lines.push('  - worker provenance remains caller-provided unless verified elsewhere')
+  lines.push('  - execution feedback does not auto-absorb or auto-redelegate')
+  return lines.join('\n')
+}
+
 export function buildTaskPreviewPacket(preview: TaskPacketPreviewResponse): string {
   const lines: string[] = []
   lines.push('=== Task Packet Preview (Backend, Inspect-Only) ===')

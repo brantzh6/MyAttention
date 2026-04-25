@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Loader2, AlertTriangle, BrainCircuit, Copy, Check } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import { copyTextToClipboard } from './clipboard'
@@ -8,6 +7,10 @@ import { CollapsibleSection } from './collapsible-section'
 import { ExecutionFeedbackSection } from './execution-feedback-section'
 import { WorkerPacketBridgeSection } from './worker-packet-bridge-section'
 import { TaskPreviewSection } from './task-preview-section'
+import {
+  useFlywheelRuntimeState,
+  type SectionKey,
+} from './use-flywheel-runtime-state'
 import {
   buildAbsorptionPacket,
   buildDecisionPacket,
@@ -17,79 +20,48 @@ import {
   buildWorkerPacket,
   type WorkerLane,
 } from './flywheel-packet-builders'
-import type {
-  FlywheelExecutionFeedbackInspectResponse,
-  FlywheelInspectResponse,
-  TaskPacketPreviewResponse,
-} from '@/lib/api-client'
-
-type SectionKey = 'extraction' | 'knowledge' | 'triggers' | 'sources' | 'advice' | 'controller'
 export function FlywheelInspectPanel() {
-  const [conversationText, setConversationText] = useState('')
-  const [topic, setTopic] = useState('')
-  const [taskIntent, setTaskIntent] = useState('')
-  const [provider, setProvider] = useState('qwen')
-  const [model, setModel] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<FlywheelInspectResponse | null>(null)
-  const [openSections, setOpenSections] = useState<Set<SectionKey>>(new Set())
-  const [copied, setCopied] = useState(false)
-
-  // Absorption state
-  const [selectedKnowledge, setSelectedKnowledge] = useState<Set<number>>(new Set())
-  const [selectedTriggers, setSelectedTriggers] = useState<Set<number>>(new Set())
-  const [selectedSources, setSelectedSources] = useState<Set<number>>(new Set())
-  const [reviewerNote, setReviewerNote] = useState('')
-  const [absorptionCopied, setAbsorptionCopied] = useState(false)
-  const [decisionCopied, setDecisionCopied] = useState(false)
-
-  // Backend task-packet preview state
-  const [taskPreviewLoading, setTaskPreviewLoading] = useState(false)
-  const [taskPreviewResult, setTaskPreviewResult] = useState<TaskPacketPreviewResponse | null>(null)
-  const [taskPreviewError, setTaskPreviewError] = useState<string | null>(null)
-  const [taskPreviewCopied, setTaskPreviewCopied] = useState(false)
-
-  // Worker-ready packet state (derived from taskPreviewResult)
-  const [workerLane, setWorkerLane] = useState<WorkerLane>('coding')
-  const [workerCopiedMap, setWorkerCopiedMap] = useState<Record<WorkerLane, boolean>>({ coding: false, review: false, test: false })
-  const [executionFeedbackText, setExecutionFeedbackText] = useState('')
-  const [executionStatusHint, setExecutionStatusHint] = useState('neutral')
-  const [executionFeedbackLoading, setExecutionFeedbackLoading] = useState(false)
-  const [executionFeedbackError, setExecutionFeedbackError] = useState<string | null>(null)
-  const [executionFeedbackResult, setExecutionFeedbackResult] = useState<FlywheelExecutionFeedbackInspectResponse | null>(null)
-  const [executionFeedbackCopied, setExecutionFeedbackCopied] = useState(false)
-  // Caller-provided provenance fields (inspect-only, not verified)
-  const [workerRunId, setWorkerRunId] = useState('')
-  const [workerProvider, setWorkerProvider] = useState('')
-  const [workerModel, setWorkerModel] = useState('')
-  const [workerArtifactRef, setWorkerArtifactRef] = useState('')
+  const { state, dispatch } = useFlywheelRuntimeState()
+  const {
+    conversationText,
+    topic,
+    taskIntent,
+    provider,
+    model,
+    loading,
+    error,
+    result,
+    openSections,
+    copied,
+    selectedKnowledge,
+    selectedTriggers,
+    selectedSources,
+    reviewerNote,
+    absorptionCopied,
+    decisionCopied,
+    taskPreviewLoading,
+    taskPreviewResult,
+    taskPreviewError,
+    taskPreviewCopied,
+    workerLane,
+    workerCopiedMap,
+    executionFeedbackText,
+    executionStatusHint,
+    executionFeedbackLoading,
+    executionFeedbackError,
+    executionFeedbackResult,
+    executionFeedbackCopied,
+    workerRunId,
+    workerProvider,
+    workerModel,
+    workerArtifactRef,
+  } = state
   const selectedPreviewCount =
     selectedKnowledge.size + selectedTriggers.size + selectedSources.size
 
   const handleSubmit = async () => {
     if (!conversationText.trim() || !topic.trim()) return
-    setLoading(true)
-    setError(null)
-    setResult(null)
-    setSelectedKnowledge(new Set())
-    setSelectedTriggers(new Set())
-    setSelectedSources(new Set())
-    setReviewerNote('')
-    setAbsorptionCopied(false)
-    setDecisionCopied(false)
-    setTaskPreviewResult(null)
-    setTaskPreviewError(null)
-    setTaskPreviewCopied(false)
-    setExecutionFeedbackText('')
-    setExecutionStatusHint('neutral')
-    setExecutionFeedbackError(null)
-    setExecutionFeedbackResult(null)
-    setExecutionFeedbackCopied(false)
-    setWorkerRunId('')
-    setWorkerProvider('')
-    setWorkerModel('')
-    setWorkerArtifactRef('')
+    dispatch({ type: 'startInspect' })
     try {
       const data = await apiClient.inspectFlywheel({
         conversation_text: conversationText.trim(),
@@ -98,30 +70,22 @@ export function FlywheelInspectPanel() {
         provider: provider.trim() || 'qwen',
         model: model.trim() || undefined,
       })
-      setResult(data)
-      setOpenSections(new Set<SectionKey>(['extraction', 'knowledge', 'sources']))
+      dispatch({ type: 'inspectSuccess', result: data })
     } catch (e) {
-      setError(e instanceof Error ? e.message : '提交失败')
-    } finally {
-      setLoading(false)
+      dispatch({ type: 'inspectError', error: e instanceof Error ? e.message : '????' })
     }
   }
 
   const toggleSection = (key: SectionKey) => {
-    setOpenSections(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
+    dispatch({ type: 'toggleSection', key })
   }
 
   const copyReviewPacket = async () => {
     if (!result) return
     const text = buildReviewPacket(result)
     await copyTextToClipboard(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+    dispatch({ type: 'setCopyFlag', key: 'copied', value: true })
+    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'copied', value: false }), 1500)
   }
 
   const copyAbsorptionPacket = async () => {
@@ -157,8 +121,8 @@ export function FlywheelInspectPanel() {
       reviewerNote,
     })
     await copyTextToClipboard(text)
-    setAbsorptionCopied(true)
-    setTimeout(() => setAbsorptionCopied(false), 1500)
+    dispatch({ type: 'setCopyFlag', key: 'absorptionCopied', value: true })
+    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'absorptionCopied', value: false }), 1500)
   }
 
   const copyDecisionPacket = async () => {
@@ -194,16 +158,13 @@ export function FlywheelInspectPanel() {
       reviewerNote,
     })
     await copyTextToClipboard(text)
-    setDecisionCopied(true)
-    setTimeout(() => setDecisionCopied(false), 1500)
+    dispatch({ type: 'setCopyFlag', key: 'decisionCopied', value: true })
+    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'decisionCopied', value: false }), 1500)
   }
 
   const requestTaskPreview = async () => {
     if (!result) return
-    setTaskPreviewLoading(true)
-    setTaskPreviewError(null)
-    setTaskPreviewResult(null)
-    setTaskPreviewCopied(false)
+    dispatch({ type: 'startTaskPreview' })
     try {
       const safeKnowledge = Array.from(selectedKnowledge).filter(
         (i) => i >= 0 && i < result.knowledge_delta_candidates.length,
@@ -227,16 +188,14 @@ export function FlywheelInspectPanel() {
         }).filter(Boolean),
         selected_source_labels: safeSources.map((i) => {
           const s = result.source_candidates[i]
-          return s ? (s.name || s.id || '未命名') : ''
+          return s ? (s.name || s.id || '???') : ''
         }).filter(Boolean),
         reviewer_note: reviewerNote.trim() || undefined,
         explicit_non_canonical: true,
       })
-      setTaskPreviewResult(data)
+      dispatch({ type: 'taskPreviewSuccess', result: data })
     } catch (e) {
-      setTaskPreviewError(e instanceof Error ? e.message : '后端预览失败')
-    } finally {
-      setTaskPreviewLoading(false)
+      dispatch({ type: 'taskPreviewError', error: e instanceof Error ? e.message : '??????' })
     }
   }
 
@@ -244,24 +203,21 @@ export function FlywheelInspectPanel() {
     if (!taskPreviewResult) return
     const text = buildTaskPreviewPacket(taskPreviewResult)
     await copyTextToClipboard(text)
-    setTaskPreviewCopied(true)
-    setTimeout(() => setTaskPreviewCopied(false), 1500)
+    dispatch({ type: 'setCopyFlag', key: 'taskPreviewCopied', value: true })
+    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'taskPreviewCopied', value: false }), 1500)
   }
 
   const copyWorkerPacket = async (lane: WorkerLane) => {
     if (!taskPreviewResult || !result) return
     const text = buildWorkerPacket(lane, result.topic, result.task_intent || '(未指定)', taskPreviewResult, result)
     await copyTextToClipboard(text)
-    setWorkerCopiedMap(prev => ({ ...prev, [lane]: true }))
-    setTimeout(() => setWorkerCopiedMap(prev => ({ ...prev, [lane]: false })), 1500)
+    dispatch({ type: 'setWorkerCopied', lane, value: true })
+    setTimeout(() => dispatch({ type: 'setWorkerCopied', lane, value: false }), 1500)
   }
 
   const requestExecutionFeedbackInspect = async () => {
     if (!taskPreviewResult || !result || !executionFeedbackText.trim()) return
-    setExecutionFeedbackLoading(true)
-    setExecutionFeedbackError(null)
-    setExecutionFeedbackResult(null)
-    setExecutionFeedbackCopied(false)
+    dispatch({ type: 'startExecutionFeedback' })
     try {
       const data = await apiClient.inspectExecutionFeedback({
         topic: result.topic.trim(),
@@ -272,17 +228,14 @@ export function FlywheelInspectPanel() {
         execution_status_hint: executionStatusHint,
         provider: provider.trim() || 'qwen',
         model: model.trim() || undefined,
-        // Pass caller-provided provenance (optional, not verified)
         worker_run_id: workerRunId.trim() || undefined,
         worker_provider: workerProvider.trim() || undefined,
         worker_model: workerModel.trim() || undefined,
         worker_artifact_ref: workerArtifactRef.trim() || undefined,
       })
-      setExecutionFeedbackResult(data)
+      dispatch({ type: 'executionFeedbackSuccess', result: data })
     } catch (e) {
-      setExecutionFeedbackError(e instanceof Error ? e.message : '执行反馈探测失败')
-    } finally {
-      setExecutionFeedbackLoading(false)
+      dispatch({ type: 'executionFeedbackError', error: e instanceof Error ? e.message : '????????' })
     }
   }
 
@@ -290,33 +243,12 @@ export function FlywheelInspectPanel() {
     if (!executionFeedbackResult || !taskPreviewResult) return
     const text = buildExecutionFeedbackPacket(executionFeedbackResult, taskPreviewResult.task_packet_summary)
     await copyTextToClipboard(text)
-    setExecutionFeedbackCopied(true)
-    setTimeout(() => setExecutionFeedbackCopied(false), 1500)
+    dispatch({ type: 'setCopyFlag', key: 'executionFeedbackCopied', value: true })
+    setTimeout(() => dispatch({ type: 'setCopyFlag', key: 'executionFeedbackCopied', value: false }), 1500)
   }
 
   const toggleSelect = (family: 'knowledge' | 'triggers' | 'sources', index: number) => {
-    if (family === 'knowledge') {
-      setSelectedKnowledge(prev => {
-        const next = new Set(prev)
-        if (next.has(index)) next.delete(index)
-        else next.add(index)
-        return next
-      })
-    } else if (family === 'triggers') {
-      setSelectedTriggers(prev => {
-        const next = new Set(prev)
-        if (next.has(index)) next.delete(index)
-        else next.add(index)
-        return next
-      })
-    } else {
-      setSelectedSources(prev => {
-        const next = new Set(prev)
-        if (next.has(index)) next.delete(index)
-        else next.add(index)
-        return next
-      })
-    }
+    dispatch({ type: 'toggleSelection', family, index })
   }
 
   const isSectionOpen = (key: SectionKey) => openSections.has(key)
@@ -336,7 +268,7 @@ export function FlywheelInspectPanel() {
           <label className="text-xs text-muted-foreground mb-1 block">对话内容 *</label>
           <textarea
             value={conversationText}
-            onChange={e => setConversationText(e.target.value)}
+            onChange={e => dispatch({ type: 'setStringField', field: 'conversationText', value: e.target.value })}
             placeholder="粘贴一段对话文本..."
             rows={4}
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
@@ -348,7 +280,7 @@ export function FlywheelInspectPanel() {
             <label className="text-xs text-muted-foreground mb-1 block">主题 *</label>
             <input
               value={topic}
-              onChange={e => setTopic(e.target.value)}
+              onChange={e => dispatch({ type: 'setStringField', field: 'topic', value: e.target.value })}
               placeholder="如：source intelligence"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -357,7 +289,7 @@ export function FlywheelInspectPanel() {
             <label className="text-xs text-muted-foreground mb-1 block">任务意图</label>
             <input
               value={taskIntent}
-              onChange={e => setTaskIntent(e.target.value)}
+              onChange={e => dispatch({ type: 'setStringField', field: 'taskIntent', value: e.target.value })}
               placeholder="如：研究新来源"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -369,7 +301,7 @@ export function FlywheelInspectPanel() {
             <label className="text-xs text-muted-foreground mb-1 block">Provider</label>
             <input
               value={provider}
-              onChange={e => setProvider(e.target.value)}
+              onChange={e => dispatch({ type: 'setStringField', field: 'provider', value: e.target.value })}
               placeholder="qwen"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -378,7 +310,7 @@ export function FlywheelInspectPanel() {
             <label className="text-xs text-muted-foreground mb-1 block">Model</label>
             <input
               value={model}
-              onChange={e => setModel(e.target.value)}
+              onChange={e => dispatch({ type: 'setStringField', field: 'model', value: e.target.value })}
               placeholder="留空使用默认模型"
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
             />
@@ -608,7 +540,7 @@ export function FlywheelInspectPanel() {
             <label className="text-[11px] font-medium text-muted-foreground mb-1 block">审查备注</label>
             <textarea
               value={reviewerNote}
-              onChange={e => setReviewerNote(e.target.value)}
+              onChange={e => dispatch({ type: 'setStringField', field: 'reviewerNote', value: e.target.value })}
               placeholder="简短备注（可选）..."
               rows={2}
               maxLength={500}
@@ -723,23 +655,23 @@ export function FlywheelInspectPanel() {
     result={result}
     taskPreviewResult={taskPreviewResult}
     workerLane={workerLane}
-    onWorkerLaneChange={setWorkerLane}
+    onWorkerLaneChange={(lane) => dispatch({ type: 'setWorkerLane', lane })}
     onCopyWorkerPacket={copyWorkerPacket}
     workerCopiedMap={workerCopiedMap}
     executionFeedbackSection={
       <ExecutionFeedbackSection
         executionStatusHint={executionStatusHint}
-        onExecutionStatusHintChange={setExecutionStatusHint}
+        onExecutionStatusHintChange={(value) => dispatch({ type: 'setStringField', field: 'executionStatusHint', value })}
         executionFeedbackText={executionFeedbackText}
-        onExecutionFeedbackTextChange={setExecutionFeedbackText}
+        onExecutionFeedbackTextChange={(value) => dispatch({ type: 'setStringField', field: 'executionFeedbackText', value })}
         workerRunId={workerRunId}
         workerProvider={workerProvider}
         workerModel={workerModel}
         workerArtifactRef={workerArtifactRef}
-        onWorkerRunIdChange={setWorkerRunId}
-        onWorkerProviderChange={setWorkerProvider}
-        onWorkerModelChange={setWorkerModel}
-        onWorkerArtifactRefChange={setWorkerArtifactRef}
+        onWorkerRunIdChange={(value) => dispatch({ type: 'setStringField', field: 'workerRunId', value })}
+        onWorkerProviderChange={(value) => dispatch({ type: 'setStringField', field: 'workerProvider', value })}
+        onWorkerModelChange={(value) => dispatch({ type: 'setStringField', field: 'workerModel', value })}
+        onWorkerArtifactRefChange={(value) => dispatch({ type: 'setStringField', field: 'workerArtifactRef', value })}
         executionFeedbackLoading={executionFeedbackLoading}
         executionFeedbackError={executionFeedbackError}
         executionFeedbackResult={executionFeedbackResult}

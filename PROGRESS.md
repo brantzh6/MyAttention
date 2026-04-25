@@ -3586,3 +3586,10 @@ MyAttention 的主线没有变化，仍然围绕三条大脑推进：
   - controller judgment: `accept_with_changes`
   - accepted as a phase-level checkpoint for the flywheel runtime surface
   - next mainline target: flywheel runtime state convergence
+- completed flywheel runtime state convergence phase 1:
+  - result:
+    `docs/IKE_FLYWHEEL_RUNTIME_STATE_CONVERGENCE_RESULT_2026-04-25.md`
+  - added reducer-backed state hook:
+    `services/web/components/evolution/use-flywheel-runtime-state.ts`
+  - new inspect / preview / execution-feedback cycles now reset lower-half runtime state through atomic reducer transitions
+  - validation: 36 backend tests OK, `npm run build` OK

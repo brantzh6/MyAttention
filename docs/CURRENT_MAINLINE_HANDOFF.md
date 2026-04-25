@@ -60,6 +60,25 @@ Policy reference:
 
 This section overrides older runtime phase notes below when they conflict.
 
+- the current flywheel runtime surface has now reached a phase-level
+  checkpoint:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_RUNTIME_SURFACE_CHECKPOINT_2026-04-25.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_RUNTIME_SURFACE_CHECKPOINT_2026-04-25.md)
+  - current controller interpretation:
+    - the active flywheel surface is now materially landed as a bounded
+      manual AI-assisted loop surface
+    - current surface already includes:
+      - visible AI entry
+      - manual review / absorption / decision bridges
+      - backend task-packet preview
+      - worker packet bridge
+      - execution-feedback return bridge
+      - reducer-backed runtime state convergence
+      - bounded runtime surface decomposition on both backend and frontend
+    - current default next step:
+      - do not keep reopening panel decomposition by default
+      - move the mainline to stable AI-participation loop closure
+      - prioritize worker-backed end-to-end closure and provenance discipline
+
 - a new direction baseline now exists:
   - [D:\code\MyAttention\docs\IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_bundle\ike_ai_native_conversation_runtime_v02\md\IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_EN.md](/D:/code/MyAttention/docs/IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_bundle/ike_ai_native_conversation_runtime_v02/md/IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_EN.md)
   - [D:\code\MyAttention\docs\IKE_AI_NATIVE_CONVERSATION_RUNTIME_V02_REVIEW_ABSORPTION_2026-04-18.md](/D:/code/MyAttention/docs/IKE_AI_NATIVE_CONVERSATION_RUNTIME_V02_REVIEW_ABSORPTION_2026-04-18.md)

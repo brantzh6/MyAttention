@@ -8,6 +8,24 @@
 
 ### Added
 
+- 2026-04-25: Reached a phase-level flywheel runtime surface checkpoint.
+  The current flywheel now materially closes a bounded manual AI-assisted
+  loop across AI entry, inspect, manual review/absorption/decision, backend
+  preview, worker packet generation, execution-feedback return, and
+  AI-assisted reflection. This is not autonomous runtime closure, but it is
+  now treated as a stable checkpoint rather than an open-ended panel spike.
+- 2026-04-25: Added `use-flywheel-runtime-controller.ts` and moved the main
+  flywheel async orchestration and packet-copy actions out of
+  `flywheel-inspect-panel.tsx`. Reducer-backed runtime state remains the
+  single truth source, while the panel now behaves more like a runtime shell.
+- 2026-04-25: Decomposed the remaining flywheel manual bridge UI into
+  dedicated presentational sections:
+  `manual-review-section.tsx`, `manual-absorption-section.tsx`, and
+  `manual-decision-section.tsx`.
+- 2026-04-25: Decomposed the flywheel result display surface into
+  `flywheel-results-section.tsx`, so extraction / knowledge / evolution /
+  source / advice / controller display no longer lives inline in the main
+  panel component.
 - 2026-04-21: Absorbed review for the flywheel execution-feedback bridge.
   The slice remains accepted with changes: direction is correct and bounded,
   while worker-result provenance, route-level test depth, and frontend panel

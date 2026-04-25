@@ -1,5 +1,57 @@
 # MyAttention 项目工作进度
 
+## 2026-04-25 - Flywheel runtime surface checkpoint reached
+
+- current controller judgment:
+  - `accept`
+- the flywheel runtime surface is now treated as a phase-level checkpoint
+- this checkpoint is based on closure of the current bounded manual loop:
+  - AI entry
+  - inspect
+  - review / absorption / decision
+  - backend preview
+  - worker packet bridge
+  - execution feedback return
+  - AI-assisted reflection
+- current meaning:
+  - panel decomposition work is no longer the default mainline
+  - the next mainline should shift to stable AI-participation loop closure
+  - worker-backed end-to-end closure and provenance discipline now matter more
+    than more UI slicing
+
+## 2026-04-25 - Flywheel result surface decomposed
+
+- extracted the flywheel result display area into:
+  - `services/web/components/evolution/flywheel-results-section.tsx`
+- `flywheel-inspect-panel.tsx` now acts more clearly as runtime shell +
+  bridge wiring instead of owning the full result-display JSX
+- current meaning:
+  - the main panel is now structurally small enough for checkpoint judgment
+
+## 2026-04-25 - Flywheel manual bridge sections decomposed
+
+- extracted the remaining manual bridge UI blocks into:
+  - `manual-review-section.tsx`
+  - `manual-absorption-section.tsx`
+  - `manual-decision-section.tsx`
+- current meaning:
+  - manual bridge UI is no longer embedded as one large inline block
+  - future flywheel work can focus on loop closure instead of panel sprawl
+
+## 2026-04-25 - Flywheel runtime controller convergence added
+
+- extracted flywheel runtime orchestration into:
+  - `services/web/components/evolution/use-flywheel-runtime-controller.ts`
+- current controller hook now owns:
+  - inspect submit
+  - task preview request
+  - execution feedback inspect request
+  - packet-copy actions across review / absorption / decision / worker /
+    feedback surfaces
+- current meaning:
+  - reducer state remains the single runtime truth source
+  - the main panel no longer mixes most async orchestration with rendering
+
 ## 2026-04-20 - Flywheel execution feedback bridge added
 
 - added a bounded execution-result return path to the flywheel

@@ -1,8 +1,11 @@
 'use client'
 
-import { Loader2, AlertTriangle, BrainCircuit, Copy, Check } from 'lucide-react'
+import { Loader2, AlertTriangle, BrainCircuit } from 'lucide-react'
 import { CollapsibleSection } from './collapsible-section'
 import { ExecutionFeedbackSection } from './execution-feedback-section'
+import { ManualAbsorptionSection } from './manual-absorption-section'
+import { ManualDecisionSection } from './manual-decision-section'
+import { ManualReviewSection } from './manual-review-section'
 import { WorkerPacketBridgeSection } from './worker-packet-bridge-section'
 import { TaskPreviewSection } from './task-preview-section'
 import { useFlywheelRuntimeController } from './use-flywheel-runtime-controller'
@@ -148,345 +151,88 @@ export function FlywheelInspectPanel() {
 
       {/* Manual review bridge */}
       {result && (
-        <div className="mt-4 rounded-lg border bg-card/80">
-          <div className="flex items-center justify-between px-3 py-2 border-b">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold">手动审查包</span>
-              <span className="text-[10px] text-muted-foreground">Review Packet — 仅供手动审查</span>
-            </div>
-            <button
-              type="button"
-              onClick={copyReviewPacket}
-              className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
-              title="复制审查包到剪贴板"
-            >
-              {copied ? (
-                <>
-                  <Check className="h-3 w-3 text-green-600" />
-                  <span className="text-green-600">已复制</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3 w-3" />
-                  <span>复制</span>
-                </>
-              )}
-            </button>
-          </div>
-          <div className="px-3 py-2 space-y-1.5 text-xs">
-            <div className="grid grid-cols-[80px_1fr] gap-x-2">
-              <span className="text-muted-foreground shrink-0">主题</span>
-              <span className="font-medium truncate">{result.topic}</span>
-            </div>
-            <div className="grid grid-cols-[80px_1fr] gap-x-2">
-              <span className="text-muted-foreground shrink-0">任务意图</span>
-              <span>{result.task_intent || '(未指定)'}</span>
-            </div>
-            <div className="grid grid-cols-[80px_1fr] gap-x-2">
-              <span className="text-muted-foreground shrink-0">意图分段</span>
-              <span>{result.segment_intent || '(未识别)'}</span>
-            </div>
-            {result.operational_advice?.suggested_next_step && result.operational_advice.suggested_next_step !== 'no_action' && (
-              <div className="grid grid-cols-[80px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">建议下一步</span>
-                <span className="font-medium">{result.operational_advice.suggested_next_step}</span>
-              </div>
-            )}
-            {result.controller_packet?.reason_tags?.length > 0 && (
-              <div className="grid grid-cols-[80px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">原因标签</span>
-                <div className="flex flex-wrap gap-1">
-                  {result.controller_packet.reason_tags.map((tag, i) => (
-                    <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {result.knowledge_delta_candidates?.length > 0 && (
-              <div className="grid grid-cols-[80px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">知识增量</span>
-                <div className="flex flex-wrap gap-1">
-                  {result.knowledge_delta_candidates.map((d, i) => (
-                    <span key={i} className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">[{d.delta_type}] {d.label}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {result.evolution_trigger_candidates?.length > 0 && (
-              <div className="grid grid-cols-[80px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">进化触发</span>
-                <div className="flex flex-wrap gap-1">
-                  {result.evolution_trigger_candidates.map((t, i) => (
-                    <span key={i} className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-700">[{t.trigger_type}] {t.label}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {result.source_candidates?.length > 0 && (
-              <div className="grid grid-cols-[80px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">来源候选</span>
-                <div className="space-y-0.5">
-                  {result.source_candidates.map((s, i) => (
-                    <div key={i} className="text-muted-foreground">
-                      <span className="h-1 w-1 rounded-full bg-muted-foreground inline-block mr-1" />
-                      {s.name || s.id || '未命名'}
-                      {s.type && <span className="text-[10px] text-muted-foreground/60"> · {s.type}</span>}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <ManualReviewSection
+          result={result}
+          copied={copied}
+          onCopyReviewPacket={copyReviewPacket}
+        />
       )}
 
       {/* Manual absorption surface */}
       {result && (
-        <div className="mt-4 rounded-lg border border-dashed bg-muted/30">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-dashed">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold">手动吸收</span>
-              <span className="text-[10px] text-muted-foreground">Absorption — 选择候选项并生成紧凑吸收包</span>
-            </div>
-            <button
-              type="button"
-              onClick={copyAbsorptionPacket}
-              disabled={!hasAnyAbsorptionSelection && !reviewerNote.trim()}
-              className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              title="复制吸收包到剪贴板"
-            >
-              {absorptionCopied ? (
-                <>
-                  <Check className="h-3 w-3 text-green-600" />
-                  <span className="text-green-600">已复制</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3 w-3" />
-                  <span>复制吸收包</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          <div className="px-3 py-2 space-y-3">
-            {/* Knowledge delta checkboxes */}
-            {result.knowledge_delta_candidates.length > 0 && (
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground mb-1">知识增量候选</div>
-                <div className="space-y-0.5">
-                  {result.knowledge_delta_candidates.map((d, i) => (
-                    <label key={i} className="flex items-start gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedKnowledge.has(i)}
-                        onChange={() => toggleSelect('knowledge', i)}
-                        className="mt-0.5 h-3.5 w-3.5 rounded border-muted-foreground/30 accent-primary"
-                      />
-                      <span className="text-xs">
-                        <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">{d.delta_type}</span>
-                        {' '}{d.label}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Evolution trigger checkboxes */}
-            {result.evolution_trigger_candidates.length > 0 && (
-              <div>
-                <div className="text-[11px] font-medium text-muted-foreground mb-1">进化触发候选</div>
-                <div className="space-y-0.5">
-                  {result.evolution_trigger_candidates.map((t, i) => (
-                    <label key={i} className="flex items-start gap-2 cursor-pointer">
-                      <input
-                      type="checkbox"
-                      checked={selectedTriggers.has(i)}
-                      onChange={() => toggleSelect('triggers', i)}
-                      className="mt-0.5 h-3.5 w-3.5 rounded border-muted-foreground/30 accent-primary"
-                    />
-                    <span className="text-xs">
-                      <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">{t.trigger_type}</span>
-                      {' '}{t.label}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Source checkboxes */}
-          {result.source_candidates.length > 0 && (
-            <div>
-              <div className="text-[11px] font-medium text-muted-foreground mb-1">来源候选</div>
-              <div className="space-y-0.5">
-                {result.source_candidates.map((s, i) => (
-                  <label key={i} className="flex items-start gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={selectedSources.has(i)}
-                      onChange={() => toggleSelect('sources', i)}
-                      className="mt-0.5 h-3.5 w-3.5 rounded border-muted-foreground/30 accent-primary"
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {s.name || s.id || '未命名'}
-                      {s.type && <span className="text-[10px] text-muted-foreground/60"> · {s.type}</span>}
-                    </span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Reviewer note */}
-          <div>
-            <label className="text-[11px] font-medium text-muted-foreground mb-1 block">审查备注</label>
-            <textarea
-              value={reviewerNote}
-              onChange={e => setField('reviewerNote', e.target.value)}
-              placeholder="简短备注（可选）..."
-              rows={2}
-              maxLength={500}
-              className="w-full rounded-md border bg-background px-2 py-1.5 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-            />
-          </div>
-        </div>
-      </div>
-    )}
+        <ManualAbsorptionSection
+          result={result}
+          selectedKnowledge={selectedKnowledge}
+          selectedTriggers={selectedTriggers}
+          selectedSources={selectedSources}
+          reviewerNote={reviewerNote}
+          hasAnyAbsorptionSelection={hasAnyAbsorptionSelection}
+          absorptionCopied={absorptionCopied}
+          onCopyAbsorptionPacket={copyAbsorptionPacket}
+          onToggleSelect={toggleSelect}
+          onReviewerNoteChange={(value) => setField('reviewerNote', value)}
+        />
+      )}
 
       {/* Manual decision bridge */}
       {result && (
-        <div className="mt-4 rounded-lg border border-dashed bg-muted/20">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-dashed">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold">手动决策桥接</span>
-              <span className="text-[10px] text-muted-foreground">Decision Bridge — 生成紧凑决策包供对齐讨论</span>
-            </div>
-            <button
-              type="button"
-              onClick={copyDecisionPacket}
-              className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
-              title="复制决策包到剪贴板"
-            >
-              {decisionCopied ? (
-                <>
-                  <Check className="h-3 w-3 text-green-600" />
-                  <span className="text-green-600">已复制</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3 w-3" />
-                  <span>复制决策包</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          <div className="px-3 py-2 space-y-1.5 text-xs">
-            <div className="grid grid-cols-[80px_1fr] gap-x-2">
-              <span className="text-muted-foreground shrink-0">主题</span>
-              <span className="font-medium truncate">{result.topic}</span>
-            </div>
-            <div className="grid grid-cols-[80px_1fr] gap-x-2">
-              <span className="text-muted-foreground shrink-0">任务意图</span>
-              <span>{result.task_intent || '(未指定)'}</span>
-            </div>
-            {result.operational_advice?.suggested_next_step && result.operational_advice.suggested_next_step !== 'no_action' && (
-              <div className="grid grid-cols-[80px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">建议下一步</span>
-                <span className="font-medium">{result.operational_advice.suggested_next_step}</span>
-              </div>
-            )}
-            {result.controller_packet?.reason_tags?.length > 0 && (
-              <div className="grid grid-cols-[80px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">原因标签</span>
-                <div className="flex flex-wrap gap-1">
-                  {result.controller_packet.reason_tags.map((tag, i) => (
-                    <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">{tag}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-            {(selectedKnowledge.size > 0 || selectedTriggers.size > 0 || selectedSources.size > 0) && (
-              <div className="grid grid-cols-[80px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">已选项</span>
-                <div className="flex flex-wrap gap-1">
-                  {Array.from(selectedKnowledge).map((i) => {
-                    const d = result.knowledge_delta_candidates[i]
-                    return d ? <span key={`k${i}`} className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">[{d.delta_type}] {d.label}</span> : null
-                  })}
-                  {Array.from(selectedTriggers).map((i) => {
-                    const t = result.evolution_trigger_candidates[i]
-                    return t ? <span key={`t${i}`} className="rounded bg-purple-50 px-1.5 py-0.5 text-[10px] text-purple-700">[{t.trigger_type}] {t.label}</span> : null
-                  })}
-                  {Array.from(selectedSources).map((i) => {
-                    const s = result.source_candidates[i]
-                    return s ? <span key={`s${i}`} className="rounded bg-muted px-1.5 py-0.5 text-[10px]">{s.name || s.id || '未命名'}</span> : null
-                  })}
-                </div>
-              </div>
-            )}
-            {reviewerNote.trim() && (
-              <div className="grid grid-cols-[80px_1fr] gap-x-2">
-                <span className="text-muted-foreground shrink-0">审查备注</span>
-                <span className="text-muted-foreground truncate">{reviewerNote.trim()}</span>
-              </div>
-            )}
-          </div>
-        </div>
+        <ManualDecisionSection
+          result={result}
+          selectedKnowledge={selectedKnowledge}
+          selectedTriggers={selectedTriggers}
+          selectedSources={selectedSources}
+          reviewerNote={reviewerNote}
+          decisionCopied={decisionCopied}
+          onCopyDecisionPacket={copyDecisionPacket}
+        />
+      )}
+      {/* Backend task-packet preview */}
+      {result && (
+        <TaskPreviewSection
+          taskPreviewLoading={taskPreviewLoading}
+          taskPreviewError={taskPreviewError}
+          taskPreviewResult={taskPreviewResult}
+          taskPreviewCopied={taskPreviewCopied}
+          selectedPreviewCount={selectedPreviewCount}
+          onRequestPreview={requestTaskPreview}
+          onCopyPreview={copyTaskPreviewPacket}
+        />
       )}
 
-
-{/* Backend task-packet preview */}
-{result && (
-  <TaskPreviewSection
-    taskPreviewLoading={taskPreviewLoading}
-    taskPreviewError={taskPreviewError}
-    taskPreviewResult={taskPreviewResult}
-    taskPreviewCopied={taskPreviewCopied}
-    selectedPreviewCount={selectedPreviewCount}
-    onRequestPreview={requestTaskPreview}
-    onCopyPreview={copyTaskPreviewPacket}
-  />
-)}
-
-
-
-{/* Worker-ready packet bridge (requires taskPreviewResult) */}
-{result && taskPreviewResult && (
-  <WorkerPacketBridgeSection
-    result={result}
-    taskPreviewResult={taskPreviewResult}
-    workerLane={workerLane}
-    onWorkerLaneChange={setWorkerLane}
-    onCopyWorkerPacket={copyWorkerPacket}
-    workerCopiedMap={workerCopiedMap}
-    executionFeedbackSection={
-      <ExecutionFeedbackSection
-        executionStatusHint={executionStatusHint}
-        onExecutionStatusHintChange={(value) => setField('executionStatusHint', value)}
-        executionFeedbackText={executionFeedbackText}
-        onExecutionFeedbackTextChange={(value) => setField('executionFeedbackText', value)}
-        workerRunId={workerRunId}
-        workerProvider={workerProvider}
-        workerModel={workerModel}
-        workerArtifactRef={workerArtifactRef}
-        onWorkerRunIdChange={(value) => setField('workerRunId', value)}
-        onWorkerProviderChange={(value) => setField('workerProvider', value)}
-        onWorkerModelChange={(value) => setField('workerModel', value)}
-        onWorkerArtifactRefChange={(value) => setField('workerArtifactRef', value)}
-        executionFeedbackLoading={executionFeedbackLoading}
-        executionFeedbackError={executionFeedbackError}
-        executionFeedbackResult={executionFeedbackResult}
-        executionFeedbackCopied={executionFeedbackCopied}
-        onRequestInspect={requestExecutionFeedbackInspect}
-        onCopyPacket={copyExecutionFeedbackPacket}
-        taskPreviewResult={taskPreviewResult}
-      />
-    }
-  />
-)}
+      {/* Worker-ready packet bridge (requires taskPreviewResult) */}
+      {result && taskPreviewResult && (
+        <WorkerPacketBridgeSection
+          result={result}
+          taskPreviewResult={taskPreviewResult}
+          workerLane={workerLane}
+          onWorkerLaneChange={setWorkerLane}
+          onCopyWorkerPacket={copyWorkerPacket}
+          workerCopiedMap={workerCopiedMap}
+          executionFeedbackSection={
+            <ExecutionFeedbackSection
+              executionStatusHint={executionStatusHint}
+              onExecutionStatusHintChange={(value) => setField('executionStatusHint', value)}
+              executionFeedbackText={executionFeedbackText}
+              onExecutionFeedbackTextChange={(value) => setField('executionFeedbackText', value)}
+              workerRunId={workerRunId}
+              workerProvider={workerProvider}
+              workerModel={workerModel}
+              workerArtifactRef={workerArtifactRef}
+              onWorkerRunIdChange={(value) => setField('workerRunId', value)}
+              onWorkerProviderChange={(value) => setField('workerProvider', value)}
+              onWorkerModelChange={(value) => setField('workerModel', value)}
+              onWorkerArtifactRefChange={(value) => setField('workerArtifactRef', value)}
+              executionFeedbackLoading={executionFeedbackLoading}
+              executionFeedbackError={executionFeedbackError}
+              executionFeedbackResult={executionFeedbackResult}
+              executionFeedbackCopied={executionFeedbackCopied}
+              onRequestInspect={requestExecutionFeedbackInspect}
+              onCopyPacket={copyExecutionFeedbackPacket}
+              taskPreviewResult={taskPreviewResult}
+            />
+          }
+        />
+      )}
 
 
       {/* Results */}

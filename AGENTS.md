@@ -219,28 +219,15 @@ Default acceptance policy:
 - strategy drift -> `reject`
 - bounded patch with evidence -> eligible for acceptance
 
-## 10. Governance Flow
+## 10. Governance Reference
 
-Follow this sequence for every non-trivial task:
+Do not hardcode evolving governance procedures in this file.
 
-1. Classify the task.
-   - Decide whether it is `controller-only`, `delegated coding`, `delegated review`, `delegated test`, or `controller fallback patch`.
-   - If the task is bounded implementation work, default to delegation.
+Instead, apply the current project governance framework and its linked indices:
 
-2. Delegate by default.
-   - Do not start direct implementation unless the task is explicitly classified as a controller fallback patch.
-   - Prefer the narrowest role that can finish the task.
+- [D:\code\MyAttention\docs\PROJECT_AGENT_HARNESS_CONTRACT.md](/D:/code/MyAttention/docs/PROJECT_AGENT_HARNESS_CONTRACT.md)
+- [D:\code\MyAttention\docs\IKE_DELIVERY_GOVERNANCE_INDEX_2026-04-11.md](/D:/code/MyAttention/docs/IKE_DELIVERY_GOVERNANCE_INDEX_2026-04-11.md)
+- [D:\code\MyAttention\docs\CHANGE_MANAGEMENT.md](/D:/code/MyAttention/docs/CHANGE_MANAGEMENT.md)
+- [D:\code\MyAttention\docs\VERSION_MANAGEMENT.md](/D:/code/MyAttention/docs/VERSION_MANAGEMENT.md)
 
-3. Make fallback explicit.
-   - If controller code changes are unavoidable, state the blocker first.
-   - Explain why delegation is not viable right now.
-   - Keep fallback patches minimal and bounded.
-
-4. Require evidence.
-   - Return the worker or agent used, the run or review artifact, the files changed, and the validation run.
-   - If no delegation happened, record the reason as a blocker, not as a silent omission.
-
-5. Review before expansion.
-   - Fix review findings before moving to the next scope.
-   - Do not silently broaden the task after implementation starts.
-   - Treat repeated self-fallback as a governance defect.
+This file should define working boundaries and controller duties, while the governance docs define the current operating procedure.

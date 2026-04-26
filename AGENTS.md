@@ -62,7 +62,90 @@ Current mainline blockers:
 - active task/source-plan surfaces are still too noisy.
 - evolution is still too rule-engine heavy.
 
-## 3. Architectural Corrections Already Made
+## 3. Lifecycle Governance
+
+Adopt the `AgentSDLC` lifecycle shape as the project-level delivery contract:
+
+1. Design
+2. Design Review
+3. Code Implementation
+4. Code Review
+5. Testing
+6. Promotion Decision
+7. Runtime Monitoring / Feedback
+
+Rules:
+
+- No non-trivial task skips Design or Design Review.
+- No delegated task skips Code Review or Testing.
+- No delegate decides promotion.
+- Runtime signals feed back into new design work, not direct hot edits by default.
+- Keep pipeline discipline:
+  - max 3 active implementation/review nodes
+  - max 1 active promotion-style decision node
+
+Default project classification:
+
+- Project Level: `L2` persistent personal system
+- Project Type: `C` AI agent / workflow system
+- Default Risk: `R2`
+- Default Template: `T2`
+
+Automatic escalation to `R3` / reinforced governance when a task touches:
+
+- memory / persistence
+- task orchestration or scheduler logic
+- worker / harness execution contracts
+- runtime truth or promotion boundaries
+- permissions, deletion, or self-modification rules
+- production incident remediation
+
+## 4. Delegation And Model Routing
+
+Default controller rule:
+
+- controller coordinates lifecycle, writes briefs, and makes gate decisions
+- delegates implement, review, and validate
+- controller does not use direct coding as the default path
+
+Default delegated lanes:
+
+1. General coding
+   - primary: `claude-worker + glm-5`
+   - backup: `claude-worker + glm-5.1`
+   - fallback: `openclaw + glm-5`
+2. Critical coding
+   - primary: `claude-worker + glm-5.1`
+   - backup: `claude-worker + glm-5`
+3. Frontend / UI / multimodal implementation
+   - primary: `claude-worker + qwen3.6-plus`
+   - backup: `claude-worker + glm-5`
+4. Code review
+   - primary: `claude-worker + kimi-k2.5`
+   - backup: `openclaw + kimi-k2.5`
+   - secondary backup: `claude-worker + glm-5`
+5. Default testing
+   - primary: `claude-worker + glm-5`
+   - backup: `claude-worker + qwen3.6-plus` for GUI / frontend flows
+6. Test scaffolding / bulk test patching
+   - primary: `claude-worker + MiniMax-M2.5`
+7. High-risk test strategy or hard validation diagnosis
+   - primary: `claude-worker + glm-5.1`
+
+Governance-health defaults:
+
+- review files must have one canonical identity
+- avoid opening new review nodes while old ones are still ambiguous
+- treat review-file drift as a controller governance problem, not a reviewer problem
+
+Execution defaults:
+
+- prefer `one_shot` bounded tasks
+- use `detached` only when the packet is long-running but still single-result
+- do not use `continue` as the default development lane
+- every coding, review, and test packet should be independently auditable
+
+## 5. Architectural Corrections Already Made
 
 These are not optional preferences. Do not regress them.
 
@@ -77,7 +160,7 @@ These are not optional preferences. Do not regress them.
    - Watchdog/rule layer keeps runtime alive.
    - Evolution layer should increasingly perform model-assisted prioritization and diagnosis.
 
-## 4. Safe Working Pattern
+## 6. Safe Working Pattern
 
 For every delegated task:
 
@@ -94,7 +177,7 @@ Do not:
 - mix unrelated fixes into one patch
 - change backend semantics in UI-only tasks
 
-## 5. Expected Delivery Format
+## 7. Expected Delivery Format
 
 Every delegated task must return:
 
@@ -111,7 +194,7 @@ If blocked, return:
 - what was attempted
 - what is missing
 
-## 6. Role Files
+## 8. Role Files
 
 Use the role files in:
 
@@ -125,7 +208,7 @@ Use the role files in:
 
 Pick the narrowest role that matches the task.
 
-## 7. Review Gate
+## 9. Review Gate
 
 No delegated task is final until reviewed by the main controller.
 
@@ -135,3 +218,29 @@ Default acceptance policy:
 - broadened scope -> `reject`
 - strategy drift -> `reject`
 - bounded patch with evidence -> eligible for acceptance
+
+## 10. Governance Flow
+
+Follow this sequence for every non-trivial task:
+
+1. Classify the task.
+   - Decide whether it is `controller-only`, `delegated coding`, `delegated review`, `delegated test`, or `controller fallback patch`.
+   - If the task is bounded implementation work, default to delegation.
+
+2. Delegate by default.
+   - Do not start direct implementation unless the task is explicitly classified as a controller fallback patch.
+   - Prefer the narrowest role that can finish the task.
+
+3. Make fallback explicit.
+   - If controller code changes are unavoidable, state the blocker first.
+   - Explain why delegation is not viable right now.
+   - Keep fallback patches minimal and bounded.
+
+4. Require evidence.
+   - Return the worker or agent used, the run or review artifact, the files changed, and the validation run.
+   - If no delegation happened, record the reason as a blocker, not as a silent omission.
+
+5. Review before expansion.
+   - Fix review findings before moving to the next scope.
+   - Do not silently broaden the task after implementation starts.
+   - Treat repeated self-fallback as a governance defect.

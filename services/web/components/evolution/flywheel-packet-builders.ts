@@ -302,7 +302,7 @@ export function buildLoopPacket(
   lines.push('')
   lines.push('[loop_context]')
   lines.push(`topic: ${topic}`)
-  lines.push(`task_intent: ${taskIntent || '(???)'}`)
+  lines.push(`task_intent: ${taskIntent || '(未指定)'}`)
   lines.push(`worker_lane: ${lane}`)
   lines.push(`task_packet_summary: ${preview.task_packet_summary}`)
   lines.push(`packet_intent: ${preview.packet_intent}`)

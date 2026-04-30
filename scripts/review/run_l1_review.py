@@ -89,7 +89,7 @@ def build_qoder_command(
     ]
 
 
-def build_openclaw_command(cwd: Path, task_id: str, brief_path: Path) -> list[str]:
+def build_openclaw_command(cwd: Path, task_id: str, brief_path: Path, delegate_timeout: int) -> list[str]:
     return [
         sys.executable,
         str((cwd / "scripts" / "acpx" / "openclaw_delegate.py").resolve()),
@@ -103,6 +103,8 @@ def build_openclaw_command(cwd: Path, task_id: str, brief_path: Path) -> list[st
         f"{safe_task_id(task_id).lower()}-review",
         "--file",
         str(brief_path),
+        "--timeout",
+        str(delegate_timeout),
         "--lane",
         "review",
         "--reasoning-mode",
@@ -379,7 +381,7 @@ def main() -> int:
     done_path = base / "done" / f"{task_id}.json"
 
     qoder_command = build_qoder_command(cwd, task_id, brief_path, context_path, result_path, done_path)
-    openclaw_command = build_openclaw_command(cwd, task_id, brief_path)
+    openclaw_command = build_openclaw_command(cwd, task_id, brief_path, args.delegate_timeout)
     selected_delegate_command = {
         "none": None,
         "qoder": qoder_command,

@@ -270,7 +270,12 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
         display_name = f"{domain} events"
         return "event", object_key, display_name, canonical_url, domain
 
-    if any(segment.lower() in {"changelog", "release", "releases"} for segment in path_segments):
+    if any(
+        segment.lower() in {"changelog", "release", "releases", "release-notes", "announcements"}
+        or segment.lower().startswith("release-")
+        or segment.lower().startswith("announcement-")
+        for segment in path_segments
+    ):
         object_key = f"{domain}:release"
         canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments)}"
         display_name = f"{domain} release stream"

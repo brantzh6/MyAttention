@@ -27,6 +27,17 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertIn("release", display_name)
         self.assertIn("/releases/tag/v0.5.0", canonical_url)
 
+    def test_preserves_github_release_tag_path_without_scheme(self) -> None:
+        item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+            "github.com/openclaw/openclaw/releases/tag/v1.2.3",
+            SourceDiscoveryFocus.FRONTIER,
+        )
+        self.assertEqual(item_type, "release")
+        self.assertEqual(object_key, "github.com/openclaw/openclaw/release/v1.2.3")
+        self.assertEqual(domain, "github.com")
+        self.assertIn("release", display_name)
+        self.assertIn("/releases/tag/v1.2.3", canonical_url)
+
     def test_identifies_event_pages_as_event_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
             "https://example.org/events/agent-summit-2026",

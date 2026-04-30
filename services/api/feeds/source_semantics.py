@@ -164,9 +164,11 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 4 and path_segments[2].lower() == "releases":
         owner, repo = path_segments[0], path_segments[1]
-        release_id = path_segments[4] if len(path_segments) >= 5 and path_segments[3].lower() == "tag" else path_segments[3]
+        is_tag_release = len(path_segments) >= 5 and path_segments[3].lower() == "tag"
+        release_id = path_segments[4] if is_tag_release else path_segments[3]
         object_key = f"{domain}/{owner}/{repo}/release/{release_id}".lower()
-        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/releases/{release_id}"
+        release_path = f"releases/tag/{release_id}" if is_tag_release else f"releases/{release_id}"
+        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/{release_path}"
         display_name = f"{owner}/{repo} release {release_id}"
         return "release", object_key, display_name, canonical_url, domain
 

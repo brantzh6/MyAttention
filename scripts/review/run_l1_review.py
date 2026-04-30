@@ -46,6 +46,39 @@ def format_process_output(value: str | bytes | None) -> str:
     return value
 
 
+def is_review_result_complete(result_path: Path) -> bool:
+    if not result_path.exists():
+        return False
+    text = result_path.read_text(encoding="utf-8", errors="replace")
+    required_headers = [
+        "## Task ID",
+        "## Summary",
+        "## Files Changed",
+        "## Commit Hash",
+        "## Validation Run",
+        "## Known Risks",
+        "## Recommendation",
+    ]
+    if not all(header in text for header in required_headers):
+        return False
+    placeholder_markers = [
+        "\n## Summary\n\n## Files Changed",
+        "\n## Files Changed\n\n## Commit Hash",
+        "\n## Commit Hash\n\n## Validation Run",
+        "\n## Validation Run\n\n## Known Risks",
+        "\n## Known Risks\n\n## Recommendation",
+    ]
+    return not any(marker in text for marker in placeholder_markers)
+
+
+def classify_delegate_status(delegate_exit_code: int, result_path: Path) -> str:
+    if delegate_exit_code != 0:
+        return "delegate_failed"
+    if is_review_result_complete(result_path):
+        return "delegate_completed"
+    return "delegate_launched"
+
+
 def build_qoder_command(
     cwd: Path,
     task_id: str,
@@ -503,7 +536,7 @@ def main() -> int:
     if delegate_exit_code != 0:
         emit_text("execution_status: delegate_failed")
         return delegate_exit_code
-    emit_text("execution_status: delegate_completed")
+    emit_text(f"execution_status: {status}")
     return 0
 
 

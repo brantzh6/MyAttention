@@ -190,6 +190,108 @@ def normalize_ai_judgments_from_candidates(
     return judgments, summary, discarded
 
 
+def _enum_value(value: Any) -> str:
+    return str(getattr(value, "value", value or "")).strip()
+
+
+def candidate_to_judgment_payload(candidate: Any) -> Dict[str, Any]:
+    return {
+        "object_key": str(getattr(candidate, "object_key", "") or "").strip(),
+        "item_type": str(getattr(candidate, "item_type", "") or "").strip(),
+        "name": str(getattr(candidate, "name", "") or "").strip(),
+        "domain": str(getattr(candidate, "domain", "") or "").strip(),
+        "url": str(getattr(candidate, "url", "") or "").strip(),
+        "authority_tier": str(getattr(candidate, "authority_tier", "") or "").strip(),
+        "authority_score": float(getattr(candidate, "authority_score", 0.0) or 0.0),
+        "recommendation": str(getattr(candidate, "recommendation", "") or "").strip(),
+        "recommendation_reason": str(getattr(candidate, "recommendation_reason", "") or "").strip(),
+        "follow_score": float(getattr(candidate, "follow_score", 0.0) or 0.0),
+        "activity_freshness": str(getattr(candidate, "activity_freshness", "") or "").strip(),
+        "inferred_roles": list(getattr(candidate, "inferred_roles", []) or []),
+        "source_nature": str(getattr(candidate, "source_nature", "") or "").strip(),
+        "temperature": str(getattr(candidate, "temperature", "") or "").strip(),
+        "recommended_execution_strategy": str(
+            getattr(candidate, "recommended_execution_strategy", "") or ""
+        ).strip(),
+        "why_relevant": str(getattr(candidate, "why_relevant", "") or "").strip(),
+        "confidence_note": str(getattr(candidate, "confidence_note", "") or "").strip(),
+        "sample_titles": list((getattr(candidate, "sample_titles", []) or [])[:2]),
+        "sample_snippets": list((getattr(candidate, "sample_snippets", []) or [])[:1]),
+    }
+
+
+def build_ai_candidate_judgment_prompt(
+    topic: str,
+    focus: Any,
+    task_intent: str,
+    interest_bias: Any,
+    candidates: List[Any],
+) -> str:
+    candidate_block = json.dumps(
+        [candidate_to_judgment_payload(candidate) for candidate in candidates],
+        ensure_ascii=False,
+        indent=2,
+    )
+    return (
+        "你是 Source Intelligence 的 AI judgment lane。"
+        "你的任务不是改写系统规则，而是对已经过初步降噪的候选对象做 advisory judgment。\n\n"
+        f"topic: {topic}\n"
+        f"focus: {_enum_value(focus)}\n"
+        f"task_intent: {task_intent}\n"
+        f"interest_bias: {_enum_value(interest_bias)}\n\n"
+        "请只基于给定候选，返回 JSON：\n"
+        "{\n"
+        '  "summary": "一句话总结",\n'
+        '  "judgments": [\n'
+        "    {\n"
+        '      "object_key": "候选 object_key",\n'
+        '      "verdict": "follow|review|ignore",\n'
+        '      "rationale": "为什么",\n'
+        '      "confidence": 0.0,\n'
+        '      "review_priority": "high|normal|low"\n'
+        "    }\n"
+        "  ]\n"
+        "}\n\n"
+        "要求：\n"
+        "1. 不要输出候选之外的 object_key\n"
+        "2. 不要输出 JSON 之外的内容\n"
+        "3. verdict 只能是 follow/review/ignore\n"
+        "4. 这是 advisory judgment，不是最终真相\n\n"
+        f"候选列表:\n{candidate_block}"
+    )
+
+
+async def run_ai_candidate_judgment_once(
+    *,
+    adapter: Any,
+    provider: str,
+    model: str,
+    topic: str,
+    focus: Any,
+    task_intent: str,
+    interest_bias: Any,
+    judged_candidates: List[Any],
+) -> Tuple[List[SourceCandidateJudgment], str, str, int]:
+    raw = await adapter.chat(
+        message=build_ai_candidate_judgment_prompt(
+            topic=topic,
+            focus=focus,
+            task_intent=task_intent,
+            interest_bias=interest_bias,
+            candidates=judged_candidates,
+        ),
+        provider=provider,
+        model=model,
+        system_prompt="Return valid JSON only.",
+    )
+    payload, parse_status = parse_ai_judgment_payload(raw)
+    judgments, summary, discarded_judgments = normalize_ai_judgments_from_candidates(
+        judged_candidates,
+        payload,
+    )
+    return judgments, summary, parse_status, discarded_judgments
+
+
 # ── Verdict-overlap comparison for panel analysis ─────────────────────────────
 
 def compare_judgment_verdict_overlap(

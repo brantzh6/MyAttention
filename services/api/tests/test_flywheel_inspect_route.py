@@ -108,6 +108,12 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertEqual(data["controller_packet"]["review_mode"], "review_flywheel_candidates")
         self.assertIn("knowledge_delta_review", data["controller_packet"]["reason_tags"])
         self.assertIn("evolution_trigger_review", data["controller_packet"]["reason_tags"])
+        self.assertIn("ready_for_task_packet_preview", data["controller_packet"]["reason_tags"])
+        self.assertIn("needs_controller_review", data["controller_packet"]["reason_tags"])
+        self.assertIn(
+            "ready for task-packet preview",
+            " ".join(data["operational_advice"]["controller_notes"]).lower(),
+        )
         self.assertEqual(data["promotion_state"], "inspect_only")
         self.assertEqual(data["controller_packet"]["truth_status"], "non_canonical")
         self.assertEqual(data["controller_packet"]["advisory_scope"], "flywheel_inspect_only")
@@ -153,6 +159,11 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertEqual(data["operational_advice"]["suggested_next_step"], "no_action")
         self.assertEqual(data["controller_packet"]["review_mode"], "no_action")
         self.assertIn("no_action", data["controller_packet"]["reason_tags"])
+        self.assertIn("insufficient_signal", data["controller_packet"]["reason_tags"])
+        self.assertIn(
+            "insufficient inspect signal",
+            " ".join(data["operational_advice"]["controller_notes"]).lower(),
+        )
         self.assertEqual(data["promotion_state"], "inspect_only")
 
     def test_flywheel_inspect_explicit_non_canonical_boundary(self):
@@ -205,6 +216,8 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertEqual(data["operational_advice"]["suggested_next_step"], "review_knowledge_deltas")
         self.assertEqual(len(data["knowledge_delta_candidates"]), 1)
         self.assertEqual(data["knowledge_delta_candidates"][0]["delta_type"], "concept")
+        self.assertIn("ready_for_task_packet_preview", data["controller_packet"]["reason_tags"])
+        self.assertIn("needs_controller_review", data["controller_packet"]["reason_tags"])
 
     def test_flywheel_inspect_filters_invalid_delta_types(self):
         """Invalid delta_type values are filtered out, valid ones are kept."""
@@ -332,6 +345,52 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertEqual(data["correction_events"][0]["review_gate"], "controller_review_required")
         self.assertEqual(data["operational_advice"]["suggested_next_step"], "review_source_candidates")
         self.assertIn("source-level candidates only", " ".join(data["operational_advice"]["controller_notes"]).lower())
+        self.assertIn("needs_controller_review", data["controller_packet"]["reason_tags"])
+        self.assertNotIn("ready_for_task_packet_preview", data["controller_packet"]["reason_tags"])
+
+    def test_flywheel_inspect_with_correction_only_requires_review(self):
+        """Valid correction-only inspect output requires review without task readiness."""
+
+        class _DummyAdapter:
+            async def chat(self, *args, **kwargs):
+                return """
+                {
+                  "intent": "correction",
+                  "summary": "valid correction only",
+                  "source_candidates": [],
+                  "correction_events": [
+                    {
+                      "target_scope": "source_status",
+                      "target_ref": "github.com/openclaw/openclaw",
+                      "correction_content": "treat as inactive"
+                    }
+                  ],
+                  "knowledge_delta_candidates": [],
+                  "evolution_trigger_candidates": []
+                }
+                """
+
+        with patch(
+            "conversation_runtime.flywheel.LLMAdapter",
+            return_value=_DummyAdapter(),
+        ):
+            response = self.client.post(
+                "/api/conversation-runtime/flywheel/inspect",
+                json={
+                    "conversation_text": "Treat github.com/openclaw/openclaw as inactive.",
+                    "speaker_role": "user",
+                    "topic": "source correction",
+                    "task_intent": "correction",
+                    "provider": "qwen",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["operational_advice"]["suggested_next_step"], "review_corrections")
+        self.assertEqual(len(data["correction_events"]), 1)
+        self.assertIn("needs_controller_review", data["controller_packet"]["reason_tags"])
+        self.assertNotIn("ready_for_task_packet_preview", data["controller_packet"]["reason_tags"])
 
     def test_flywheel_inspect_discards_out_of_scope_correction(self):
         """Out-of-scope corrections (e.g. entity) are discarded by P0 normalization."""
@@ -375,6 +434,8 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertEqual(data["correction_events"], [])
         self.assertIn("discarded_corrections=1", data["notes"])
         self.assertEqual(data["operational_advice"]["suggested_next_step"], "manual_review")
+        self.assertIn("needs_controller_review", data["controller_packet"]["reason_tags"])
+        self.assertIn("manual_review_required", data["controller_packet"]["reason_tags"])
 
     def test_flywheel_inspect_handles_invalid_json_gracefully(self):
         """Invalid LLM JSON response falls back to empty candidates."""
@@ -457,6 +518,8 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertEqual(data["operational_advice"]["suggested_next_step"], "review_evolution_triggers")
         self.assertEqual(data["controller_packet"]["review_mode"], "review_evolution_triggers")
         self.assertIn("evolution_trigger_review", data["controller_packet"]["reason_tags"])
+        self.assertIn("ready_for_task_packet_preview", data["controller_packet"]["reason_tags"])
+        self.assertIn("needs_controller_review", data["controller_packet"]["reason_tags"])
         self.assertNotIn("knowledge_delta_review", data["controller_packet"]["reason_tags"])
 
     # ---------------------------------------------------------------------------

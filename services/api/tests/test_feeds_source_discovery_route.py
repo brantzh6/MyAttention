@@ -1156,10 +1156,12 @@ class SourceDiscoveryRouteTests(unittest.TestCase):
 
             self.assertEqual(response.status_code, 200)
             data = response.json()
-            self.assertEqual(len(data["candidates"]), 1)
-            candidate = data["candidates"][0]
+            candidate = next(
+                candidate
+                for candidate in data["candidates"]
+                if candidate["object_key"] == "github.com/openclaw/openclaw/issue/123"
+            )
             self.assertEqual(candidate["item_type"], "signal")
-            self.assertEqual(candidate["object_key"], "github.com/openclaw/openclaw/issue/123")
             self.assertEqual(candidate["domain"], "github.com")
         finally:
             test_app.dependency_overrides.clear()

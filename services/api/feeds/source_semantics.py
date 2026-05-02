@@ -64,6 +64,16 @@ def is_reserved_social_namespace(handle: str) -> bool:
     return handle.strip().lower() in _RESERVED_SOCIAL_SINGLE_SEGMENT_PATHS
 
 
+def is_reserved_repository_namespace(domain: str, owner: str) -> bool:
+    normalized_domain = normalize_domain(domain)
+    normalized_owner = owner.strip().lower()
+    if normalized_domain == "github.com":
+        return normalized_owner in _RESERVED_GITHUB_SINGLE_SEGMENT_PATHS
+    if normalized_domain == "gitlab.com":
+        return normalized_owner in _RESERVED_GITLAB_SINGLE_SEGMENT_PATHS
+    return False
+
+
 def _focus_value(focus) -> str:
     return str(getattr(focus, "value", focus) or "").strip().lower()
 
@@ -118,6 +128,8 @@ def _github_repo_signal_identity(
     owner, repo = path_segments[0], path_segments[1]
     section = path_segments[2].lower()
     item_id = path_segments[3]
+    if is_reserved_repository_namespace(domain, owner):
+        return None
 
     if section == "issues":
         object_key = f"{domain}/{owner}/{repo}/issue/{item_id}".lower()
@@ -162,6 +174,8 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 4 and path_segments[2].lower() == "releases":
         owner, repo = path_segments[0], path_segments[1]
+        if is_reserved_repository_namespace(domain, owner):
+            return "domain", domain, domain, f"https://{domain}", domain
         is_tag_release = len(path_segments) >= 5 and path_segments[3].lower() == "tag"
         release_id = path_segments[4] if is_tag_release else path_segments[3]
         object_key = f"{domain}/{owner}/{repo}/release/{release_id}".lower()
@@ -172,6 +186,8 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 3 and path_segments[2].lower() == "releases":
         owner, repo = path_segments[0], path_segments[1]
+        if is_reserved_repository_namespace(domain, owner):
+            return "domain", domain, domain, f"https://{domain}", domain
         object_key = f"{domain}/{owner}/{repo}/release/latest".lower()
         canonical_url = f"https://{domain}/{owner}/{repo}/releases"
         display_name = f"{owner}/{repo} releases"
@@ -195,6 +211,8 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 2:
         owner, repo = path_segments[0], path_segments[1]
+        if is_reserved_repository_namespace(domain, owner):
+            return "domain", domain, domain, f"https://{domain}", domain
         object_key = f"{domain}/{owner}/{repo}".lower()
         canonical_url = f"https://{domain}/{owner}/{repo}"
         display_name = f"{owner}/{repo}"

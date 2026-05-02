@@ -366,6 +366,30 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
                     related,
                 )
 
+    def test_reserved_github_namespace_signal_does_not_emit_repository_hints(self) -> None:
+        related = _candidate_relation_hints(
+            "signal",
+            "github.com/orgs/openai/discussion/123",
+            "https://github.com/orgs/openai/discussions/123",
+        )
+
+        self.assertNotIn("repository", {item["relation"] for item in related})
+        self.assertFalse(
+            any(item["object_key"].startswith("github.com/org/orgs") for item in related),
+        )
+
+    def test_reserved_github_namespace_discussion_stays_organization(self) -> None:
+        item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+            "https://github.com/orgs/openai/discussions/123",
+            SourceDiscoveryFocus.METHOD,
+        )
+
+        self.assertEqual(item_type, "organization")
+        self.assertEqual(object_key, "github.com/org/openai")
+        self.assertEqual(display_name, "openai")
+        self.assertEqual(canonical_url, "https://github.com/orgs/openai")
+        self.assertEqual(domain, "github.com")
+
     def test_github_signal_repository_relation_can_seed_repository_candidate(self) -> None:
         candidate = _build_related_candidate_seed(
             {

@@ -46,6 +46,7 @@ from feeds.source_semantics import (
     ai_judgment_truth_boundary as _shared_ai_judgment_truth_boundary,
     candidate_identity as _shared_candidate_identity,
     focus_category as _shared_focus_category,
+    is_reserved_repository_namespace as _shared_is_reserved_repository_namespace,
     is_reserved_social_namespace as _shared_is_reserved_social_namespace,
     normalize_domain as _shared_normalize_domain,
 )
@@ -2012,23 +2013,24 @@ def _candidate_relation_hints(item_type: str, object_key: str, url: str) -> list
             parts = key.split("/")
             if len(parts) >= 5 and parts[3] in {"issue", "discussion", "pull"}:
                 owner, repo = parts[1], parts[2]
-                repo_key = f"github.com/{owner}/{repo}"
-                related.append(
-                    {
-                        "relation": "repository",
-                        "item_type": "repository",
-                        "object_key": repo_key,
-                        "label": f"{owner}/{repo}",
-                    }
-                )
-                related.append(
-                    {
-                        "relation": "owner",
-                        "item_type": "organization",
-                        "object_key": f"github.com/org/{owner}",
-                        "label": owner,
-                    }
-                )
+                if not _shared_is_reserved_repository_namespace("github.com", owner):
+                    repo_key = f"github.com/{owner}/{repo}"
+                    related.append(
+                        {
+                            "relation": "repository",
+                            "item_type": "repository",
+                            "object_key": repo_key,
+                            "label": f"{owner}/{repo}",
+                        }
+                    )
+                    related.append(
+                        {
+                            "relation": "owner",
+                            "item_type": "organization",
+                            "object_key": f"github.com/org/{owner}",
+                            "label": owner,
+                        }
+                    )
         related.append({"relation": "source_stream", "item_type": "domain", "object_key": url.lower(), "label": "discussion"})
     return related[:3]
 

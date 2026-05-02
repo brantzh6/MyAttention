@@ -135,15 +135,22 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertIn("/changelog", canonical_url)
 
     def test_identifies_event_pages_as_event_object(self) -> None:
-        item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+        for url in (
             "https://example.org/events/agent-summit-2026",
-            SourceDiscoveryFocus.FRONTIER,
-        )
-        self.assertEqual(item_type, "event")
-        self.assertEqual(object_key, "example.org:event")
-        self.assertEqual(domain, "example.org")
-        self.assertIn("events", display_name)
-        self.assertIn("/events/agent-summit-2026", canonical_url)
+            "https://example.org/workshop/agent-evaluation",
+            "https://example.org/webinar/source-intelligence",
+            "https://example.org/talks/agent-memory-boundaries",
+        ):
+            with self.subTest(url=url):
+                item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.FRONTIER,
+                )
+                self.assertEqual(item_type, "event")
+                self.assertEqual(object_key, "example.org:event")
+                self.assertEqual(domain, "example.org")
+                self.assertIn("events", display_name)
+                self.assertIn("example.org", canonical_url)
 
     def test_identifies_reddit_thread_as_signal_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(

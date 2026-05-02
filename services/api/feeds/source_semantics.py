@@ -264,7 +264,18 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
             display_name = f"HN item {item_id}"
             return "signal", object_key, display_name, canonical_url, domain
 
-    if any(segment.lower() in {"events", "event", "summit", "conference", "meetup"} for segment in path_segments):
+    event_segments = {
+        "events",
+        "event",
+        "summit",
+        "conference",
+        "meetup",
+        "workshop",
+        "webinar",
+        "talk",
+        "talks",
+    }
+    if any(segment.lower() in event_segments for segment in path_segments):
         object_key = f"{domain}:event"
         canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments)}"
         display_name = f"{domain} events"

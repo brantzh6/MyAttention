@@ -7,8 +7,6 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from urllib.parse import urlparse
-
 from sqlalchemy import String as SqlString, cast, or_, select
 from sqlalchemy.orm import joinedload
 
@@ -27,14 +25,34 @@ from feeds.ai_judgment import (
     SourceDiscoveryJudgePanelDisagreementItem,
     SourceDiscoveryJudgePanelInsights,
     SourceJudgmentSelectiveAbsorptionAdvice,
+    build_ai_candidate_judgment_prompt,
     compare_judgment_verdict_overlap,
     default_model_for_provider,
     derive_selective_absorption_advice,
     derive_panel_insights,
     normalize_ai_judgments_from_candidates,
     parse_ai_judgment_payload,
+    run_ai_candidate_judgment_once,
 )
 from feeds.authority import get_authority_classifier
+from feeds.source_contracts import (
+    SourceDiscoveryCandidate,
+    SourceDiscoveryFocus,
+    SourceDiscoveryInterestBias,
+    SourceDiscoveryRequest,
+    SourceDiscoveryResponse,
+)
+from feeds.source_semantics import (
+    ai_judgment_truth_boundary as _shared_ai_judgment_truth_boundary,
+    candidate_identity as _shared_candidate_identity,
+    focus_category as _shared_focus_category,
+    is_reserved_social_namespace as _shared_is_reserved_social_namespace,
+    normalize_domain as _shared_normalize_domain,
+)
+from feeds.source_postprocess import (
+    _compress_generic_domain_candidates,
+    _compress_release_repository_overlap,
+)
 from feeds.persistence import (
     build_import_feed_extra,
     build_import_source_url,
@@ -119,76 +137,6 @@ class FeedsReadBackend(str, Enum):
     CACHE = "cache"
     DB = "db"
     HYBRID = "hybrid"
-
-
-class SourceDiscoveryFocus(str, Enum):
-    LATEST = "latest"
-    AUTHORITATIVE = "authoritative"
-    FRONTIER = "frontier"
-    METHOD = "method"
-
-
-class SourceDiscoveryInterestBias(str, Enum):
-    AUTHORITY = "authority"
-    FRONTIER = "frontier"
-    COMMUNITY = "community"
-    METHOD = "method"
-
-
-class SourceDiscoveryRequest(BaseModel):
-    task_intent: str = Field("", description="discovery task intent")
-    interest_bias: Optional[SourceDiscoveryInterestBias] = Field(None, description="signal preference bias")
-    topic: str = Field(..., min_length=2, description="需要研究或持续关注的主题")
-    focus: SourceDiscoveryFocus = Field(SourceDiscoveryFocus.AUTHORITATIVE, description="发现目标")
-    limit: int = Field(12, ge=3, le=30, description="返回候选源数量")
-
-
-class SourceDiscoveryCandidate(BaseModel):
-    item_type: str = "domain"
-    object_key: str = ""
-    domain: str
-    name: str
-    url: str
-    authority_tier: str
-    authority_score: float
-    recommendation: str
-    recommendation_reason: str
-    evidence_count: int
-    activity_freshness: float = 0.0
-    follow_score: float = 0.0
-    inferred_roles: List[str] = []
-    related_entities: List[Dict[str, str]] = []
-    matched_queries: List[str]
-    sample_titles: List[str]
-    sample_snippets: List[str]
-    object_bucket: str = "authority"
-    policy_id: str = ""
-    policy_version: int = 1
-    policy_score: float = 0.0
-    gate_status: str = "candidate"
-    selection_reason: str = ""
-    source_nature: str = "mixed"
-    temperature: str = "medium"
-    recommended_mode: str = ""
-    recommended_execution_strategy: str = ""
-    why_relevant: str = ""
-    confidence_note: str = ""
-    canonical_ref: str = ""
-    candidate_endpoints: List[str] = []
-
-
-class SourceDiscoveryResponse(BaseModel):
-    topic: str
-    focus: SourceDiscoveryFocus
-    task_intent: str = ""
-    interest_bias: SourceDiscoveryInterestBias = SourceDiscoveryInterestBias.AUTHORITY
-    queries: List[str]
-    policy_id: str = ""
-    policy_version: int = 1
-    portfolio_summary: Dict[str, Any] = {}
-    notes: List[str] = []
-    truth_boundary: List[str] = []
-    candidates: List[SourceDiscoveryCandidate]
 
 
 class SourceDiscoveryJudgeInspectRequest(BaseModel):
@@ -465,13 +413,7 @@ def _source_to_api_model(source: _FeedSource) -> Source:
 
 
 def _normalize_domain(value: str) -> str:
-    parsed = urlparse(value if "://" in value else f"https://{value}")
-    domain = parsed.netloc or parsed.path
-    normalized = domain.lower().removeprefix("www.")
-    parts = normalized.split(".")
-    if len(parts) >= 3 and parts[0] in {"m", "mobile", "eu"}:
-        normalized = ".".join(parts[1:])
-    return normalized
+    return _shared_normalize_domain(value)
 
 
 _CONTEXTUAL_TECH_MEDIA_DOMAINS = {
@@ -485,221 +427,8 @@ _CONTEXTUAL_TECH_MEDIA_DOMAINS = {
 }
 
 
-def _is_contextual_media_article_candidate(domain: str, path_segments: list[str]) -> bool:
-    if domain not in _CONTEXTUAL_TECH_MEDIA_DOMAINS:
-        return False
-    if not path_segments:
-        return False
-    first = path_segments[0].lower()
-    if first in {
-        "tag",
-        "tags",
-        "topic",
-        "topics",
-        "category",
-        "categories",
-        "author",
-        "authors",
-        "about",
-        "team",
-        "search",
-        "newsletters",
-        "podcasts",
-        "events",
-    }:
-        return False
-    return True
-
-
-def _github_repo_signal_identity(
-    domain: str,
-    path_segments: list[str],
-    url: str,
-    focus: SourceDiscoveryFocus,
-) -> Optional[tuple[str, str, str, str, str]]:
-    if domain != "github.com":
-        return None
-    if focus not in {
-        SourceDiscoveryFocus.METHOD,
-        SourceDiscoveryFocus.FRONTIER,
-        SourceDiscoveryFocus.LATEST,
-    }:
-        return None
-    if len(path_segments) < 4:
-        return None
-
-    owner, repo = path_segments[0], path_segments[1]
-    section = path_segments[2].lower()
-    item_id = path_segments[3]
-
-    if section == "issues":
-        object_key = f"{domain}/{owner}/{repo}/issue/{item_id}".lower()
-        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/issues/{item_id}"
-        display_name = f"{owner}/{repo} issue {item_id}"
-        return "signal", object_key, display_name, canonical_url, domain
-
-    if section in {"pull", "pulls"}:
-        object_key = f"{domain}/{owner}/{repo}/pull/{item_id}".lower()
-        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/pull/{item_id}"
-        display_name = f"{owner}/{repo} pull {item_id}"
-        return "signal", object_key, display_name, canonical_url, domain
-
-    if section == "discussions":
-        object_key = f"{domain}/{owner}/{repo}/discussion/{item_id}".lower()
-        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/discussions/{item_id}"
-        display_name = f"{owner}/{repo} discussion {item_id}"
-        return "signal", object_key, display_name, canonical_url, domain
-
-    return None
-
-
 def _candidate_identity(url: str, focus: SourceDiscoveryFocus) -> tuple[str, str, str, str, str]:
-    parsed = urlparse(url if "://" in url else f"https://{url}")
-    domain = _normalize_domain(parsed.netloc or parsed.path)
-    path_segments = [segment for segment in (parsed.path or "").split("/") if segment]
-
-    if focus in {SourceDiscoveryFocus.LATEST, SourceDiscoveryFocus.FRONTIER} and _is_contextual_media_article_candidate(
-        domain,
-        path_segments,
-    ):
-        slug = "-".join(path_segments).lower()
-        object_key = f"{domain}/article/{slug}"
-        canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments)}"
-        display_name = f"{domain} article"
-        return "signal", object_key, display_name, canonical_url, domain
-
-    github_repo_signal = _github_repo_signal_identity(domain, path_segments, url, focus)
-    if github_repo_signal is not None:
-        return github_repo_signal
-
-    if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 4 and path_segments[2].lower() == "releases":
-        owner, repo = path_segments[0], path_segments[1]
-        release_id = path_segments[4] if len(path_segments) >= 5 and path_segments[3].lower() == "tag" else path_segments[3]
-        object_key = f"{domain}/{owner}/{repo}/release/{release_id}".lower()
-        canonical_url = url if url.startswith("http") else f"https://{domain}/{owner}/{repo}/releases/{release_id}"
-        display_name = f"{owner}/{repo} release {release_id}"
-        return "release", object_key, display_name, canonical_url, domain
-
-    if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 3 and path_segments[2].lower() == "releases":
-        owner, repo = path_segments[0], path_segments[1]
-        object_key = f"{domain}/{owner}/{repo}/release/latest".lower()
-        canonical_url = f"https://{domain}/{owner}/{repo}/releases"
-        display_name = f"{owner}/{repo} releases"
-        return "release", object_key, display_name, canonical_url, domain
-
-    if domain in {"github.com", "gitlab.com"} and path_segments and path_segments[0].lower() == "orgs" and len(path_segments) >= 2:
-        org = path_segments[1]
-        object_key = f"{domain}/org/{org}".lower()
-        canonical_url = f"https://{domain}/orgs/{org}"
-        return "organization", object_key, org, canonical_url, domain
-
-    if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 2:
-        owner, repo = path_segments[0], path_segments[1]
-        object_key = f"{domain}/{owner}/{repo}".lower()
-        canonical_url = f"https://{domain}/{owner}/{repo}"
-        display_name = f"{owner}/{repo}"
-        return "repository", object_key, display_name, canonical_url, domain
-
-    if domain == "huggingface.co" and len(path_segments) >= 2:
-        owner, repo = path_segments[0], path_segments[1]
-        object_key = f"{domain}/{owner}/{repo}".lower()
-        canonical_url = f"https://{domain}/{owner}/{repo}"
-        display_name = f"{owner}/{repo}"
-        return "repository", object_key, display_name, canonical_url, domain
-
-    if domain == "reddit.com" and len(path_segments) >= 2 and path_segments[0].lower() == "r":
-        if len(path_segments) >= 4 and path_segments[2].lower() in {"comments", "s"}:
-            if focus == SourceDiscoveryFocus.METHOD:
-                community = path_segments[1]
-                object_key = f"{domain}/r/{community}".lower()
-                canonical_url = f"https://{domain}/r/{community}"
-                display_name = f"r/{community}"
-                return "community", object_key, display_name, canonical_url, domain
-            thread_id = path_segments[3]
-            object_key = f"{domain}/thread/{thread_id}".lower()
-            canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments[:4])}"
-            display_name = f"r/{path_segments[1]} thread {thread_id}"
-            return "signal", object_key, display_name, canonical_url, domain
-        community = path_segments[1]
-        object_key = f"{domain}/r/{community}".lower()
-        canonical_url = f"https://{domain}/r/{community}"
-        display_name = f"r/{community}"
-        return "community", object_key, display_name, canonical_url, domain
-
-    if domain == "linkedin.com" and len(path_segments) >= 2 and path_segments[0].lower() == "company":
-        company = path_segments[1]
-        object_key = f"{domain}/company/{company}".lower()
-        canonical_url = f"https://{domain}/company/{company}"
-        return "organization", object_key, company, canonical_url, domain
-
-    if domain == "linkedin.com" and len(path_segments) >= 2 and path_segments[0].lower() == "in":
-        handle = path_segments[1]
-        object_key = f"{domain}/in/{handle}".lower()
-        canonical_url = f"https://{domain}/in/{handle}"
-        return "person", object_key, handle, canonical_url, domain
-
-    if domain in {"x.com", "twitter.com"} and path_segments:
-        if len(path_segments) >= 3 and path_segments[1].lower() == "status":
-            handle = path_segments[0]
-            status_id = path_segments[2]
-            object_key = f"{domain}/{handle}/status/{status_id}".lower()
-            canonical_url = url if url.startswith("http") else f"https://{domain}/{handle}/status/{status_id}"
-            display_name = f"@{handle} status {status_id}"
-            return "signal", object_key, display_name, canonical_url, domain
-        handle = path_segments[0]
-        if handle.lower() not in {"home", "search", "explore", "i", "settings", "messages"}:
-            object_key = f"{domain}/{handle}".lower()
-            canonical_url = f"https://{domain}/{handle}"
-            display_name = f"@{handle}"
-            return "person", object_key, display_name, canonical_url, domain
-
-    if domain == "news.ycombinator.com" and parsed.query:
-        query = parsed.query.lower()
-        if "id=" in query:
-            item_id = query.split("id=", 1)[1].split("&", 1)[0]
-            object_key = f"{domain}/item/{item_id}".lower()
-            canonical_url = url if url.startswith("http") else f"https://{domain}{parsed.path}?id={item_id}"
-            display_name = f"hn item {item_id}"
-            return "signal", object_key, display_name, canonical_url, domain
-
-    if domain == "github.com" and len(path_segments) == 1:
-        handle = path_segments[0]
-        if handle.lower() not in {
-            "orgs",
-            "topics",
-            "collections",
-            "features",
-            "enterprise",
-            "pricing",
-            "marketplace",
-            "sponsors",
-            "settings",
-            "search",
-            "notifications",
-            "explore",
-            "login",
-            "join",
-        }:
-            object_key = f"{domain}/user/{handle}".lower()
-            canonical_url = f"https://{domain}/{handle}"
-            return "person", object_key, handle, canonical_url, domain
-
-    lowered_url = (parsed.path or "").lower()
-    if any(token in lowered_url for token in ("/release", "/releases", "release-notes", "changelog", "whats-new", "announcements")):
-        object_key = f"{domain}:release".lower()
-        canonical_url = url if url.startswith("http") else f"https://{domain}{parsed.path}"
-        display_name = f"{domain} release stream"
-        return "release", object_key, display_name, canonical_url, domain
-
-    if any(token in lowered_url for token in ("conference", "summit", "meetup", "workshop", "webinar", "talks", "events")):
-        object_key = f"{domain}:event".lower()
-        canonical_url = url if url.startswith("http") else f"https://{domain}{parsed.path}"
-        display_name = f"{domain} events"
-        return "event", object_key, display_name, canonical_url, domain
-
-    object_key = domain.lower()
-    canonical_url = url if url.startswith("http") else f"https://{domain}"
-    return "domain", object_key, domain, canonical_url, domain
+    return _shared_candidate_identity(url, focus)
 
 
 def _normalize_plan_topic(value: str) -> str:
@@ -846,12 +575,7 @@ def _discovery_truth_boundary() -> list[str]:
 
 
 def _ai_judgment_truth_boundary() -> list[str]:
-    return [
-        "AI judgment inspect output is advisory, not canonical source truth",
-        "AI judgment does not auto-subscribe, auto-promote, or write source plans",
-        "model verdicts must remain reviewable and may be wrong or incomplete",
-        "model summary is advisory condensation, not the canonical decision set",
-    ]
+    return _shared_ai_judgment_truth_boundary()
 
 
 def _discovery_request_from_source_plan(body: "SourcePlanCreateRequest") -> SourceDiscoveryRequest:
@@ -881,13 +605,7 @@ def _discovery_request_from_persisted_plan(
 
 
 def _focus_category(focus: SourceDiscoveryFocus) -> str:
-    if focus == SourceDiscoveryFocus.METHOD:
-        return "开发者"
-    if focus == SourceDiscoveryFocus.FRONTIER:
-        return "AI研究"
-    if focus == SourceDiscoveryFocus.LATEST:
-        return "科技"
-    return "AI研究"
+    return _shared_focus_category(focus)
 
 
 def _candidate_to_attention_payload(candidate: SourceDiscoveryCandidate) -> Dict[str, Any]:
@@ -1134,37 +852,12 @@ def _build_ai_candidate_judgment_prompt(
     interest_bias: SourceDiscoveryInterestBias,
     candidates: list[SourceDiscoveryCandidate],
 ) -> str:
-    candidate_block = json.dumps(
-        [_candidate_to_judgment_payload(candidate) for candidate in candidates],
-        ensure_ascii=False,
-        indent=2,
-    )
-    return (
-        "你是 Source Intelligence 的 AI judgment lane。"
-        "你的任务不是改写系统规则，而是对已经过初步降噪的候选对象做 advisory judgment。\n\n"
-        f"topic: {topic}\n"
-        f"focus: {focus.value}\n"
-        f"task_intent: {task_intent}\n"
-        f"interest_bias: {interest_bias.value}\n\n"
-        "请只基于给定候选，返回 JSON：\n"
-        "{\n"
-        '  "summary": "一句话总结",\n'
-        '  "judgments": [\n'
-        "    {\n"
-        '      "object_key": "候选 object_key",\n'
-        '      "verdict": "follow|review|ignore",\n'
-        '      "rationale": "为什么",\n'
-        '      "confidence": 0.0,\n'
-        '      "review_priority": "high|normal|low"\n'
-        "    }\n"
-        "  ]\n"
-        "}\n\n"
-        "要求：\n"
-        "1. 不要输出候选之外的 object_key\n"
-        "2. 不要输出 JSON 之外的内容\n"
-        "3. verdict 只能是 follow/review/ignore\n"
-        "4. 这是 advisory judgment，不是最终真相\n\n"
-        f"候选列表:\n{candidate_block}"
+    return build_ai_candidate_judgment_prompt(
+        topic=topic,
+        focus=focus,
+        task_intent=task_intent,
+        interest_bias=interest_bias,
+        candidates=candidates,
     )
 
 
@@ -1176,21 +869,16 @@ async def _run_ai_candidate_judgment_once(
     discovery: SourceDiscoveryResponse,
     judged_candidates: list[SourceDiscoveryCandidate],
 ) -> tuple[list[SourceCandidateJudgment], str, str, int]:
-    raw = await adapter.chat(
-        message=_build_ai_candidate_judgment_prompt(
-            discovery.topic,
-            discovery.focus,
-            discovery.task_intent,
-            discovery.interest_bias,
-            judged_candidates,
-        ),
+    return await run_ai_candidate_judgment_once(
+        adapter=adapter,
         provider=provider,
         model=model,
-        system_prompt="Return valid JSON only.",
+        topic=discovery.topic,
+        focus=discovery.focus,
+        task_intent=discovery.task_intent,
+        interest_bias=discovery.interest_bias,
+        judged_candidates=judged_candidates,
     )
-    payload, parse_status = parse_ai_judgment_payload(raw)
-    judgments, summary, discarded_judgments = normalize_ai_judgments_from_candidates(judged_candidates, payload)
-    return judgments, summary, parse_status, discarded_judgments
 
 
 def _compare_ai_candidate_judgments(
@@ -2301,26 +1989,44 @@ def _candidate_relation_hints(item_type: str, object_key: str, url: str) -> list
         if key.startswith("github.com/user/"):
             handle = key.split("github.com/user/", 1)[1]
             related.append({"relation": "activity_stream", "item_type": "domain", "object_key": "github.com", "label": f"@{handle} on GitHub"})
-        elif key.startswith("x.com/") or key.startswith("twitter.com/"):
-            handle = key.split("/", 1)[1] if "/" in key else key
-            related.append({"relation": "activity_stream", "item_type": "signal", "object_key": f"{key}/status/latest", "label": f"{handle} activity"})
         elif "linkedin.com/in/" in key:
             handle = key.split("linkedin.com/in/", 1)[1]
             related.append({"relation": "profile", "item_type": "domain", "object_key": "linkedin.com", "label": f"{handle} profile"})
     elif item_type == "signal":
         if key.startswith("x.com/") and "/status/" in key:
             handle = key.split("x.com/", 1)[1].split("/status/", 1)[0].strip("/")
-            if handle:
+            if handle and not _shared_is_reserved_social_namespace(handle):
                 related.append({"relation": "author", "item_type": "person", "object_key": f"x.com/{handle}", "label": f"@{handle}"})
         elif key.startswith("twitter.com/") and "/status/" in key:
             handle = key.split("twitter.com/", 1)[1].split("/status/", 1)[0].strip("/")
-            if handle:
+            if handle and not _shared_is_reserved_social_namespace(handle):
                 related.append(
                     {
                         "relation": "author",
                         "item_type": "person",
                         "object_key": f"twitter.com/{handle}",
                         "label": f"@{handle}",
+                    }
+                )
+        elif key.startswith("github.com/"):
+            parts = key.split("/")
+            if len(parts) >= 5 and parts[3] in {"issue", "discussion", "pull"}:
+                owner, repo = parts[1], parts[2]
+                repo_key = f"github.com/{owner}/{repo}"
+                related.append(
+                    {
+                        "relation": "repository",
+                        "item_type": "repository",
+                        "object_key": repo_key,
+                        "label": f"{owner}/{repo}",
+                    }
+                )
+                related.append(
+                    {
+                        "relation": "owner",
+                        "item_type": "person",
+                        "object_key": f"github.com/user/{owner}",
+                        "label": owner,
                     }
                 )
         related.append({"relation": "source_stream", "item_type": "domain", "object_key": url.lower(), "label": "discussion"})
@@ -2358,8 +2064,20 @@ def _related_entity_url(item_type: str, object_key: str) -> str:
 
 def _parent_related_item_type(parent_object_key: str) -> str:
     key = parent_object_key.lower()
+    if key.startswith("github.com/"):
+        parts = key.split("/")
+        if len(parts) >= 5 and parts[3] in {"issue", "discussion", "pull"}:
+            return "signal"
     if key.startswith("github.com/") and key.count("/") >= 2 and "/release/" not in key:
         return "repository"
+    if key.startswith("x.com/") and "/status/" in key:
+        handle = key.split("x.com/", 1)[1].split("/status/", 1)[0].strip("/")
+        if _shared_is_reserved_social_namespace(handle):
+            return "domain"
+    if key.startswith("twitter.com/") and "/status/" in key:
+        handle = key.split("twitter.com/", 1)[1].split("/status/", 1)[0].strip("/")
+        if _shared_is_reserved_social_namespace(handle):
+            return "domain"
     if "/status/" in key or "/thread/" in key or "/item/" in key:
         return "signal"
     if "/release/" in key or key.endswith(":release"):
@@ -2380,7 +2098,7 @@ def _build_related_candidate_seed(
     object_key = str(related.get("object_key", "")).strip().lower()
     label = str(related.get("label", "")).strip()
     relation = str(related.get("relation", "")).strip().lower()
-    if item_type not in {"person", "organization"} or not object_key:
+    if item_type not in {"person", "organization", "repository"} or not object_key:
         return None
 
     inferred_roles: list[str] = []
@@ -2485,82 +2203,6 @@ def _candidate_selection_threshold(item_type: str, focus: SourceDiscoveryFocus) 
     if item_type == "repository" and focus == SourceDiscoveryFocus.METHOD:
         return 0.4
     return base_threshold
-
-
-def _compress_generic_domain_candidates(
-    candidates: list[dict[str, Any]],
-    focus: SourceDiscoveryFocus,
-) -> list[dict[str, Any]]:
-    if focus not in {
-        SourceDiscoveryFocus.METHOD,
-        SourceDiscoveryFocus.FRONTIER,
-        SourceDiscoveryFocus.LATEST,
-    }:
-        return candidates
-
-    specific_best_by_domain: dict[str, float] = {}
-    for candidate in candidates:
-        item_type = str(candidate.get("item_type", "")).lower()
-        domain = str(candidate.get("domain", "")).lower()
-        if not domain or item_type == "domain":
-            continue
-        specific_best_by_domain[domain] = max(
-            specific_best_by_domain.get(domain, 0.0),
-            float(candidate.get("authority_score", 0.0) or 0.0),
-        )
-
-    compressed: list[dict[str, Any]] = []
-    for candidate in candidates:
-        item_type = str(candidate.get("item_type", "")).lower()
-        domain = str(candidate.get("domain", "")).lower()
-        score = float(candidate.get("authority_score", 0.0) or 0.0)
-        best_specific = specific_best_by_domain.get(domain, 0.0)
-        if item_type == "domain" and best_specific >= max(score - 0.02, 0.38):
-            continue
-        compressed.append(candidate)
-    return compressed
-
-
-def _repository_base_object_key(object_key: str, item_type: str) -> str:
-    key = str(object_key or "").lower()
-    item_type = str(item_type or "").lower()
-    if item_type == "repository":
-        return key
-    if item_type == "release" and "/release/" in key:
-        return key.split("/release/", 1)[0]
-    return ""
-
-
-def _compress_release_repository_overlap(
-    candidates: list[dict[str, Any]],
-    focus: SourceDiscoveryFocus,
-) -> list[dict[str, Any]]:
-    if focus not in {SourceDiscoveryFocus.LATEST, SourceDiscoveryFocus.FRONTIER}:
-        return candidates
-
-    release_best_by_repo: dict[str, float] = {}
-    for candidate in candidates:
-        item_type = str(candidate.get("item_type", "")).lower()
-        if item_type != "release":
-            continue
-        repo_key = _repository_base_object_key(candidate.get("object_key", ""), item_type)
-        if not repo_key:
-            continue
-        release_best_by_repo[repo_key] = max(
-            release_best_by_repo.get(repo_key, 0.0),
-            float(candidate.get("authority_score", 0.0) or 0.0),
-        )
-
-    compressed: list[dict[str, Any]] = []
-    for candidate in candidates:
-        item_type = str(candidate.get("item_type", "")).lower()
-        object_key = str(candidate.get("object_key", "")).lower()
-        score = float(candidate.get("authority_score", 0.0) or 0.0)
-        best_release = release_best_by_repo.get(object_key, 0.0)
-        if item_type == "repository" and best_release >= max(score - 0.02, 0.38):
-            continue
-        compressed.append(candidate)
-    return compressed
 
 
 async def _run_source_discovery(body: SourceDiscoveryRequest, db: AsyncSession) -> SourceDiscoveryResponse:

@@ -39,12 +39,14 @@ Codex Cloud review on PR #2 returned three bounded findings:
 1. `P1` unresolved `ai_judgment` import in `services/api/routers/feeds.py`
 2. `P2` dropped `workshop` / `webinar` / `talks` event-page matching
 3. `P2` missing reserved GitHub namespace guard for signal relation hints
+4. `P0` updated-head still missing committed `ai_judgment` helper definitions
 
 Absorption decision:
 
-- `P1`: checked against local updated head; not reproducible. `build_ai_candidate_judgment_prompt` exists in `services/api/feeds/ai_judgment.py`, and `py_compile` covers both `services/api/routers/feeds.py` and `services/api/feeds/ai_judgment.py`.
+- `P1`: accepted as a PR packaging issue after the updated-head review showed the helper definitions were present locally but not committed to the PR branch.
 - `P2 event matching`: accepted and fixed. Event segment matching now restores `workshop`, `webinar`, `talk`, and `talks`; regression coverage was added.
 - `P2 reserved GitHub namespace`: accepted and fixed. Reserved repository-owner namespaces now block repo-shaped signal identity and relation hints while preserving `/orgs/<org>` as an organization object.
+- `P0 missing helper definitions`: accepted and fixed. The shared `ai_judgment` helper substrate is now committed, and the route test expectation now allows relation-hint candidate expansion while still asserting the original GitHub issue remains a `signal`.
 
 ## Validation Run
 
@@ -58,6 +60,18 @@ Observed result:
 
 ```text
 47 passed, 6 warnings, 23 subtests passed
+```
+
+Passed:
+
+```powershell
+python -m pytest services/api/tests/test_feeds_source_discovery_route.py -q
+```
+
+Observed result:
+
+```text
+37 passed, 4 warnings
 ```
 
 Passed:

@@ -189,9 +189,9 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
             return "domain", domain, domain, f"https://{domain}", domain
         if domain == "gitlab.com" and handle.lower() in _RESERVED_GITLAB_SINGLE_SEGMENT_PATHS:
             return "domain", domain, domain, f"https://{domain}", domain
-        object_key = f"{domain}/user/{handle}".lower()
+        object_key = f"{domain}/org/{handle}".lower()
         canonical_url = f"https://{domain}/{handle}"
-        return "person", object_key, handle, canonical_url, domain
+        return "organization", object_key, handle, canonical_url, domain
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 2:
         owner, repo = path_segments[0], path_segments[1]

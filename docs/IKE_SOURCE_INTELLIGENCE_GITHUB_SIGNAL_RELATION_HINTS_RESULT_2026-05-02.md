@@ -11,9 +11,16 @@ Implemented deterministic relation hints for GitHub repo-scoped signal objects.
 GitHub issue, discussion, and pull signal object keys now emit relation hints back to:
 
 - the parent repository
-- the repository owner as a person candidate
+- the repository owner as an organization candidate
 
 Related candidate seeding now also supports repository candidates, allowing a GitHub signal to seed its repository context without subscribing, promoting, or writing source plans.
+
+Controller absorption update:
+
+- the initial L1 review flagged a false-person-seed correctness issue for GitHub owners
+- the fix now normalizes ambiguous single-segment GitHub/GitLab handles to `organization`
+- repo-owner relation hints now use `organization` instead of `person`
+- the fixed slice was re-reviewed and accepted
 
 ## Files Changed
 
@@ -35,7 +42,7 @@ The implementation stays inside existing source-discovery mechanics:
 - no GitHub API calls are introduced.
 - no persistence, scheduler, source-plan promotion, or route contract behavior is changed.
 
-This preserves the project direction that source value is contextual: a GitHub issue or discussion is more useful when attached to its repository and owner context.
+This preserves the project direction that source value is contextual: a GitHub issue or discussion is more useful when attached to its repository context, and the owner namespace is represented conservatively as an organization candidate to avoid false person seeds.
 
 ## Validation Run
 
@@ -66,16 +73,10 @@ python -m py_compile services/api/feeds/source_contracts.py services/api/feeds/s
 ## Known Risks
 
 - Repository related-candidate seeding is now allowed for relation hints. It remains advisory and in-memory, but downstream ranking should still be reviewed through the GitHub/Codex L1 gate before promotion.
-- Existing repository-owner handling treats GitHub owners as `person` seeds. That matches the pre-existing behavior, but future work may need organization/person disambiguation.
+- Ambiguous single-segment GitHub/GitLab handles are now classified as `organization` to avoid false person seeds. That is conservative, but it may under-model user-profile pages until a better identity source exists.
 - The broader worktree remains dirty and over budget; this result is not safe for broad commit or mixed PR.
 - `services/api/feeds/source_contracts.py`, `services/api/feeds/source_postprocess.py`, and `services/api/feeds/source_semantics.py` are currently untracked but required by the scoped source-intelligence candidate. A PR that includes `feeds.py` without these files will be incomplete.
 
 ## Recommendation
 
-accept_with_changes
-
-Required changes before promotion:
-
-- Run scoped GitHub/Codex L1 review on only this source-intelligence slice.
-- Absorb any L1 findings locally.
-- Controller performs L2 integration review before accepting promotion.
+accept

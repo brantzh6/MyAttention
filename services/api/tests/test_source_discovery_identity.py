@@ -64,13 +64,13 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertIn("release", display_name)
         self.assertIn("/releases/tag/v1.2.3", canonical_url)
 
-    def test_identifies_github_user_profile_as_person_object(self) -> None:
+    def test_identifies_github_user_profile_as_organization_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
             "https://github.com/openclaw",
             SourceDiscoveryFocus.METHOD,
         )
-        self.assertEqual(item_type, "person")
-        self.assertEqual(object_key, "github.com/user/openclaw")
+        self.assertEqual(item_type, "organization")
+        self.assertEqual(object_key, "github.com/org/openclaw")
         self.assertEqual(display_name, "openclaw")
         self.assertEqual(canonical_url, "https://github.com/openclaw")
         self.assertEqual(domain, "github.com")
@@ -101,13 +101,13 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
                 self.assertEqual(canonical_url, "https://gitlab.com")
                 self.assertEqual(domain, "gitlab.com")
 
-    def test_identifies_gitlab_user_profile_as_person_object(self) -> None:
+    def test_identifies_gitlab_user_profile_as_organization_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
             "https://gitlab.com/openclaw",
             SourceDiscoveryFocus.METHOD,
         )
-        self.assertEqual(item_type, "person")
-        self.assertEqual(object_key, "gitlab.com/user/openclaw")
+        self.assertEqual(item_type, "organization")
+        self.assertEqual(object_key, "gitlab.com/org/openclaw")
         self.assertEqual(display_name, "openclaw")
         self.assertEqual(canonical_url, "https://gitlab.com/openclaw")
         self.assertEqual(domain, "gitlab.com")
@@ -273,12 +273,12 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
             _candidate_selection_threshold("domain", SourceDiscoveryFocus.FRONTIER),
         )
 
-    def test_related_repository_owner_can_seed_person_candidate(self) -> None:
+    def test_related_repository_owner_can_seed_organization_candidate(self) -> None:
         candidate = _build_related_candidate_seed(
             {
                 "relation": "owner",
-                "item_type": "person",
-                "object_key": "github.com/user/openclaw",
+                "item_type": "organization",
+                "object_key": "github.com/org/openclaw",
                 "label": "openclaw",
             },
             parent_object_key="github.com/openclaw/openclaw",
@@ -289,9 +289,9 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         )
         self.assertIsNotNone(candidate)
         assert candidate is not None
-        self.assertEqual(candidate["item_type"], "person")
+        self.assertEqual(candidate["item_type"], "organization")
         self.assertEqual(candidate["url"], "https://github.com/openclaw")
-        self.assertIn("maintainer", candidate["inferred_roles"])
+        self.assertEqual(candidate["inferred_roles"], [])
         self.assertGreaterEqual(candidate["authority_score"], 0.45)
 
     def test_x_status_signal_emits_person_relation_hint(self) -> None:
@@ -329,8 +329,8 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertIn(
             {
                 "relation": "owner",
-                "item_type": "person",
-                "object_key": "github.com/user/openclaw",
+                "item_type": "organization",
+                "object_key": "github.com/org/openclaw",
                 "label": "openclaw",
             },
             related,

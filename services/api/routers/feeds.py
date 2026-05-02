@@ -1980,8 +1980,8 @@ def _candidate_relation_hints(item_type: str, object_key: str, url: str) -> list
         parts = key.split("/")
         if len(parts) >= 3:
             owner = parts[1]
-            owner_key = f"github.com/user/{owner}"
-            related.append({"relation": "owner", "item_type": "person", "object_key": owner_key, "label": owner})
+            owner_key = f"github.com/org/{owner}"
+            related.append({"relation": "owner", "item_type": "organization", "object_key": owner_key, "label": owner})
     elif item_type == "organization" and key.startswith("github.com/org/"):
         org = key.split("/org/", 1)[1]
         related.append({"relation": "activity_stream", "item_type": "domain", "object_key": "github.com", "label": f"{org} org"})
@@ -2024,8 +2024,8 @@ def _candidate_relation_hints(item_type: str, object_key: str, url: str) -> list
                 related.append(
                     {
                         "relation": "owner",
-                        "item_type": "person",
-                        "object_key": f"github.com/user/{owner}",
+                        "item_type": "organization",
+                        "object_key": f"github.com/org/{owner}",
                         "label": owner,
                     }
                 )

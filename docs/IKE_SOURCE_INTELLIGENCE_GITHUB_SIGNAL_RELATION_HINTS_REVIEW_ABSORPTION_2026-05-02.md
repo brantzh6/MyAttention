@@ -32,6 +32,20 @@ The accepted fix removes the concrete correctness issue without widening scope:
 
 The controller accepted the re-reviewed slice after validation passed.
 
+## GitHub/Codex Review Absorption
+
+Codex Cloud review on PR #2 returned three bounded findings:
+
+1. `P1` unresolved `ai_judgment` import in `services/api/routers/feeds.py`
+2. `P2` dropped `workshop` / `webinar` / `talks` event-page matching
+3. `P2` missing reserved GitHub namespace guard for signal relation hints
+
+Absorption decision:
+
+- `P1`: checked against local updated head; not reproducible. `build_ai_candidate_judgment_prompt` exists in `services/api/feeds/ai_judgment.py`, and `py_compile` covers both `services/api/routers/feeds.py` and `services/api/feeds/ai_judgment.py`.
+- `P2 event matching`: accepted and fixed. Event segment matching now restores `workshop`, `webinar`, `talk`, and `talks`; regression coverage was added.
+- `P2 reserved GitHub namespace`: accepted and fixed. Reserved repository-owner namespaces now block repo-shaped signal identity and relation hints while preserving `/orgs/<org>` as an organization object.
+
 ## Validation Run
 
 Passed:
@@ -43,13 +57,13 @@ python -m pytest services/api/tests/test_source_discovery_identity.py -q
 Observed result:
 
 ```text
-45 passed, 6 warnings, 19 subtests passed
+47 passed, 6 warnings, 23 subtests passed
 ```
 
 Passed:
 
 ```powershell
-python -m py_compile services/api/feeds/source_semantics.py services/api/routers/feeds.py services/api/tests/test_source_discovery_identity.py
+python -m py_compile services/api/feeds/source_semantics.py services/api/routers/feeds.py services/api/feeds/ai_judgment.py services/api/tests/test_source_discovery_identity.py
 ```
 
 ## Known Risks

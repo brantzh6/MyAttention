@@ -1,0 +1,428 @@
+{
+    "generated_at":  "2026-04-30",
+    "truth_status":  "manual_curated_active_state_non_canonical",
+    "source":  [
+                   "docs/IKE_MAINLINE_STATE_MANIFEST_P0_PACKET_2026-04-29.md",
+                   "docs/IKE_WORKTREE_DOC_KNOWLEDGE_GOVERNANCE_PLAN_2026-04-29.md",
+                   "docs/CURRENT_MAINLINE_HANDOFF.md",
+                   "docs/IKE_SCOPED_GITHUB_CODEX_REVIEW_PREP_2026-04-29.md",
+                   "docs/IKE_VISUAL_CONTROL_SURFACE_P0_REVIEW_ABSORPTION_2026-04-29.md",
+                   "docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_PACKET_2026-04-29.md",
+                   "docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_RESULT_2026-04-29.md",
+                   "docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_REVIEW_ABSORPTION_2026-04-30.md",
+                   "docs/IKE_VISUAL_CONTROL_SURFACE_P1_PROGRESS_DASHBOARD_RESULT_2026-04-30.md",
+                   "docs/IKE_WORKTREE_ARCHIVE_INDEX_PLAN_P0_PACKET_2026-04-30.md",
+                   "docs/IKE_WORKTREE_ARCHIVE_INDEX_PLAN_P0_RESULT_2026-04-30.md",
+                   "docs/IKE_WORKTREE_ARCHIVE_INDEX_PLAN_P0_REVIEW_ABSORPTION_2026-04-30.md",
+                   "docs/IKE_DIRTY_WORKTREE_RECONCILIATION_DOCS_ONLY_RESULT_2026-04-30.md",
+                   "docs/IKE_CURRENT_CONTINUATION_HISTORY_RECONCILIATION_RESULT_2026-04-30.md",
+                   "docs/IKE_ACTIVE_SURFACES_HISTORY_ONLY_RECONCILIATION_RESULT_2026-04-30.md",
+                   "docs/IKE_DIRTY_WORKTREE_SCOPED_CLEANUP_PLANNING_RESULT_2026-04-30.md",
+                   "docs/IKE_DIRTY_WORKTREE_SCOPED_CLEANUP_PACKET_2026-04-30.md",
+                   "docs/IKE_DIRTY_WORKTREE_SCOPED_CLEANUP_PACKET_RESULT_2026-04-30.md",
+                   "docs/IKE_CONTROLLER_SURFACE_HISTORY_AUDIT_PACKET_2026-04-30.md",
+                   "docs/IKE_CONTROLLER_SURFACE_HISTORY_AUDIT_RESULT_2026-04-30.md",
+                   "docs/IKE_LONG_HANDOFF_HISTORY_NOTE_NORMALIZATION_PACKET_2026-04-30.md",
+                   "docs/IKE_LONG_HANDOFF_HISTORY_NOTE_NORMALIZATION_RESULT_2026-04-30.md",
+                   "docs/IKE_LONG_HANDOFF_REVIEW_TIME_OBSERVATION_NORMALIZATION_PACKET_2026-04-30.md",
+                   "docs/IKE_LONG_HANDOFF_REVIEW_TIME_OBSERVATION_NORMALIZATION_RESULT_2026-04-30.md",
+                   "docs/IKE_LONG_HANDOFF_BLOCKER_NOTE_NORMALIZATION_PACKET_2026-04-30.md",
+                   "docs/IKE_LONG_HANDOFF_BLOCKER_HISTORY_NORMALIZATION_PACKET_2026-04-30.md",
+                   "docs/IKE_LONG_HANDOFF_BLOCKER_HISTORY_NORMALIZATION_RESULT_2026-04-30.md",
+                   "docs/IKE_LONG_HANDOFF_FINAL_BLOCKER_HISTORY_NORMALIZATION_PACKET_2026-04-30.md",
+                   "docs/IKE_LONG_HANDOFF_FINAL_BLOCKER_HISTORY_NORMALIZATION_RESULT_2026-04-30.md",
+                   "docs/IKE_PR1_CODEX_REVIEW_ACCESS_HISTORY_ONLY_RESULT_2026-04-30.md",
+                   "docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_PACKET_2026-04-30.md",
+                   "docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_RESULT_2026-04-30.md",
+                   "docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_IMPLEMENTATION_RESULT_2026-05-01.md",
+                   "docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_PACKET_2026-05-02.md",
+                   "docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_RESULT_2026-05-02.md",
+                   "docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_REVIEW_ABSORPTION_2026-05-02.md",
+                   "docs/IKE_ARCHIVE_INDEX_SCHEMA_P0_PACKET_2026-04-30.md",
+                   "docs/IKE_ARCHIVE_INDEX_SCHEMA_P0_RESULT_2026-04-30.md",
+                   "docs/IKE_ARCHIVE_INDEX_SCHEMA_P0_REVIEW_ABSORPTION_2026-04-30.md",
+                   "docs/IKE_REVIEW_ARTIFACT_IDENTITY_INDEX_P0_PACKET_2026-04-30.md",
+                   "docs/archive/REVIEW_ARTIFACT_IDENTITY_INDEX_2026-04.md",
+                   "docs/IKE_REVIEW_ARTIFACT_IDENTITY_INDEX_P0_RESULT_2026-04-30.md",
+                   "docs/IKE_REVIEW_ARTIFACT_IDENTITY_INDEX_P0_REVIEW_ABSORPTION_2026-04-30.md",
+                   "docs/IKE_DOC_ARCHIVE_INDEX_2026_04_P0_PACKET_2026-04-30.md",
+                   "docs/archive/ARCHIVE_INDEX_2026-04.md",
+                   "docs/IKE_DOC_ARCHIVE_INDEX_2026_04_P0_RESULT_2026-04-30.md",
+                   "docs/IKE_DOC_ARCHIVE_INDEX_2026_04_P0_REVIEW_ABSORPTION_2026-04-30.md",
+                   "docs/CURRENT_MAINLINE_HANDOFF_COMPACT_2026-04-30.md",
+                   "docs/CODE_REVIEW_2026-04-30.md",
+                   "docs/IKE_PR1_GITHUB_CODEX_REVIEW_FINDINGS_REVIEW_ABSORPTION_2026-04-30.md"
+                ],
+    "current_phase":  "source_intelligence_quality_resumption",
+    "active_branch_context":  {
+                                  "controller_worktree":  "D:/code/MyAttention",
+                                  "controller_branch":  "codex/source-intel-github-signal-relations-20260502 with scoped governance PR #3",
+                                  "dirty_untracked_entries":  "clean after 2026-05-06 quarantine and scoped governance restore",
+                                  "scoped_review_branch":  "codex/governance-current-surfaces-20260506",
+                                  "scoped_review_base":  "origin/codex/pre-ike-restructure-2026-04-09",
+                                   "scoped_review_commit":  "bbe2479e7b65dea022f6a66ad4912be406b5cdfa",
+                                   "github_pr":  "https://github.com/brantzh6/MyAttention/pull/1",
+                                   "merge_commit":  "56f458ab3e663e9c6791b361d1a20a4b928c6cac"
+                               },
+    "open_reviews":  [
+                         {
+                             "review_id":  "PR_1_GITHUB_CODEX_REVIEW",
+                             "level":  "L2",
+                              "status":  "merged",
+                              "artifact":  "https://github.com/brantzh6/MyAttention/pull/1",
+                              "next":  "continue the mainline from the merge commit"
+                          }
+                     ],
+    "active_nodes":  [
+                         {
+                             "node_id":  "IKE_REVIEW_AUTOMATION_P0",
+                             "lane":  "review_automation",
+                             "stage":  "accepted",
+                             "risk":  "R2",
+                             "artifacts":  [
+                                               "docs/IKE_REVIEW_AUTOMATION_P0_IMPLEMENTATION_PACKET_2026-04-29.md",
+                                               "docs/IKE_REVIEW_AUTOMATION_P0_RESULT_2026-04-29.md"
+                                           ],
+                             "validation":  [
+                                                "python scripts/review/run_l1_review.py --help",
+                                                "python -m py_compile scripts/review/run_l1_review.py"
+                                            ],
+                             "review":  {
+                                            "level":  "controller",
+                                            "recommendation":  "accept",
+                                            "findings_absorbed":  "unknown"
+                                        },
+                             "promotion":  {
+                                               "github_pr":  "https://github.com/brantzh6/MyAttention/pull/1",
+                                               "merge_allowed":  false,
+                                               "reason":  "PR review pending"
+                                           },
+                             "truth_boundary":  [
+                                                    "review artifact generation only",
+                                                    "not promotion authority"
+                                                ],
+                             "next":  [
+                                          "historical: PR #1 review outcome was later resolved and merged"
+                                      ]
+                         },
+                         {
+                             "node_id":  "IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE",
+                             "lane":  "review_automation",
+                             "stage":  "accepted",
+                             "risk":  "R2",
+                             "artifacts":  [
+                                               "docs/IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_PACKET_2026-04-29.md",
+                                               "docs/IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_RESULT_2026-04-29.md"
+                                           ],
+                             "validation":  [
+                                                "python scripts/review/run_l1_review.py --help",
+                                                "python scripts/review/run_l1_review.py --cwd D:/code/MyAttention --task-id IKE_REVIEW_AUTOMATION_P1_DRY_TIMEOUT_SMOKE --title \"P1 dry timeout smoke\" --target-brief docs/IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_PACKET_2026-04-29.md --target-result docs/IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_RESULT_2026-04-29.md --execute qoder --delegate-timeout 1 --dry-run",
+                                                "python -m py_compile scripts/review/run_l1_review.py"
+                                            ],
+                             "review":  {
+                                            "level":  "controller",
+                                            "recommendation":  "accept",
+                                            "findings_absorbed":  "unknown"
+                                        },
+                             "promotion":  {
+                                               "github_pr":  "https://github.com/brantzh6/MyAttention/pull/1",
+                                               "merge_allowed":  false,
+                                               "reason":  "PR review pending"
+                                           },
+                             "truth_boundary":  [
+                                                    "delegated execution attempt metadata only",
+                                                    "not promotion authority"
+                                                ],
+                             "next":  [
+                                          "historical: PR #1 review outcome was later resolved and merged"
+                                      ]
+                         },
+                         {
+                             "node_id":  "IKE_REVIEW_AUTOMATION_P2_REAL_L1_OPERATIONAL_SMOKE",
+                             "lane":  "review_automation",
+                             "stage":  "accepted_with_changes",
+                             "risk":  "R2",
+                             "artifacts":  [
+                                               "docs/IKE_REVIEW_AUTOMATION_P2_REAL_L1_OPERATIONAL_SMOKE_PACKET_2026-04-29.md",
+                                               "docs/IKE_REVIEW_AUTOMATION_P2_REAL_L1_OPERATIONAL_SMOKE_RESULT_2026-04-29.md"
+                                           ],
+                             "validation":  [
+                                                "qoder wrapper launch smoke: exit code 0"
+                                            ],
+                             "review":  {
+                                            "level":  "controller",
+                                            "recommendation":  "accept_with_changes",
+                                            "findings_absorbed":  "manual_estimate: launch accepted; result-file completion not accepted as automated"
+                                        },
+                             "promotion":  {
+                                               "github_pr":  "https://github.com/brantzh6/MyAttention/pull/1",
+                                               "merge_allowed":  false,
+                                               "reason":  "PR review pending"
+                                           },
+                             "truth_boundary":  [
+                                                    "wrapper launch and metadata capture smoke",
+                                                    "review result completion requires controller verification"
+                                                ],
+                             "next":  [
+                                          "verify result-file completion before accepting delegated review findings"
+                                      ]
+                         },
+                         {
+                             "node_id":  "IKE_FLYWHEEL_INSPECT_DECISION_READINESS_TAGS_P0",
+                             "lane":  "flywheel_readiness",
+                             "stage":  "accepted",
+                             "risk":  "R2",
+                             "artifacts":  [
+                                               "docs/IKE_FLYWHEEL_INSPECT_DECISION_READINESS_TAGS_P0_PACKET_2026-04-29.md",
+                                               "docs/IKE_FLYWHEEL_INSPECT_DECISION_READINESS_TAGS_P0_RESULT_2026-04-29.md"
+                                           ],
+                             "validation":  [
+                                                "PYTHONPATH=D:/code/MyAttention/services/api python -m pytest services/api/tests/test_flywheel_inspect_route.py services/api/tests/test_conversation_runtime_route.py"
+                                            ],
+                             "review":  {
+                                            "level":  "L1",
+                                            "recommendation":  "accept",
+                                            "findings_absorbed":  true
+                                        },
+                             "promotion":  {
+                                               "github_pr":  "https://github.com/brantzh6/MyAttention/pull/1",
+                                               "merge_allowed":  false,
+                                               "reason":  "PR review pending"
+                                           },
+                             "truth_boundary":  [
+                                                    "inspect-only",
+                                                    "non-canonical",
+                                                    "not promotion truth"
+                                                ],
+                             "next":  [
+                                          "historical: PR #1 review outcome was later resolved and merged"
+                                      ]
+                         },
+                         {
+                             "node_id":  "IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP",
+                             "lane":  "visual_control_surface",
+                             "stage":  "accepted",
+                             "risk":  "R2_if_bounded_to_static_ui_provenance",
+                             "artifacts":  [
+                                               "docs/IKE_VISUAL_CONTROL_SURFACE_P0_REVIEW_ABSORPTION_2026-04-29.md",
+                                               "docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_PACKET_2026-04-29.md",
+                                               "docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_RESULT_2026-04-29.md",
+                                               "docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_REVIEW_ABSORPTION_2026-04-30.md"
+                                           ],
+                             "validation":  [
+                                                "services/web npm run build passed after provenance follow-up",
+                                                "services/web npm run build passed after delegated finding fix"
+                                            ],
+                             "review":  {
+                                            "level":  "L1",
+                                            "recommendation":  "accept",
+                                            "findings_absorbed":  true
+                                        },
+                             "promotion":  {
+                                               "github_pr":  "unknown",
+                                               "merge_allowed":  false,
+                                               "reason":  "local UI P0 accepted as static provenance surface; broader branch promotion still blocked by dirty worktree and PR review payload"
+                                           },
+                             "truth_boundary":  [
+                                                    "static UI provenance only",
+                                                    "no backend integration",
+                                                    "no runtime truth change"
+                                                ],
+                             "next":  [
+                                          "include UI follow-up in future scoped review branch only after worktree reduction",
+                                          "do not treat static snapshot as canonical runtime truth"
+                                      ]
+                         },
+                         {
+                             "node_id":  "IKE_MAINLINE_STATE_MANIFEST_P0",
+                             "lane":  "governance_manifest",
+                             "stage":  "accepted",
+                             "risk":  "R2",
+                             "artifacts":  [
+                                               "docs/IKE_MAINLINE_STATE_MANIFEST_P0_PACKET_2026-04-29.md",
+                                               "docs/CURRENT_MAINLINE_STATE.json",
+                                               "docs/CURRENT_ACTIVE_ARTIFACTS.md",
+                                               "docs/CURRENT_REVIEW_QUEUE.md",
+                                               "docs/IKE_MAINLINE_STATE_MANIFEST_P0_RESULT_2026-04-29.md"
+                                           ],
+                             "validation":  [
+                                                "python -m json.tool docs/CURRENT_MAINLINE_STATE.json",
+                                                "manual referenced-file existence check"
+                                            ],
+                             "review":  {
+                                            "level":  "L1",
+                                            "recommendation":  "accept",
+                                            "findings_absorbed":  true
+                                        },
+                             "promotion":  {
+                                               "github_pr":  "unknown",
+                                               "merge_allowed":  false,
+                                               "reason":  "manual curated governance source accepted; no product promotion implied"
+                                           },
+                             "truth_boundary":  [
+                                                    "manual active-state index",
+                                                    "does not accept own work",
+                                                    "does not replace controller promotion decision"
+                                                ],
+                             "next":  [
+                                          "use manifest for active-state tracking",
+                                          "implement dirty-worktree classifier P0"
+                                      ]
+                         },
+                         {
+                             "node_id":  "IKE_DIRTY_WORKTREE_CLASSIFIER_P0",
+                             "lane":  "governance_tooling",
+                             "stage":  "accepted",
+                             "risk":  "R2",
+                             "artifacts":  [
+                                               "scripts/governance/classify_worktree.py",
+                                               "scripts/governance/README.md"
+                                           ],
+                             "quarantine_evidence":  [
+                                               "codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_PACKET_2026-04-30.md",
+                                               "codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md"
+                                           ],
+                             "validation":  [
+                                                "python scripts/governance/classify_worktree.py --cwd D:/code/MyAttention",
+                                                "python scripts/governance/classify_worktree.py --cwd D:/code/MyAttention --json | python -m json.tool",
+                                                "python -m py_compile scripts/governance/classify_worktree.py"
+                                            ],
+                             "review":  {
+                                            "level":  "L1",
+                                            "recommendation":  "accept",
+                                            "findings_absorbed":  true
+                                        },
+                             "promotion":  {
+                                               "github_pr":  "unknown",
+                                               "merge_allowed":  false,
+                                               "reason":  "local governance tool accepted; not yet in scoped PR"
+                                           },
+                             "truth_boundary":  [
+                                                    "read-only git status classification",
+                                                    "heuristic grouping only",
+                                                    "not promotion authority"
+                                                ],
+                             "next":  [
+                                          "use classifier output for scoped cleanup planning"
+                                      ]
+                         },
+                         {
+                             "node_id":  "IKE_DIRTY_WORKTREE_REDUCTION_PLAN_P0",
+                             "lane":  "governance_cleanup",
+                             "stage":  "accepted_with_changes",
+                             "risk":  "R2",
+                             "artifacts":  [
+                                               "docs/IKE_DIRTY_WORKTREE_REDUCTION_PLAN_P0_PACKET_2026-04-30.md",
+                                               "docs/IKE_DIRTY_WORKTREE_REDUCTION_PLAN_P0_RESULT_2026-04-30.md"
+                                           ],
+                             "validation":  [
+                                                "python scripts/governance/classify_worktree.py --cwd D:/code/MyAttention --json"
+                                            ],
+                             "review":  {
+                                            "level":  "L1",
+                                            "recommendation":  "accept_with_changes",
+                                            "findings_absorbed":  true
+                                        },
+                             "promotion":  {
+                                               "github_pr":  "unknown",
+                                               "merge_allowed":  false,
+                                               "reason":  "planning artifact only; no file operations authorized"
+                                           },
+                             "truth_boundary":  [
+                                                    "planning only",
+                                                    "does not delete move stage branch archive or merge",
+                                                    "not promotion authority"
+                                                ],
+                             "next":  [
+                                          "run PR #1 review findings check P0",
+                                          "prepare archive/index packet only after review gates are checked"
+                                      ]
+                         },
+                         {
+                             "node_id":  "IKE_PR1_REVIEW_FINDINGS_CHECK_P0",
+                             "lane":  "github_codex_review",
+                             "stage":  "accepted_with_changes",
+                             "risk":  "R2",
+                             "artifacts":  [
+                                               "docs/IKE_PR1_REVIEW_FINDINGS_CHECK_P0_RESULT_2026-04-30.md",
+                                               "https://github.com/brantzh6/MyAttention/pull/1"
+                                           ],
+                             "validation":  [
+                                                "GitHub connector _get_pr_info",
+                                                "GitHub connector _list_pull_request_reviews",
+                                                "GitHub connector _fetch_pr_comments"
+                                            ],
+                             "review":  {
+                                            "level":  "controller_read_only_fallback",
+                                            "recommendation":  "accept_with_changes",
+                                            "findings_absorbed":  true
+                                        },
+                              "promotion":  {
+                                               "github_pr":  "https://github.com/brantzh6/MyAttention/pull/1",
+                                               "merge_allowed":  true,
+                                               "reason":  "PR merged at controller decision"
+                                           },
+                             "truth_boundary":  [
+                                                    "read-only PR metadata/review/comment check",
+                                                    "not merge authorization",
+                                                    "not Codex review completion proof"
+                                                ],
+                              "next":  [
+                                           "continue the mainline from the merge commit",
+                                           "absorb any new findings only if a fresh review is requested",
+                                           "or update scoped branch with newer governance artifacts"
+                                       ]
+                          }
+                         ,
+                         {
+                             "node_id":  "IKE_PR1_GITHUB_CODEX_REVIEW_FINDINGS_ABSORPTION_P0",
+                             "lane":  "github_codex_review",
+                             "stage":  "accepted_with_changes",
+                             "risk":  "R2",
+                             "artifacts":  [
+                                               "docs/IKE_PR1_GITHUB_CODEX_REVIEW_FINDINGS_REVIEW_ABSORPTION_2026-04-30.md",
+                                               "scripts/review/run_l1_review.py",
+                                               "services/api/feeds/source_semantics.py"
+                                           ],
+                             "validation":  [
+                                                "python -m py_compile D:\\code\\MyAttention\\scripts\\review\\run_l1_review.py D:\\code\\MyAttention\\services\\api\\feeds\\source_semantics.py",
+                                                "python D:\\code\\MyAttention\\scripts\\review\\run_l1_review.py --help",
+                                                "python -m pytest D:\\code\\MyAttention\\services\\api\\tests\\test_source_discovery_identity.py -q"
+                                            ],
+                             "review":  {
+                                            "level":  "controller",
+                                            "recommendation":  "accept_with_changes",
+                                            "findings_absorbed":  true
+                                        },
+                             "promotion":  {
+                                               "github_pr":  "https://github.com/brantzh6/MyAttention/pull/1",
+                                               "merge_allowed":  true,
+                                               "reason":  "PR merged at controller decision"
+                                           },
+                             "truth_boundary":  [
+                                                    "absorbed review findings only",
+                                                    "no PR merge authorization",
+                                                    "no claim of remote sync until pushed"
+                                                ],
+                             "next":  [
+                                          "make the controller promotion decision",
+                                          "or request a fresh review pass before promotion"
+                                      ]
+                         }
+                     ],
+    "blocked_or_waiting":  [
+                               {
+                                   "item":  "PR #1 GitHub/Codex review",
+                                   "status":  "merged",
+                                   "next":  "continue the mainline from the merge commit"
+                               }
+                           ],
+    "next_recommended_nodes":  [
+                                   {
+                                       "node":  "Source Intelligence Quality Resumption P0",
+                                       "lane":  "source_intelligence",
+                                       "risk":  "R2",
+                                       "reason":  "source-intelligence quality is the next product-capability mainline after the current cleanup/history stabilization"
+                                   }
+                               ]
+}

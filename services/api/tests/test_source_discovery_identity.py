@@ -124,19 +124,22 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertEqual(domain, "gitlab.com")
 
     def test_identifies_changelog_page_as_release_stream_object(self) -> None:
-        item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
-            "https://example.com/changelog",
-            SourceDiscoveryFocus.LATEST,
-        )
-        self.assertEqual(item_type, "release")
-        self.assertEqual(object_key, "example.com:release")
-        self.assertEqual(domain, "example.com")
-        self.assertIn("release stream", display_name)
-        self.assertIn("/changelog", canonical_url)
+        for url in ("https://example.com/changelog", "https://example.com/whats-new"):
+            with self.subTest(url=url):
+                item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.LATEST,
+                )
+                self.assertEqual(item_type, "release")
+                self.assertEqual(object_key, "example.com:release")
+                self.assertEqual(domain, "example.com")
+                self.assertIn("release stream", display_name)
 
     def test_identifies_event_pages_as_event_object(self) -> None:
         for url in (
             "https://example.org/events/agent-summit-2026",
+            "https://example.org/ai-conference-2026",
+            "https://example.org/agent-summit-2026",
             "https://example.org/workshop/agent-evaluation",
             "https://example.org/webinar/source-intelligence",
             "https://example.org/talks/agent-memory-boundaries",

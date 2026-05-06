@@ -76,8 +76,79 @@ This section overrides older runtime phase notes below when they conflict.
       - bounded runtime surface decomposition on both backend and frontend
     - current default next step:
       - do not keep reopening panel decomposition by default
-      - move the mainline to stable AI-participation loop closure
-      - prioritize worker-backed end-to-end closure and provenance discipline
+    - move the mainline to stable AI-participation loop closure
+    - prioritize worker-backed end-to-end closure and provenance discipline
+
+## Current Continuation
+
+- PR #1 has already merged; treat the merge commit as historical context, not a live blocker.
+- `docs/CURRENT_MAINLINE_STATE.json` is the active continuation source for controller state.
+- `/control` is now the visible progress surface for the project mainline, UI line, and governance line.
+- The next bounded node is source-intelligence quality resumption; do not push mixed changes.
+- Source-intelligence quality has now landed focus-independent GitHub issue/discussion identity recognition.
+- The current cleanup slice is docs-only reconciliation for the controller-facing governance surfaces.
+- The active surfaces are history-only for the old PR #1 wait wording.
+- The current source-intelligence packet is `docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_PACKET_2026-05-02.md`; it is fixed locally and awaiting scoped GitHub/Codex L1 re-review.
+- The PR #1 Codex review access check is historical evidence only and is not a live blocker.
+- Keep the static control surface explicit: it is a progress dashboard, not canonical runtime truth.
+
+- the current flywheel `AI-participation closure` review wave is now absorbed:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_RESULT_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_RESULT_2026-04-27.md)
+  - [D:\code\MyAttention\docs\reviews\active\review_for_IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_RESULT_2026-04-27.md](/D:/code/MyAttention/docs/reviews/active/review_for_IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_RESULT_2026-04-27.md)
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_REVIEW_ABSORPTION_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_REVIEW_ABSORPTION_2026-04-27.md)
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_PHASE_JUDGMENT_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_PHASE_JUDGMENT_2026-04-27.md)
+  - current controller interpretation:
+    - the closure surface is accepted as a truthful stopping point for the
+      current manual phase
+    - no reviewer identified a still-missing crucial inspect-only signal
+    - the primary remaining risk is pseudo-workflow drift if local packaging
+      continues by default
+    - current default next step:
+      - stop local closure-pack growth
+      - treat the current line as phase-judged
+      - only continue through a new stronger-semantics design packet
+  - the selected stronger-semantics packet is now:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_NEXT_OBJECT_BOUNDARY_DESIGN_PACKET_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_NEXT_OBJECT_BOUNDARY_DESIGN_PACKET_2026-04-27.md)
+  - design review absorption:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_NEXT_OBJECT_BOUNDARY_DESIGN_REVIEW_ABSORPTION_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_AI_PARTICIPATION_CLOSURE_NEXT_OBJECT_BOUNDARY_DESIGN_REVIEW_ABSORPTION_2026-04-27.md)
+  - next narrower stronger-semantics packet:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_TRUST_STATE_DESIGN_PACKET_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_TRUST_STATE_DESIGN_PACKET_2026-04-27.md)
+  - worker-return trust-state review absorption:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_TRUST_STATE_DESIGN_REVIEW_ABSORPTION_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_TRUST_STATE_DESIGN_REVIEW_ABSORPTION_2026-04-27.md)
+  - next narrower governance-state packet:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_CLASSIFICATION_AND_GOVERNANCE_STATE_DESIGN_PACKET_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_CLASSIFICATION_AND_GOVERNANCE_STATE_DESIGN_PACKET_2026-04-27.md)
+  - governance-state review absorption:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_CLASSIFICATION_AND_GOVERNANCE_STATE_DESIGN_REVIEW_ABSORPTION_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_CLASSIFICATION_AND_GOVERNANCE_STATE_DESIGN_REVIEW_ABSORPTION_2026-04-27.md)
+  - next narrower transition-rules packet:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_GOVERNANCE_STATE_TRANSITION_RULES_DESIGN_PACKET_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_GOVERNANCE_STATE_TRANSITION_RULES_DESIGN_PACKET_2026-04-27.md)
+  - transition-rules review absorption:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_GOVERNANCE_STATE_TRANSITION_RULES_DESIGN_REVIEW_ABSORPTION_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_GOVERNANCE_STATE_TRANSITION_RULES_DESIGN_REVIEW_ABSORPTION_2026-04-27.md)
+  - worker-return design-wave closure checkpoint:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_DESIGN_WAVE_CLOSURE_CHECKPOINT_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_DESIGN_WAVE_CLOSURE_CHECKPOINT_2026-04-27.md)
+  - closure-checkpoint review absorption:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_DESIGN_WAVE_CLOSURE_CHECKPOINT_REVIEW_ABSORPTION_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_DESIGN_WAVE_CLOSURE_CHECKPOINT_REVIEW_ABSORPTION_2026-04-27.md)
+  - phase judgment:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_DESIGN_WAVE_PHASE_JUDGMENT_2026-04-27.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_WORKER_RETURN_EVIDENCE_DESIGN_WAVE_PHASE_JUDGMENT_2026-04-27.md)
+  - next mainline-level choice packet:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_POST_WORKER_RETURN_MAINLINE_CHOICE_PACKET_2026-04-28.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_POST_WORKER_RETURN_MAINLINE_CHOICE_PACKET_2026-04-28.md)
+  - mainline choice review absorption:
+    - [D:\code\MyAttention\docs\IKE_FLYWHEEL_POST_WORKER_RETURN_MAINLINE_CHOICE_REVIEW_ABSORPTION_2026-04-28.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_POST_WORKER_RETURN_MAINLINE_CHOICE_REVIEW_ABSORPTION_2026-04-28.md)
+  - next resumed-priority choice packet:
+    - [D:\code\MyAttention\docs\IKE_POST_FLYWHEEL_PHASE_STOP_MAINLINE_PRIORITY_CHOICE_PACKET_2026-04-28.md](/D:/code/MyAttention/docs/IKE_POST_FLYWHEEL_PHASE_STOP_MAINLINE_PRIORITY_CHOICE_PACKET_2026-04-28.md)
+  - resumed-priority review absorption:
+    - [D:\code\MyAttention\docs\IKE_POST_FLYWHEEL_PHASE_STOP_MAINLINE_PRIORITY_CHOICE_REVIEW_ABSORPTION_2026-04-28.md](/D:/code/MyAttention/docs/IKE_POST_FLYWHEEL_PHASE_STOP_MAINLINE_PRIORITY_CHOICE_REVIEW_ABSORPTION_2026-04-28.md)
+  - source-intelligence resumption assessment:
+    - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_ASSESSMENT_PACKET_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_ASSESSMENT_PACKET_2026-04-28.md)
+  - source-intelligence resumption assessment absorption:
+    - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_ASSESSMENT_REVIEW_ABSORPTION_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_ASSESSMENT_REVIEW_ABSORPTION_2026-04-28.md)
+  - critical entity / person discovery quality packet:
+    - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_CRITICAL_ENTITY_PERSON_DISCOVERY_QUALITY_PACKET_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_CRITICAL_ENTITY_PERSON_DISCOVERY_QUALITY_PACKET_2026-04-28.md)
+  - consolidated phase execution design for one-time review:
+    - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_PHASE_EXECUTION_DESIGN_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_PHASE_EXECUTION_DESIGN_2026-04-28.md)
+  - phase execution design review absorption:
+    - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_PHASE_EXECUTION_DESIGN_REVIEW_ABSORPTION_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_PHASE_EXECUTION_DESIGN_REVIEW_ABSORPTION_2026-04-28.md)
+  - delegated discovery surface assessment:
+    - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_SURFACE_ASSESSMENT_RESULT_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_SURFACE_ASSESSMENT_RESULT_2026-04-28.md)
 
 - a new direction baseline now exists:
   - [D:\code\MyAttention\docs\IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_bundle\ike_ai_native_conversation_runtime_v02\md\IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_EN.md](/D:/code/MyAttention/docs/IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_bundle/ike_ai_native_conversation_runtime_v02/md/IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_EN.md)
@@ -675,7 +746,7 @@ This section overrides older runtime phase notes below when they conflict.
     - corpus extraction is ready
     - full-corpus, batch, and micro-batch Claude runs still lack durable final artifacts
     - direct Claude CLI recovery attempts also timed out
-    - current blocker is delegated completion/throughput, not missing inputs
+    - historical blocker note: delegated completion/throughput was the issue at that time, not missing inputs
 
 - `R2-C1` runtime-backed visible-surface proof is now durably recorded:
   - [D:\code\MyAttention\docs\IKE_RUNTIME_V0_R2-C1_RESULT_MILESTONE_2026-04-08.md](/D:/code/MyAttention/docs/IKE_RUNTIME_V0_R2-C1_RESULT_MILESTONE_2026-04-08.md)
@@ -1403,7 +1474,7 @@ This section overrides older runtime phase notes below when they conflict.
   - wider runtime sweep was partially blocked by existing DB test fixture/environment gaps:
     - `417 passed, 35 errors`
     - initial blocker was missing `db_session` fixture in schema-foundation DB tests
-    - current blocker is now narrower and environment-level:
+    - historical blocker note: the issue was narrower and environment-level at that time:
       - runtime DB pytest harness exists
       - local `MyAttentionPostgres` service is stopped
       - port `5432` is not reachable
@@ -2823,3 +2894,467 @@ Current `R1-A2` note:
   - lower-half flywheel runtime state is now reducer-backed
   - new inspect runs atomically clear preview / feedback / provenance state
   - next step should judge whether section-level action adapters or bounded hooks are worth the added complexity
+
+## 2026-04-28 Source Intelligence Person Discovery Hardening
+
+- phase design:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_PHASE_EXECUTION_DESIGN_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_PHASE_EXECUTION_DESIGN_2026-04-28.md)
+- surface assessment:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_SURFACE_ASSESSMENT_RESULT_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_SURFACE_ASSESSMENT_RESULT_2026-04-28.md)
+- implementation result:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_HARDENING_RESULT_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_HARDENING_RESULT_2026-04-28.md)
+- delegation evidence:
+  - implementation: `019dd1a8-374a-7023-867f-10ba3917f1c7` / `Copernicus`
+  - code review: `019dd1ab-fe50-74b2-8a6f-5bf5f1bc00a1` / `Tesla`
+  - review-finding fix: `019dd1af-3646-7fd3-9cca-594ed4461ff1` / `Chandrasekhar`
+  - reserved-path follow-up: `019dd1b1-0b5f-76a0-8922-e7e781f03980` / `James`
+- controller judgment:
+  - `accept_with_changes`
+  - initial review finding was fixed before continuing
+  - direct X/Twitter profile person seeds no longer fabricate synthetic `status/latest` related signals
+  - real X/Twitter status URLs still preserve `signal -> author -> person` behavior
+  - focused validation passed: `80 passed`
+- next boundary:
+  - continue source-intelligence quality with another bounded target only after checking the dirty worktree scope
+  - no new external review is needed unless identity resolution, role-strength semantics, persistence, scheduler logic, runtime truth, or route/contract boundaries change
+
+## 2026-04-28 Source Intelligence Helper Extraction Review Gate
+
+- local review request:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_HELPER_EXTRACTION_REGULARIZATION_LOCAL_REVIEW_REQUEST_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_HELPER_EXTRACTION_REGULARIZATION_LOCAL_REVIEW_REQUEST_2026-04-28.md)
+- external review pack:
+  - [D:\code\MyAttention\.runtime\review-packs\IKE_SOURCE_INTELLIGENCE_HELPER_EXTRACTION_REGULARIZATION_2026-04-28.zip](/D:/code/MyAttention/.runtime/review-packs/IKE_SOURCE_INTELLIGENCE_HELPER_EXTRACTION_REGULARIZATION_2026-04-28.zip)
+- review feedback file:
+  - [D:\code\MyAttention\docs\reviews\active\review_for_IKE_SOURCE_INTELLIGENCE_HELPER_EXTRACTION_REGULARIZATION_2026-04-28.md](/D:/code/MyAttention/docs/reviews/active/review_for_IKE_SOURCE_INTELLIGENCE_HELPER_EXTRACTION_REGULARIZATION_2026-04-28.md)
+- delegation evidence:
+  - promotion-hygiene assessment: `019dd1bd-181a-72c3-a1d3-ca19f2d8f9f5` / `Epicurus`
+- controller judgment:
+  - `review_required`
+  - helper extraction is a promotion blocker until regularized
+  - external review is required because the current helper extraction touches route/contract model placement and candidate identity semantics
+  - do not continue to another source-intelligence behavior patch until this review is back and absorbed
+
+## 2026-04-28 Source Intelligence Helper Extraction Review Absorbed
+
+- absorption:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_HELPER_EXTRACTION_REGULARIZATION_REVIEW_ABSORPTION_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_HELPER_EXTRACTION_REGULARIZATION_REVIEW_ABSORPTION_2026-04-28.md)
+- delegation evidence:
+  - review-absorption implementation: `019dd204-7d86-7442-a6fd-b96fdb0410e7` / `Maxwell`
+- controller validation:
+  - focused source-discovery validation passed: `81 passed`
+- controller judgment:
+  - `accept_with_changes`
+  - helper extraction is accepted as bounded regularization with parity repair, not as pure refactor
+  - `source_semantics.candidate_identity` typed contract is restored
+  - dead route-local identity helpers are removed
+  - `compress_source_candidates` is documented and covered as regularized post-extraction behavior
+  - next source-intelligence behavior work may resume under the phase cadence, but promotion still requires explicitly scoped diff hygiene because the broader worktree is dirty
+
+## 2026-04-28 Source Intelligence Social Namespace Negative Boundary
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_SOCIAL_NAMESPACE_NEGATIVE_BOUNDARY_RESULT_2026-04-28.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_SOCIAL_NAMESPACE_NEGATIVE_BOUNDARY_RESULT_2026-04-28.md)
+- delegation evidence:
+  - assessment: `019dd240-2ea7-77a2-978e-da58264384dd` / `Turing`
+  - implementation: `019dd316-770b-7401-8787-d617e47a34d7` / `Archimedes`
+- controller validation:
+  - focused source-discovery validation passed: `84 passed`
+- controller judgment:
+  - `accept`
+  - X/Twitter reserved namespaces such as `/hashtag`, `/intent`, `/login`, and `/share` no longer become false `person` candidates
+  - direct profile and real status URL behavior is preserved
+  - no external review trigger was hit
+  - next source-intelligence target should remain a bounded negative-boundary, traceability, or uncertainty-clarity improvement
+
+## 2026-04-29 Source Intelligence Reserved Status Negative Boundary
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_RESERVED_STATUS_NEGATIVE_BOUNDARY_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_RESERVED_STATUS_NEGATIVE_BOUNDARY_RESULT_2026-04-29.md)
+- delegation evidence:
+  - assessment: `019dd6ee-a2a3-7471-8528-3ba64bab92e2` / `Kepler`
+  - implementation: `019dd6f1-65fa-7563-a35c-7ec1c763ac56` / `Descartes`
+- controller validation:
+  - focused source-discovery validation passed: `86 passed`
+- controller judgment:
+  - `accept`
+  - reserved X/Twitter status-like URLs such as `x.com/i/status/...` and `twitter.com/search/status/...` no longer become signal candidates or downstream author person seeds
+  - valid profile and real status URL behavior is preserved
+  - no external review trigger was hit
+  - next source-intelligence target should remain bounded; if no safe negative-boundary/traceability target exists, stop at phase milestone rather than inventing heuristic expansion
+
+## 2026-04-29 Source Intelligence GitLab Namespace Negative Boundary
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_GITLAB_NAMESPACE_NEGATIVE_BOUNDARY_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_GITLAB_NAMESPACE_NEGATIVE_BOUNDARY_RESULT_2026-04-29.md)
+- delegation evidence:
+  - assessment: `019dd6f5-29df-70f3-88cd-e9ad937c2980` / `Nietzsche`
+  - implementation: `019dd6f7-c702-75f2-994c-bddb252e738b` / `Ohm`
+- controller validation:
+  - focused source-discovery validation passed: `89 passed`
+- controller judgment:
+  - `accept`
+  - GitLab reserved namespaces `explore`, `projects`, and `groups` no longer become false `person` candidates
+  - valid GitLab user profile and repository behavior is preserved
+  - no external review trigger was hit
+  - next step should either identify another clearly safe source-local negative boundary or close the phase at a milestone; do not invent broader heuristic expansion
+
+## 2026-04-29 Source Intelligence Person Discovery Hardening Phase Milestone
+
+- milestone:
+  - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_HARDENING_PHASE_MILESTONE_2026-04-29.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_PERSON_DISCOVERY_HARDENING_PHASE_MILESTONE_2026-04-29.md)
+- phase-stop assessment:
+  - `019dd6fa-9f1f-7361-b3c9-efe2a82050de` / `Huygens`
+- controller validation:
+  - latest focused source-discovery validation passed: `89 passed`
+- controller judgment:
+  - `accept`
+  - phase closes as a milestone
+  - completed work reduced false-positive source-local person candidates and removed fabricated traceability without changing role strength, identity resolution, route/schema, persistence, scheduler/runtime truth, scoring, or ranking
+  - no further clearly safe bounded target was identified; continuing inside this phase would risk reserved-list gardening or broader heuristic expansion
+  - next mainline movement should start from a new bounded design/review packet if it touches source ranking, identity resolution, role semantics, route/schema boundaries, persistence, scheduler/runtime truth, or broader uncertainty modeling
+
+## 2026-04-29 Visual Control Surface Parallel Branch
+
+- branch:
+  - `codex/ike-visual-control-surface`
+- design:
+  - [D:\code\MyAttention\docs\IKE_VISUAL_CONTROL_SURFACE_BRANCH_DESIGN_2026-04-29.md](/D:/code/MyAttention/docs/IKE_VISUAL_CONTROL_SURFACE_BRANCH_DESIGN_2026-04-29.md)
+- purpose:
+  - make IKE project progress, phase state, capability maturity, and flywheel closure visible in UI
+  - unblock user understanding without waiting for backend intelligence completion
+- controller judgment:
+  - proceed in parallel with mainline
+  - Antigravity is the preferred UI implementation delegate
+  - static/mock-first UI is allowed if clearly labeled and adapter-seamed
+  - no backend mutation, no fake execution, no canonical progress claim in P0
+- first packet:
+  - `IKE_VISUAL_CONTROL_SURFACE_P0`
+  - implement `/control`, `/control/flywheel`, and `/control/source-intelligence`
+  - add typed adapter boundary and sidebar route
+
+## 2026-04-29 Review Cadence And Automation Policy
+
+- policy:
+  - [D:\code\MyAttention\docs\IKE_REVIEW_CADENCE_AND_AUTOMATION_POLICY_2026-04-29.md](/D:/code/MyAttention/docs/IKE_REVIEW_CADENCE_AND_AUTOMATION_POLICY_2026-04-29.md)
+- controller judgment:
+  - adopt immediately
+  - daily implementation uses SDLC plus delegated model review
+  - GitHub/Codex review is the default stage-level review after push/PR
+  - manual Claude/Gemini/ChatGPT review is reserved for critical gates
+  - L3 external zip packets should no longer be used for every small implementation node
+
+## 2026-04-29 Review Automation P0 Packet
+
+- packet:
+  - [D:\code\MyAttention\docs\IKE_REVIEW_AUTOMATION_P0_IMPLEMENTATION_PACKET_2026-04-29.md](/D:/code/MyAttention/docs/IKE_REVIEW_AUTOMATION_P0_IMPLEMENTATION_PACKET_2026-04-29.md)
+- purpose:
+  - make L1 daily delegated review operational through a project-level review runner
+  - keep L3 manual cross-model review explicit and rare
+- current controller judgment:
+  - proceed with L1 delegated implementation
+  - allowed implementation scope is `scripts/review/*` plus result doc only
+  - no product backend/frontend changes
+  - no AGENTS.md governance hardcoding
+  - should reuse existing qoder/openclaw review bundle assets where practical
+- parallelism:
+  - can proceed while Antigravity implements visual control surface P0
+  - must not touch `services/web/app/control/*`, `services/web/components/control/*`, or visual-control docs unless coordinating with the UI branch
+
+## 2026-04-29 Review Automation P0 Result
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_REVIEW_AUTOMATION_P0_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_REVIEW_AUTOMATION_P0_RESULT_2026-04-29.md)
+- delegation evidence:
+  - implementation: `019dd86a-5af2-78c1-8431-99d775c1b2a5` / `Helmholtz`
+- files changed:
+  - [D:\code\MyAttention\scripts\review\run_l1_review.py](/D:/code/MyAttention/scripts/review/run_l1_review.py)
+  - [D:\code\MyAttention\scripts\review\README.md](/D:/code/MyAttention/scripts/review/README.md)
+  - [D:\code\MyAttention\docs\IKE_REVIEW_AUTOMATION_P0_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_REVIEW_AUTOMATION_P0_RESULT_2026-04-29.md)
+- controller validation:
+  - `python D:\code\MyAttention\scripts\review\run_l1_review.py --help`
+  - `python D:\code\MyAttention\scripts\review\run_l1_review.py --cwd D:\code\MyAttention --task-id IKE_REVIEW_AUTOMATION_SMOKE --title "Smoke review automation" --target-brief docs\IKE_REVIEW_CADENCE_AND_AUTOMATION_POLICY_2026-04-29.md --target-result docs\IKE_REVIEW_AUTOMATION_P0_IMPLEMENTATION_PACKET_2026-04-29.md --validation "no product code validation required" --dry-run`
+  - `python -m py_compile D:\code\MyAttention\scripts\review\run_l1_review.py`
+  - write smoke created `.runtime\reviews\briefs\IKE_REVIEW_AUTOMATION_P0_CONTROLLER_SMOKE.md`, `.runtime\reviews\contexts\IKE_REVIEW_AUTOMATION_P0_CONTROLLER_SMOKE.md`, `.runtime\reviews\results\IKE_REVIEW_AUTOMATION_P0_CONTROLLER_SMOKE.md`, and `.runtime\reviews\done\IKE_REVIEW_AUTOMATION_P0_CONTROLLER_SMOKE.json`
+- controller judgment:
+  - `accept`
+  - P0 now creates deterministic local L1 review artifacts and prints qoder/openclaw review commands
+  - L1 and L2 do not create external zip packets
+  - L3 remains explicit and only reminds the controller of the 10-entry external package rule
+  - P0 does not yet execute delegates automatically; next automation node should decide whether to add execution, status polling, or PR/Codex bridge support
+
+## 2026-04-29 Review Automation P1 Execution Bridge Packet
+
+- packet:
+  - [D:\code\MyAttention\docs\IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_PACKET_2026-04-29.md](/D:/code/MyAttention/docs/IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_PACKET_2026-04-29.md)
+- purpose:
+  - move daily L1 review from artifact preparation toward optional delegated execution
+  - keep default behavior conservative and prepare-only
+- implementation boundary:
+  - only `scripts/review/run_l1_review.py`, `scripts/review/README.md`, and the P1 result doc are in scope
+  - no product backend/frontend changes
+  - no `AGENTS.md` governance hardcoding
+  - no L3 external zip packaging
+- controller judgment:
+  - ready for delegated implementation
+  - review after implementation should use L1 delegated review by default
+  - manual external review is only needed if implementation changes review authority, runtime truth, promotion semantics, or broadens beyond the packet
+
+## 2026-04-29 Review Automation P1 Execution Bridge Result
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_RESULT_2026-04-29.md)
+- delegation evidence:
+  - implementation: `019dd99a-aa35-7e40-bd54-91fbc437dc2b` / `Galileo`
+  - L1 review: `019dd99f-9cd5-7023-8f35-2d687e2f6934` / `Plato`
+  - review-risk fix: `019dd9a1-ccc9-7f22-9973-e14941e0477a` / `Halley`
+- files changed:
+  - [D:\code\MyAttention\scripts\review\run_l1_review.py](/D:/code/MyAttention/scripts/review/run_l1_review.py)
+  - [D:\code\MyAttention\scripts\review\README.md](/D:/code/MyAttention/scripts/review/README.md)
+  - [D:\code\MyAttention\docs\IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_RESULT_2026-04-29.md)
+- controller validation:
+  - `python D:\code\MyAttention\scripts\review\run_l1_review.py --help`
+  - `python D:\code\MyAttention\scripts\review\run_l1_review.py --cwd D:\code\MyAttention --task-id IKE_REVIEW_AUTOMATION_P1_DRY_TIMEOUT_SMOKE --title "P1 dry timeout smoke" --target-brief docs\IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_PACKET_2026-04-29.md --target-result docs\IKE_REVIEW_AUTOMATION_P1_EXECUTION_BRIDGE_RESULT_2026-04-29.md --execute qoder --delegate-timeout 1 --dry-run`
+  - `python -m py_compile D:\code\MyAttention\scripts\review\run_l1_review.py`
+  - dynamic timeout check passed: `run_delegate([...python -c "import time; time.sleep(2)"], timeout=1)` returned `124`
+- controller judgment:
+  - `accept`
+  - P1 adds explicit `--execute none|qoder|openclaw` while keeping default prepare-only behavior
+  - `--dry-run` remains no-write and no-delegate
+  - delegated execution is bounded by `--delegate-timeout`
+  - done metadata records attempt status only and does not become promotion truth
+  - real qoder/openclaw review execution is intentionally not promoted as verified here; that belongs to the next operational smoke or live review node
+
+## 2026-04-29 Review Automation P2 Real L1 Operational Smoke Packet
+
+- packet:
+  - [D:\code\MyAttention\docs\IKE_REVIEW_AUTOMATION_P2_REAL_L1_OPERATIONAL_SMOKE_PACKET_2026-04-29.md](/D:/code/MyAttention/docs/IKE_REVIEW_AUTOMATION_P2_REAL_L1_OPERATIONAL_SMOKE_PACKET_2026-04-29.md)
+- purpose:
+  - verify that P1 can launch a real L1 delegated review path
+  - keep daily review automation practical without returning to frequent external zip packets
+- delegation evidence:
+  - next-node assessment: `019dd9bb-d931-76f2-b7f2-2624c6eb8a20` / `Planck`
+  - operational smoke execution: `019dd9bd-1848-7410-bb66-9dcb260ebcbe` / `Lovelace`
+- implementation boundary:
+  - allowed writes are `.runtime\reviews\*IKE_REVIEW_AUTOMATION_P2_REAL_L1_SMOKE*` plus the P2 result doc
+  - no product backend/frontend changes
+  - no visual-control UI changes
+  - no L3 external zip package
+- controller judgment:
+  - proceed as operational smoke
+  - no external review required unless wrapper contract drift, promotion authority drift, or runtime truth changes are discovered
+
+## 2026-04-29 Review Automation P2 Real L1 Operational Smoke Result
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_REVIEW_AUTOMATION_P2_REAL_L1_OPERATIONAL_SMOKE_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_REVIEW_AUTOMATION_P2_REAL_L1_OPERATIONAL_SMOKE_RESULT_2026-04-29.md)
+- delegation evidence:
+  - operational smoke execution: `019dd9bd-1848-7410-bb66-9dcb260ebcbe` / `Lovelace`
+- artifacts:
+  - `.runtime\reviews\briefs\IKE_REVIEW_AUTOMATION_P2_REAL_L1_SMOKE.md`
+  - `.runtime\reviews\contexts\IKE_REVIEW_AUTOMATION_P2_REAL_L1_SMOKE.md`
+  - `.runtime\reviews\results\IKE_REVIEW_AUTOMATION_P2_REAL_L1_SMOKE.md`
+  - `.runtime\reviews\done\IKE_REVIEW_AUTOMATION_P2_REAL_L1_SMOKE.json`
+- controller verification:
+  - qoder wrapper was launched exactly once
+  - runner exit code was `0`
+  - done JSON records `status: delegate_completed`, `execute: qoder`, `delegate_attempted: true`, and `delegate_exit_code: 0`
+  - reviewer result file still showed `status: pending` immediately after wrapper return
+- controller judgment:
+  - `accept_with_changes`
+  - accept the qoder launch and metadata capture smoke
+  - do not treat wrapper success as completed review output
+  - daily review automation can be used for artifact creation and delegated launch, but controller must still verify result-file completion before accepting review findings
+  - do not block product mainline on improving polling/completion semantics unless the next task specifically depends on automated review completion
+
+## 2026-04-29 Flywheel Inspect Decision Readiness Tags P0 Packet
+
+- packet:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_INSPECT_DECISION_READINESS_TAGS_P0_PACKET_2026-04-29.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_INSPECT_DECISION_READINESS_TAGS_P0_PACKET_2026-04-29.md)
+- purpose:
+  - improve controller readability of existing inspect-only flywheel output
+  - add decision-readiness hints through existing `reason_tags` and `controller_notes`
+- delegation evidence:
+  - next-node assessment: `019dd9c0-2b12-7440-b1f2-390b9d476834` / `Noether`
+  - implementation: `019dd9c3-c9fc-75f3-90b9-bd4312178504` / `Euler`
+- implementation boundary:
+  - no schema changes
+  - no persistence, scheduler, worker execution, runtime truth, or promotion changes
+  - no frontend/UI changes
+  - no panel decomposition
+- controller judgment:
+  - proceed as R2 bounded implementation
+  - use L1 delegated code review after implementation
+  - no external manual review unless scope expands
+
+## 2026-04-29 Flywheel Inspect Decision Readiness Tags P0 Result
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_INSPECT_DECISION_READINESS_TAGS_P0_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_INSPECT_DECISION_READINESS_TAGS_P0_RESULT_2026-04-29.md)
+- delegation evidence:
+  - implementation: `019dd9c3-c9fc-75f3-90b9-bd4312178504` / `Euler`
+  - L1 review: `019dd9c6-e47b-7252-8e90-303844ffe8b3` / `Feynman`
+  - review finding fix: `019dd9c8-90db-76a3-aba8-e2b9bb01f641` / `Bernoulli`
+- files changed:
+  - [D:\code\MyAttention\services\api\conversation_runtime\flywheel_inspect.py](/D:/code/MyAttention/services/api/conversation_runtime/flywheel_inspect.py)
+  - [D:\code\MyAttention\services\api\tests\test_flywheel_inspect_route.py](/D:/code/MyAttention/services/api/tests/test_flywheel_inspect_route.py)
+  - [D:\code\MyAttention\docs\IKE_FLYWHEEL_INSPECT_DECISION_READINESS_TAGS_P0_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_FLYWHEEL_INSPECT_DECISION_READINESS_TAGS_P0_RESULT_2026-04-29.md)
+- controller validation:
+  - `$env:PYTHONPATH='D:\code\MyAttention\services\api'; python -m pytest D:\code\MyAttention\services\api\tests\test_flywheel_inspect_route.py D:\code\MyAttention\services\api\tests\test_conversation_runtime_route.py`
+  - result: `42 passed`, `3 warnings`
+- review finding absorption:
+  - added direct knowledge-only readiness assertions
+  - added direct correction-only `needs_controller_review` and not-ready assertions
+  - pre-existing execution-feedback test changes remain a dirty-worktree provenance caveat, not part of this node's promoted scope
+- controller judgment:
+  - `accept`
+  - decision-readiness hints now make inspect-only flywheel output easier for the controller to act on
+  - no schema, persistence, scheduler, worker execution, runtime truth, promotion, frontend, or panel behavior changed
+  - `ready_for_task_packet_preview` is an inspect hint only, not a promotion or task creation fact
+
+## 2026-04-29 Scoped GitHub/Codex Review PR
+
+- prep:
+  - [D:\code\MyAttention\docs\IKE_SCOPED_GITHUB_CODEX_REVIEW_PREP_2026-04-29.md](/D:/code/MyAttention/docs/IKE_SCOPED_GITHUB_CODEX_REVIEW_PREP_2026-04-29.md)
+- branch:
+  - `codex/ike-scoped-review-20260429`
+- base:
+  - `codex/pre-ike-restructure-2026-04-09`
+- commit:
+  - `e4db0b383c88113a870f77347064ef632b0c0bf4`
+- pull request:
+  - https://github.com/brantzh6/MyAttention/pull/1
+- scope:
+  - review automation P0/P1/P2
+  - flywheel inspect decision-readiness tags P0
+  - source substrate dependency closure required by current conversation-runtime tests
+  - visual control surface branch design doc
+- validation:
+  - flywheel/conversation runtime route tests passed: `37 passed`, `3 warnings`
+  - source substrate tests passed with explicit `QWEN_API_KEY=sk-sp-test`: `71 passed`, `7 warnings`
+  - review runner help and `py_compile` passed
+  - `git diff --cached --check` passed before commit
+- controller judgment:
+  - draft PR created for GitHub/Codex review
+  - do not merge until Codex/GitHub review findings are checked and any actionable findings are resolved
+  - original mixed worktree remains dirty; the PR was prepared from a clean scoped worktree to avoid pushing 161 unrelated entries
+
+## 2026-04-29 Visual Control Surface P0 Review
+
+- review absorption:
+  - [D:\code\MyAttention\docs\IKE_VISUAL_CONTROL_SURFACE_P0_REVIEW_ABSORPTION_2026-04-29.md](/D:/code/MyAttention/docs/IKE_VISUAL_CONTROL_SURFACE_P0_REVIEW_ABSORPTION_2026-04-29.md)
+- follow-up packet:
+  - [D:\code\MyAttention\docs\IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_PACKET_2026-04-29.md](/D:/code/MyAttention/docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_PACKET_2026-04-29.md)
+- delivery summary:
+  - Antigravity implemented `/control`, `/control/flywheel`, and `/control/source-intelligence`
+  - sidebar navigation entry was added
+  - static typed adapter boundary exists
+- controller validation:
+  - `cd D:\code\MyAttention\services\web`
+  - `npm run build`
+  - result: passed
+- L1 review:
+  - `019dd9e1-fa23-7e43-9ccc-23fd2a06f7a2` / `Wegener`
+  - recommendation: `accept_with_changes`
+- required follow-up:
+  - add typed provenance metadata into the snapshot model
+  - remove dynamic `generatedAt` false freshness
+  - show provenance/caveat blocks on every control page
+  - add flywheel artifact/manual-action fields
+  - reduce source-intelligence overclaiming wording
+  - remove artificial `getSnapshot()` delay
+- controller judgment:
+  - do not accept Visual Control Surface P0 yet
+  - send the provenance follow-up packet to Antigravity
+  - no external manual review required unless the follow-up expands into backend integration, runtime truth, persistence, or execution behavior
+
+## 2026-04-30 Mainline State Manifest P0 Result
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_MAINLINE_STATE_MANIFEST_P0_RESULT_2026-04-29.md](/D:/code/MyAttention/docs/IKE_MAINLINE_STATE_MANIFEST_P0_RESULT_2026-04-29.md)
+- active state files:
+  - [D:\code\MyAttention\docs\CURRENT_MAINLINE_STATE.json](/D:/code/MyAttention/docs/CURRENT_MAINLINE_STATE.json)
+  - [D:\code\MyAttention\docs\CURRENT_ACTIVE_ARTIFACTS.md](/D:/code/MyAttention/docs/CURRENT_ACTIVE_ARTIFACTS.md)
+  - [D:\code\MyAttention\docs\CURRENT_REVIEW_QUEUE.md](/D:/code/MyAttention/docs/CURRENT_REVIEW_QUEUE.md)
+- delegation evidence:
+  - implementation: `019dd9e5-c888-7551-86a9-95c481414b01` / `Pauli`
+  - L1 review: `019dd9e9-98d8-7221-8d2c-bda04ff18c26` / `Gauss`
+- controller validation:
+  - `python -m json.tool D:\code\MyAttention\docs\CURRENT_MAINLINE_STATE.json`
+- L1 review judgment:
+  - `accept`
+  - active 2026-04-29 state is represented without canonical-truth or promotion overclaim
+  - PR #1 and Visual Control Surface P0 provenance follow-up were historical review-time observations visible in the open review queue at the time
+  - state remains manual curated and non-canonical
+- controller judgment:
+  - `accept`
+  - use `CURRENT_MAINLINE_STATE.json`, `CURRENT_ACTIVE_ARTIFACTS.md`, and `CURRENT_REVIEW_QUEUE.md` as the active governance source for control-surface integration and next-node selection
+  - next governance implementation should make dirty-worktree classification repeatable instead of relying on manual estimates
+
+## 2026-04-30 Dirty Worktree Classifier P0 Result
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md](/D:/code/MyAttention/docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md)
+- tool:
+  - [D:\code\MyAttention\scripts\governance\classify_worktree.py](/D:/code/MyAttention/scripts/governance/classify_worktree.py)
+  - [D:\code\MyAttention\scripts\governance\README.md](/D:/code/MyAttention/scripts/governance/README.md)
+- delegation evidence:
+  - implementation: `019ddc04-f95f-7161-8b28-3f459de42c48` / `Jason`
+  - L1 review: `019ddc07-9c27-79d2-a42a-b7e3c9cc1bbc` / `Heisenberg`
+- controller validation:
+  - `python D:\code\MyAttention\scripts\governance\classify_worktree.py --cwd D:\code\MyAttention`
+  - `python D:\code\MyAttention\scripts\governance\classify_worktree.py --cwd D:\code\MyAttention --json | python -m json.tool`
+  - `python -m py_compile D:\code\MyAttention\scripts\governance\classify_worktree.py`
+- observed state:
+  - total dirty/untracked entries: `178`
+  - populated groups: `9`
+  - recommendation: `requires_scoped_review_prep`
+- controller judgment:
+  - `accept`
+  - dirty-worktree classification is now repeatable and machine-readable
+  - tool is read-only and does not stage, branch, delete, or call GitHub
+  - next cleanup node should use the classifier output to plan archive/scoped-branch reduction, not continue manual counting
+
+## 2026-04-30 Dirty Worktree Reduction Plan P0 Result
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_DIRTY_WORKTREE_REDUCTION_PLAN_P0_RESULT_2026-04-30.md](/D:/code/MyAttention/docs/IKE_DIRTY_WORKTREE_REDUCTION_PLAN_P0_RESULT_2026-04-30.md)
+- packet:
+  - [D:\code\MyAttention\docs\IKE_DIRTY_WORKTREE_REDUCTION_PLAN_P0_PACKET_2026-04-30.md](/D:/code/MyAttention/docs/IKE_DIRTY_WORKTREE_REDUCTION_PLAN_P0_PACKET_2026-04-30.md)
+- delegation evidence:
+  - planning implementation: `019ddc3a-7abe-7421-81ed-7cc5c3f4cae8` / `Hilbert`
+  - L1 review: `019ddc3d-858d-71f0-93de-da48eba28949` / `Laplace`
+- controller validation:
+  - `python D:\code\MyAttention\scripts\governance\classify_worktree.py --cwd D:\code\MyAttention --json`
+- observed state:
+  - total dirty/untracked entries: `180`
+  - populated groups: `9`
+  - recommendation: `requires_scoped_review_prep`
+- review finding absorption:
+  - L1 review found a stale `179` count
+  - controller corrected the result doc to the current `180` count
+- controller judgment:
+  - `accept_with_changes`
+  - plan is accepted as a planning artifact only
+  - no deletion, move, stage, branch, merge, archive, or GitHub action is authorized by this result
+  - immediate next packet should check PR #1 review findings before promotion decisions
+
+## 2026-04-30 PR #1 Review Findings Check P0 Result
+
+- result:
+  - [D:\code\MyAttention\docs\IKE_PR1_REVIEW_FINDINGS_CHECK_P0_RESULT_2026-04-30.md](/D:/code/MyAttention/docs/IKE_PR1_REVIEW_FINDINGS_CHECK_P0_RESULT_2026-04-30.md)
+- pull request:
+  - https://github.com/brantzh6/MyAttention/pull/1
+- controller fallback reason:
+  - GitHub connector access for PR metadata/review/comment inspection is available in the controller tool context
+  - this was a bounded read-only fallback, not implementation work
+- historical note:
+  - this section predates the merged PR #1 state and is retained only as evidence
+- observed state:
+  - PR was open and draft at the time of this check
+  - mergeable: `true`
+  - connector-visible reviews: none
+  - connector-visible comments: none
+- controller judgment:
+  - `accept_with_changes`
+  - no actionable GitHub/Codex review findings were available to absorb at the time of this check
+  - this judgment is historical only and does not override the merged PR #1 state

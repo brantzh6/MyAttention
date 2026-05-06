@@ -19,6 +19,7 @@ Current task-landscape summary:
 - [D:\code\MyAttention\docs\IKE_UNIFIED_TASK_LANDSCAPE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_UNIFIED_TASK_LANDSCAPE_2026-04-11.md)
 - [D:\code\MyAttention\docs\IKE_UNIFIED_TASK_LANDSCAPE_REVIEW_STATE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_UNIFIED_TASK_LANDSCAPE_REVIEW_STATE_2026-04-11.md)
 - [D:\code\MyAttention\docs\IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md](/D:/code/MyAttention/docs/IKE_AI_DRIVEN_EVOLUTION_KERNEL_NOTE_2026-04-14.md)
+- [D:\code\MyAttention\docs\IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md](/D:/code/MyAttention/docs/IKE_VISION_DESIGN_ARCHITECTURE_PATH_ALIGNMENT_2026-04-17.md)
 
 ## Active Mainline
 
@@ -38,6 +39,55 @@ Current state:
 - M1 inspect/plan/refresh/version continuity slices are materially landed
 - the person-signal seed lane is explicitly closed for current scope
 - Runtime v0 is no longer the blocking kernel line
+- a new direction baseline now exists for the next decisive layer above
+  Source Intelligence:
+  - [D:\code\MyAttention\docs\IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_bundle\ike_ai_native_conversation_runtime_v02\md\IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_EN.md](/D:/code/MyAttention/docs/IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_bundle/ike_ai_native_conversation_runtime_v02/md/IKE_AI_Native_Multi_Brain_Conversation_Runtime_Plan_v0.2_EN.md)
+  - [D:\code\MyAttention\docs\IKE_AI_NATIVE_CONVERSATION_RUNTIME_V02_REVIEW_ABSORPTION_2026-04-18.md](/D:/code/MyAttention/docs/IKE_AI_NATIVE_CONVERSATION_RUNTIME_V02_REVIEW_ABSORPTION_2026-04-18.md)
+- the next active edge is now no longer another local heuristic slice; it is a
+  bounded conversation-to-object Phase 0 packet:
+  - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_P0_PHASE_JUDGMENT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_P0_PHASE_JUDGMENT_2026-04-18.md)
+  - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_P0_PLAN_2026-04-18.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_P0_PLAN_2026-04-18.md)
+  - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_P0_EXECUTION_PACKET_2026-04-18.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_P0_EXECUTION_PACKET_2026-04-18.md)
+  - [D:\code\MyAttention\docs\IKE_CONVERSATION_RUNTIME_P0_IMPLEMENTATION_RESULT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_CONVERSATION_RUNTIME_P0_IMPLEMENTATION_RESULT_2026-04-18.md)
+  - current implementation meaning:
+    - conversation runtime now has single-lane and bounded panel inspect routes
+    - conversation runtime and source intelligence now share source semantics
+    - the old private `feeds.py` judgment-runner dependency has been removed in favor of substrate-level reuse
+    - the panel route now exposes extraction disagreement and preserves
+      secondary-only discovered source candidates for inspect-time judgment
+    - source-related correction proposals now have both single-lane and
+      bounded panel review on the conversation surface
+    - inspect responses now expose a compact `controller_packet` for bounded
+      actionable next-step consumption
+    - review absorption has now hardened the trust boundary:
+      - correction proposals explicitly declare proposed / review-gated /
+        not-absorbed state
+      - `controller_packet` explicitly declares advisory / non-canonical
+        status
+      - noisy `other` single-segment fallback is now explicitly proven
+    - the contract seam is now cleaner:
+      - `conversation_runtime/contracts.py` owns conversation request/response
+        types
+      - `feeds/source_contracts.py` owns shared source-discovery contract
+        types
+    - bounded context hardening is now also landed:
+      - mixed-intent panel disagreement is explicitly proven to stay
+        `manual_review`
+      - long conversation text is now windowed before prompt delivery and
+        truncation is recorded in inspect notes
+      - conversation-derived source candidates now reuse the same shared
+        generic-domain and release-over-repository compression rules as source
+        discovery
+      - this alignment should now stop at `SourceCandidate` rather than expand
+        into a broader conversation-object compression doctrine
+      - `intent_trace` now preserves pre-compression candidate shape at the
+        inspect surface without changing truth boundaries or adding persistence
+      - `P0` is now best treated as a closed bounded proof line for the current
+        source/correction object family
+      - the next step should be a higher-level phase judgment, not more default
+        `P0` semantic expansion
+      - the current controller packet now recommends holding `P0` closed by
+        default rather than opening a new conversation object family
 - `M2` route-level loop proof is now materially landed:
   - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_RESULT_2026-04-13.md)
   - [D:\code\MyAttention\docs\IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_REVIEW_ABSORPTION_2026-04-13.md](/D:/code/MyAttention/docs/IKE_SOURCE_INTELLIGENCE_V1_M2_LOOP_PROOF_REVIEW_ABSORPTION_2026-04-13.md)
@@ -252,6 +302,29 @@ Entry:
 - [D:\code\MyAttention\docs\IKE_PROJECT_RUNTIME_ALIGNMENT_2026-04-11.md](/D:/code/MyAttention/docs/IKE_PROJECT_RUNTIME_ALIGNMENT_2026-04-11.md)
 - [D:\code\MyAttention\docs\IKE_MEMORY_TIERS_AND_RETENTION_RULE_2026-04-11.md](/D:/code/MyAttention/docs/IKE_MEMORY_TIERS_AND_RETENTION_RULE_2026-04-11.md)
 
+### 7. Worker skill / harness integration
+
+Goal:
+
+- treat worker execution as a reusable IKE skill rather than a project-private
+  script
+- make the IKE harness the owner of loading, validation, execution, and audit
+- keep `claude-worker` as the first implementation, not the final identity
+
+Current state:
+
+- the latest `claude-worker` implementation now covers durable prompt delivery,
+  detached finalization, execution-mode separation, and structured result
+  projection
+- IKE still lacks the formal harness-side skill contract and loader policy
+- the next step is a bounded contract packet, not a multi-agent rewrite
+
+Entry:
+
+- [D:\code\MyAttention\docs\IKE_WORKER_SKILL_CONTRACT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_WORKER_SKILL_CONTRACT_2026-04-18.md)
+- [D:\code\MyAttention\docs\IKE_WORKER_SKILL_PHASE_JUDGMENT_2026-04-18.md](/D:/code/MyAttention/docs/IKE_WORKER_SKILL_PHASE_JUDGMENT_2026-04-18.md)
+- [D:\code\MyAttention\docs\IKE_WORKER_SKILL_PHASE0_PLAN_2026-04-18.md](/D:/code/MyAttention/docs/IKE_WORKER_SKILL_PHASE0_PLAN_2026-04-18.md)
+
 ## Strategic Review Absorption
 
 - [D:\code\MyAttention\docs\IKE_PROJECT_STRATEGIC_REVIEW_2026-04-11.md](/D:/code/MyAttention/docs/IKE_PROJECT_STRATEGIC_REVIEW_2026-04-11.md)
@@ -264,9 +337,13 @@ Entry:
 ## Current Priorities
 
 1. Improve `Source Intelligence V1` quality through bounded quality/noise slices.
-2. Keep `Runtime v0` stable as accepted substrate, not active growth.
-3. Continue safe rename/cutover preparation only when it does not compete with active source-quality work.
-5. Harden agent execution boundaries only when it directly closes real execution gaps.
+2. Prove the first `conversation -> typed candidate objects` slice using
+   existing Source Intelligence and Runtime substrate.
+3. Keep `Runtime v0` stable as accepted substrate, not active growth.
+4. Continue safe rename/cutover preparation only when it does not compete with
+   active source-quality work.
+5. Harden agent execution boundaries only when it directly closes real
+   execution gaps.
 
 ## Current Non-Goals
 
@@ -314,3 +391,4 @@ Use this map first, then go to the relevant index, then open the detailed handof
 - `M8` review absorbed: panel inspect is now framed as a bounded dual-lane verdict-overlap surface, not a strong independent-panel claim. Stable signal now requires full overlap without asymmetric dropouts.
 - multi-model judgment direction: incubate inside project, but design toward a future reusable capability rather than route-local accumulation.
 - `Source Intelligence V1 M13`: bounded selective-absorption advisory landed on top of existing panel outputs. No new route was added; both discovery-panel and version-panel surfaces now expose advisory controller guidance (`ready_to_follow`, `ready_to_suppress`, `needs_manual_review`, `watch_candidates`) while staying inspect-only and non-canonical.
+- flywheel frontend bridge: visible AI entry now exists on the evolution page, and the same surface now also exposes bounded manual review, manual absorption, and manual decision bridges. These are all inspect-only, non-canonical, and manual by design.

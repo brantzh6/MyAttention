@@ -64,37 +64,43 @@ If closure evidence is insufficient, stop at closure gaps and do not run a green
 Active mainline:
 
 ```text
-source_intelligence_quality_resumption
+flywheel_v1_ai_entry_control_surface
+```
+
+Current product objective:
+
+```text
+Build the first usable IKE evolution loop with an AI conversation entry and a visible project control surface.
 ```
 
 Current active task packet:
 
 ```text
-docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_PACKET_2026-05-02.md
+tasks/codex/project_control_surface_anchor_p0_2026-05-06.md
 ```
 
-Current task result:
+The mainline has three first-class tasks:
+
+1. `evolution_flywheel_v1`: make the inspect-only AI-assisted loop runnable end to end.
+2. `ai_conversation_entry`: make AI conversation the product entry into typed candidates, controller packets, and review-gated next actions.
+3. `project_control_surface`: make IKE's mainline, phase, capability gaps, progress, and active lanes visible in UI so control does not depend on chat memory.
+
+Current accepted support slice:
 
 ```text
-docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_RESULT_2026-05-02.md
+PR #2 merged at acf922c: GitHub signal relation hints improved source-intelligence input quality.
 ```
 
-Current task state:
+Current source-intelligence role:
 
 ```text
-implemented locally; validation passed; initial L1 review flagged a false-person-seed issue; fixed locally; scoped L1 re-review accepted
+support lane for flywheel input quality, not the top-level product mainline.
 ```
 
-Latest accepted source-intelligence result:
+Current UI/control-surface status:
 
 ```text
-docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_IMPLEMENTATION_RESULT_2026-05-01.md
-```
-
-Current parallel UI lane:
-
-```text
-Antigravity Visual Control Surface
+required mainline anchor; previous accepted UI evidence exists in quarantine but is not promoted on the current clean mainline.
 ```
 
 Current gate:
@@ -143,7 +149,7 @@ python scripts/governance/classify_worktree.py --cwd D:\code\MyAttention --limit
 Then answer:
 
 - What is the active mainline?
-- What is the active task packet?
+- Which of the three mainline tasks does the request advance?
 - Which lane does the user request touch?
 - Is the worktree clean enough for direct scoped work?
 
@@ -153,8 +159,11 @@ If these cannot be answered in 5 minutes, stop and update `CURRENT_OPERATIONS.md
 
 Every new request is classified into exactly one bucket:
 
-- `mainline`: advances source intelligence quality
-- `ui_lane`: Antigravity or `/control` visual surface work
+- `mainline_flywheel`: advances the first usable evolution flywheel loop
+- `mainline_ai_entry`: advances AI conversation as the entry into typed candidates and controller packets
+- `mainline_control_surface`: advances the visible project/progress/capability anchor
+- `source_intelligence_support`: improves source/person/signal quality in service of the flywheel
+- `ui_lane`: Antigravity implementation work for the control surface or related UI
 - `review_gate`: GitHub/Codex review, finding absorption, PR readiness
 - `worktree_ops`: classify, split, stage, branch, or cleanup planning
 - `governance`: changes to policy, lifecycle, or acceptance rules
@@ -172,7 +181,7 @@ Mainline work gets priority unless:
 - dirty worktree state prevents a scoped PR
 - the user explicitly chooses another lane
 
-UI work may continue independently, but it must not redefine mainline truth.
+Control-surface UI is part of the mainline anchor when it makes project phase, capability gaps, or lane progress visible. Other UI work remains independent and must not redefine runtime truth.
 
 ### 4. Decide Action Type
 
@@ -320,20 +329,18 @@ Stop and report if:
 
 ## Current Next Step
 
-Prepare scoped GitHub/Codex L1 review for:
+Implement the scoped control-surface anchor packet:
 
 ```text
-docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_RESULT_2026-05-02.md
+tasks/codex/project_control_surface_anchor_p0_2026-05-06.md
 ```
 
-Candidate files:
+The packet must specify:
 
-- `services/api/feeds/source_contracts.py`
-- `services/api/feeds/source_postprocess.py`
-- `services/api/feeds/source_semantics.py`
-- `services/api/routers/feeds.py`
-- `services/api/tests/test_source_discovery_identity.py`
-- `docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_PACKET_2026-05-02.md`
-- `docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_RESULT_2026-05-02.md`
+- visible capability model: information brain, knowledge brain, evolution brain, world model, thinking-method arsenal
+- current phase/completion estimates and capability gaps
+- active lanes and owners: controller, Antigravity UI, backend/CC, review, test
+- static/provenance boundary: no fake live state unless backed by an adapter
+- GitHub PR collaboration protocol for UI work
 
-Do not include unrelated dirty worktree files.
+Do not start another source-intelligence quality slice until this anchor is in place or explicitly parked by controller decision.

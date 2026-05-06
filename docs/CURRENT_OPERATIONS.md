@@ -118,7 +118,13 @@ Rationale:
 Current worktree state:
 
 ```text
-dirty; requires scoped review prep; broad push forbidden
+clean after 2026-05-06 quarantine and scoped governance restore
+```
+
+Current quarantine evidence:
+
+```text
+local branch codex/dirty-quarantine-20260506 preserves the oversized dirty snapshot; do not promote it directly
 ```
 
 ## Session Loop

@@ -55,10 +55,10 @@ Truth status: manually curated active index; non-canonical promotion truth.
 | `docs/CURRENT_REVIEW_QUEUE.md` | accepted review queue | documentation/governance worker | Keep open reviews visible. |
 | `docs/CURRENT_MAINLINE_HANDOFF_COMPACT_2026-04-30.md` | accepted compact handoff | controller governance | Use this as the first-read continuation surface. |
 | `docs/IKE_MAINLINE_STATE_MANIFEST_P0_RESULT_2026-04-29.md` | accepted result | documentation/governance worker | Use as manifest P0 evidence. |
-| `docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_PACKET_2026-04-30.md` | accepted packet | governance tooling | Use classifier to plan cleanup. |
 | `scripts/governance/classify_worktree.py` | accepted tool | governance tooling | Run before scoped review prep. |
 | `scripts/governance/README.md` | accepted usage note | governance tooling | Keep classifier usage documented. |
-| `docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md` | accepted result | governance tooling | Historical accepted output was 178 entries, 9 groups; current observed worktree state is 197 entries, 9 groups. |
+| `codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_PACKET_2026-04-30.md` | quarantined local evidence | governance tooling | Historical classifier packet preserved in quarantine only; not an active continuation dependency. |
+| `codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md` | quarantined local evidence | governance tooling | Historical classifier result preserved in quarantine only; current active classifier truth comes from rerunning `scripts/governance/classify_worktree.py`. |
 | `docs/IKE_WORKTREE_ARCHIVE_INDEX_PLAN_P0_RESULT_2026-04-30.md` | accepted-with-changes plan | governance cleanup | Use as planning boundary; no movement authorized. |
 | `docs/IKE_WORKTREE_ARCHIVE_INDEX_PLAN_P0_REVIEW_ABSORPTION_2026-04-30.md` | accepted review absorption | governance cleanup | Latest observed planning count: 197 entries, 9 groups. |
 | `docs/IKE_DIRTY_WORKTREE_RECONCILIATION_DOCS_ONLY_RESULT_2026-04-30.md` | accepted result | governance cleanup | Documents the docs-only cleanup slice for controller-facing surfaces. |

@@ -276,7 +276,9 @@
                              "risk":  "R2",
                              "artifacts":  [
                                                "scripts/governance/classify_worktree.py",
-                                               "scripts/governance/README.md",
+                                               "scripts/governance/README.md"
+                                           ],
+                             "quarantine_evidence":  [
                                                "codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_PACKET_2026-04-30.md",
                                                "codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md"
                                            ],

@@ -100,7 +100,7 @@ support lane for flywheel input quality, not the top-level product mainline.
 Current UI/control-surface status:
 
 ```text
-required mainline anchor; previous accepted UI evidence exists in quarantine but is not promoted on the current clean mainline.
+required mainline anchor; previous accepted UI evidence may exist only in a local quarantine snapshot and must be treated as optional. The clean PR path must recreate or recover the UI without depending on unpublished refs.
 ```
 
 Current gate:
@@ -127,10 +127,10 @@ Current worktree state:
 clean after 2026-05-06 quarantine and scoped governance restore
 ```
 
-Current quarantine evidence:
+Current quarantine note:
 
 ```text
-local branch codex/dirty-quarantine-20260506 preserves the oversized dirty snapshot; do not promote it directly
+the oversized dirty snapshot was preserved locally during cleanup, but it is not a published collaboration dependency. Delegates must not rely on it; recreate or recover bounded UI files through a clean branch/PR.
 ```
 
 ## Session Loop

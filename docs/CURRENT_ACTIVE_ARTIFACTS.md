@@ -44,8 +44,8 @@ Truth status: manually curated active index; non-canonical promotion truth.
 
 | Artifact | Status | Owner/Lane | Next Action |
 | --- | --- | --- | --- |
-| `codex/dirty-quarantine-20260506:services/web/app/control/*` | quarantined evidence | visual control surface | Recover or recreate through a clean GitHub branch/PR; do not promote directly from quarantine. |
-| `codex/dirty-quarantine-20260506:services/web/lib/control-surface/*` | quarantined evidence | visual control surface | Use only as implementation evidence for the next clean UI branch. |
+| prior `/control` UI evidence | optional local evidence | visual control surface | May exist only in an unpublished local quarantine snapshot; do not rely on it for collaboration. Recreate or recover through a clean GitHub branch/PR. |
+| prior `control-surface` snapshot evidence | optional local evidence | visual control surface | May inform implementation if available locally, but the PR must be reviewable without unpublished refs. |
 | `docs/IKE_VISUAL_CONTROL_SURFACE_BRANCH_DESIGN_2026-04-29.md` | active design evidence | visual control surface | Reuse as background only; the next packet must reflect the corrected three-task mainline. |
 | `docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_PACKET_2026-04-29.md` | historical packet | UI implementation delegate | Preserve static provenance boundary. |
 | `docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_RESULT_2026-04-29.md` | historical accepted evidence | visual control surface | Build evidence exists historically, but current clean mainline does not contain the UI files. |
@@ -65,8 +65,8 @@ Truth status: manually curated active index; non-canonical promotion truth.
 | `docs/IKE_MAINLINE_STATE_MANIFEST_P0_RESULT_2026-04-29.md` | accepted result | documentation/governance worker | Use as manifest P0 evidence. |
 | `scripts/governance/classify_worktree.py` | accepted tool | governance tooling | Run before scoped review prep. |
 | `scripts/governance/README.md` | accepted usage note | governance tooling | Keep classifier usage documented. |
-| `codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_PACKET_2026-04-30.md` | quarantined local evidence | governance tooling | Historical classifier packet preserved in quarantine only; not an active continuation dependency. |
-| `codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md` | quarantined local evidence | governance tooling | Historical classifier result preserved in quarantine only; current active classifier truth comes from rerunning `scripts/governance/classify_worktree.py`. |
+| local dirty-worktree classifier packet evidence | optional local evidence | governance tooling | Historical classifier packet may exist in local quarantine only; not an active continuation dependency. |
+| local dirty-worktree classifier result evidence | optional local evidence | governance tooling | Historical classifier result may exist in local quarantine only; current active classifier truth comes from rerunning `scripts/governance/classify_worktree.py`. |
 | `docs/IKE_WORKTREE_ARCHIVE_INDEX_PLAN_P0_RESULT_2026-04-30.md` | accepted-with-changes plan | governance cleanup | Use as planning boundary; no movement authorized. |
 | `docs/IKE_WORKTREE_ARCHIVE_INDEX_PLAN_P0_REVIEW_ABSORPTION_2026-04-30.md` | accepted review absorption | governance cleanup | Latest observed planning count: 197 entries, 9 groups. |
 | `docs/IKE_DIRTY_WORKTREE_RECONCILIATION_DOCS_ONLY_RESULT_2026-04-30.md` | accepted result | governance cleanup | Documents the docs-only cleanup slice for controller-facing surfaces. |

@@ -74,7 +74,7 @@ Allowed support docs:
 - Do not add scheduler, persistence, memory, promotion, or worker execution semantics.
 - Do not present static estimates as live truth.
 - Do not broaden into general dashboard redesign.
-- Do not promote files directly from `codex/dirty-quarantine-20260506`.
+- Do not rely on unpublished local quarantine refs. Recreate or recover the UI through a clean, reviewable branch.
 
 ## Static Truth Boundary
 
@@ -133,7 +133,7 @@ Stop and report if:
 - implementation needs files outside the allowed scope
 - Antigravity output changes runtime truth or scheduler/persistence behavior
 - build cannot run
-- PR includes unrelated historical/quarantine artifacts
+- PR includes unrelated historical artifacts or depends on unpublished quarantine refs
 
 ## Recommendation
 

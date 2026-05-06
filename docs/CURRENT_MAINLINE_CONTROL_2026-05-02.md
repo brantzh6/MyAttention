@@ -199,7 +199,7 @@ Rule:
 
 - no broad commit or mixed PR
 - every implementation goes through a lane-specific branch/PR
-- quarantine evidence remains on `codex/dirty-quarantine-20260506`; do not promote it directly
+- any local quarantine evidence is optional and unpublished; delegates must recreate or recover bounded files through clean branch/PR work, not rely on the quarantine ref
 
 ## Layered Review Requirements
 

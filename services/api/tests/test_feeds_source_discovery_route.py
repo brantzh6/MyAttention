@@ -1000,9 +1000,10 @@ class SourceDiscoveryRouteTests(unittest.TestCase):
 
             self.assertEqual(response.status_code, 200)
             data = response.json()
-            self.assertEqual(data["primary_model"], "qwen3.6-plus")
+            qwen_default_model = feeds_module.default_model_for_provider("qwen")
+            self.assertEqual(data["primary_model"], qwen_default_model)
             self.assertEqual(data["secondary_model"], "claude-3-5-sonnet-20241022")
-            self.assertIn("primary_model=qwen3.6-plus", data["notes"])
+            self.assertIn(f"primary_model={qwen_default_model}", data["notes"])
             self.assertIn("secondary_model=claude-3-5-sonnet-20241022", data["notes"])
         finally:
             test_app.dependency_overrides.clear()
@@ -1156,10 +1157,12 @@ class SourceDiscoveryRouteTests(unittest.TestCase):
 
             self.assertEqual(response.status_code, 200)
             data = response.json()
-            self.assertEqual(len(data["candidates"]), 1)
-            candidate = data["candidates"][0]
+            candidate = next(
+                candidate
+                for candidate in data["candidates"]
+                if candidate["object_key"] == "github.com/openclaw/openclaw/issue/123"
+            )
             self.assertEqual(candidate["item_type"], "signal")
-            self.assertEqual(candidate["object_key"], "github.com/openclaw/openclaw/issue/123")
             self.assertEqual(candidate["domain"], "github.com")
         finally:
             test_app.dependency_overrides.clear()

@@ -1,0 +1,142 @@
+{
+  "generated_at": "2026-05-06",
+  "truth_status": "controller_curated_weekly_review_action_ledger",
+  "source_inputs": [
+    "C:/Users/jiuyou/.codex/automations/weekly-project-review/memory.md",
+    "docs/CURRENT_OPERATIONS.md",
+    "docs/CURRENT_MAINLINE_CONTROL_2026-05-02.md",
+    "docs/CURRENT_REVIEW_QUEUE.md",
+    "docs/CURRENT_ACTIVE_ARTIFACTS.md",
+    "python scripts/governance/classify_worktree.py --cwd D:/code/MyAttention --limit 5"
+  ],
+  "closure_rule": "Each weekly review action must be consumed before new greenfield weekly review conclusions are accepted.",
+  "prior_actions": [
+    {
+      "id": "WR-2026-05-03-A1",
+      "action": "Keep priority on completing the information-brain mainline before expanding knowledge-brain or new evolution scope.",
+      "status": "partial",
+      "evidence": [
+        "CURRENT_OPERATIONS names source_intelligence_quality_resumption as the active mainline.",
+        "CURRENT_MAINLINE_CONTROL requires the next mainline task to remain a bounded source-intelligence quality packet.",
+        "Dirty worktree classification still shows large flywheel_readiness and evolution_ui groups, so support work pressure remains active."
+      ],
+      "next": "Keep source intelligence as the only active mainline implementation lane; park new knowledge/evolution expansion unless it is a review gate blocker."
+    },
+    {
+      "id": "WR-2026-05-03-A2",
+      "action": "Treat self-evolution as a support verifier, not the primary product track.",
+      "status": "partial",
+      "evidence": [
+        "CURRENT_MAINLINE_CONTROL lists flywheel and visual control work as separate lanes, not the mainline.",
+        "The current dirty worktree still contains substantial flywheel_readiness and evolution_ui entries."
+      ],
+      "next": "Allow flywheel/evolution only as support or UI lanes; require reinforced governance before any runtime-truth, scheduler, persistence, or promotion semantics work."
+    },
+    {
+      "id": "WR-2026-05-03-A3",
+      "action": "Freeze or sharply limit new research-track surface area until internal fetch persistence, feed DB-read cutover, and Phase 2 acceptance are complete.",
+      "status": "superseded",
+      "evidence": [
+        "The current controller surface has replaced the older feed fact-store Phase 2 wording with source_intelligence_quality_resumption.",
+        "The underlying constraint remains valid: do not expand research/docs surface while source intelligence and worktree governance are not closed."
+      ],
+      "next": "Use the updated rule: no new durable research docs unless they directly serve active source-intelligence mainline, review absorption, or operations control."
+    },
+    {
+      "id": "WR-2026-05-03-A4",
+      "action": "Start a documentation consolidation pass because current docs are numerous and partially stale relative to code and tests.",
+      "status": "partial",
+      "evidence": [
+        "CURRENT_OPERATIONS, CURRENT_MAINLINE_CONTROL, CURRENT_ACTIVE_ARTIFACTS, and CURRENT_REVIEW_QUEUE were created as controller-facing active surfaces.",
+        "Archive and review identity index artifacts exist.",
+        "Dirty worktree classification still reports 218 entries across 9 groups, so consolidation is not closed."
+      ],
+      "next": "Continue lane-specific scoped cleanup only; do not run broad archive, deletion, movement, or mixed PR operations from the dirty worktree."
+    },
+    {
+      "id": "WR-2026-05-06-A1",
+      "action": "Make weekly project review a closed-loop control instead of a passive summary.",
+      "status": "partial",
+      "evidence": [
+        "This ledger is the first controller-curated action ledger.",
+        "The automation prompt still needs to require prior-action closure on every run."
+      ],
+      "next": "Update the weekly automation prompt to start with closure on this ledger and to write status for every prior action."
+    },
+    {
+      "id": "WR-2026-05-06-A2",
+      "action": "Treat unresolved weekly review items as carry-over constraints, not rediscovered findings.",
+      "status": "completed",
+      "evidence": [
+        "This ledger assigns completed, partial, not_started, or superseded status to prior actions.",
+        "CURRENT_OPERATIONS is updated to require review consumption before greenfield review."
+      ],
+      "next": "Future weekly reviews must update this ledger before introducing new conclusions."
+    },
+    {
+      "id": "WR-2026-05-06-A3",
+      "action": "Persist a machine-readable action ledger or closure status per action.",
+      "status": "completed",
+      "evidence": [
+        "docs/CURRENT_WEEKLY_REVIEW_ACTION_LEDGER.json exists as the active weekly review action ledger."
+      ],
+      "next": "Keep the ledger compact and controller-curated; do not let it become a second historical doc archive."
+    }
+  ],
+  "current_priority_changes": [
+    "Source intelligence quality remains the only active mainline implementation priority.",
+    "GitHub/Codex PR review becomes the default L2 review gate for scoped implementation promotion.",
+    "UI control surface remains an independent lane and should move through GitHub PRs for cross-IDE collaboration.",
+    "Weekly review outputs must create or update explicit action ledger entries before they are considered consumed.",
+    "Tooling incidents that break standard operations, such as rg execution failure, must be fixed before falling back to lower-quality workflows."
+  ],
+  "escalations": [
+    {
+      "item": "Dirty worktree over budget",
+      "reason": "Current classifier output reports 218 entries across 9 groups.",
+      "required_action": "No broad commit, broad push, or mixed PR; use scoped lane-specific PR prep only."
+    },
+    {
+      "item": "Review automation is not closed-loop enough",
+      "reason": "Automation memory notes strategic conclusions but previously lacked action-ledger persistence.",
+      "required_action": "Update automation prompt and require ledger closure before new conclusions."
+    },
+    {
+      "item": "Cross-run toolchain reliability",
+      "reason": "Bundled WindowsApps rg was present in PATH but could not execute with Access denied.",
+      "required_action": "Use user-installed ripgrep via WinGet Links and treat future key-tool failures as incidents."
+    },
+    {
+      "item": "Cross-IDE UI collaboration",
+      "reason": "Antigravity UI line cannot depend on manual context transfer.",
+      "required_action": "Move UI lane through GitHub issue/branch/PR/review comments with static-truth boundaries in the PR description."
+    }
+  ],
+  "updated_next_actions": [
+    {
+      "id": "NEXT-1",
+      "lane": "governance",
+      "action": "Update weekly project review automation prompt so it starts with prior-action closure and updates this ledger.",
+      "status": "ready"
+    },
+    {
+      "id": "NEXT-2",
+      "lane": "mainline",
+      "action": "Prepare scoped GitHub/Codex L2 PR candidate for the accepted GitHub signal relation hints source-intelligence slice.",
+      "status": "ready"
+    },
+    {
+      "id": "NEXT-3",
+      "lane": "ui_lane",
+      "action": "Define Antigravity UI collaboration through GitHub PR protocol, with allowed files limited to control-surface UI and no backend runtime truth changes.",
+      "status": "ready"
+    },
+    {
+      "id": "NEXT-4",
+      "lane": "review_adapter",
+      "action": "Write a bounded adapter design packet for Claude/qoderlic, Gemini CLI, and GitHub Codex review surfaces.",
+      "status": "ready"
+    }
+  ],
+  "recommendation": "accept_with_changes"
+}

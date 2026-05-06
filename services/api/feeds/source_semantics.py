@@ -1,3 +1,4 @@
+import re
 from typing import TYPE_CHECKING, TypeAlias
 from urllib.parse import urlparse
 
@@ -64,8 +65,29 @@ def is_reserved_social_namespace(handle: str) -> bool:
     return handle.strip().lower() in _RESERVED_SOCIAL_SINGLE_SEGMENT_PATHS
 
 
+def is_reserved_repository_namespace(domain: str, owner: str) -> bool:
+    normalized_domain = normalize_domain(domain)
+    normalized_owner = owner.strip().lower()
+    if normalized_domain == "github.com":
+        return normalized_owner in _RESERVED_GITHUB_SINGLE_SEGMENT_PATHS
+    if normalized_domain == "gitlab.com":
+        return normalized_owner in _RESERVED_GITLAB_SINGLE_SEGMENT_PATHS
+    return False
+
+
 def _focus_value(focus) -> str:
     return str(getattr(focus, "value", focus) or "").strip().lower()
+
+
+def _slug_tokens(segment: str) -> set[str]:
+    return {token for token in re.split(r"[^a-z0-9]+", segment.lower()) if token}
+
+
+def _has_event_slug_token(segment: str, event_segments: set[str]) -> bool:
+    normalized = segment.lower()
+    if normalized == "talk":
+        return True
+    return bool(_slug_tokens(normalized) & (event_segments - {"talk"}))
 
 
 def normalize_domain(value: str) -> str:
@@ -110,9 +132,9 @@ def _github_repo_signal_identity(
     url: str,
     focus,
 ) -> CandidateIdentity | None:
-    if domain != "github.com":
-        return None
     if _focus_value(focus) not in {"method", "frontier", "latest"}:
+        return None
+    if domain != "github.com":
         return None
     if len(path_segments) < 4:
         return None
@@ -120,6 +142,8 @@ def _github_repo_signal_identity(
     owner, repo = path_segments[0], path_segments[1]
     section = path_segments[2].lower()
     item_id = path_segments[3]
+    if is_reserved_repository_namespace(domain, owner):
+        return None
 
     if section == "issues":
         object_key = f"{domain}/{owner}/{repo}/issue/{item_id}".lower()
@@ -161,9 +185,18 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
     github_repo_signal = _github_repo_signal_identity(domain, path_segments, url, focus)
     if github_repo_signal is not None:
         return github_repo_signal
+    if (
+        domain == "github.com"
+        and len(path_segments) >= 4
+        and path_segments[0].lower() != "orgs"
+        and path_segments[2].lower() in {"issues", "pull", "pulls", "discussions"}
+    ):
+        return "domain", domain, domain, f"https://{domain}", domain
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 4 and path_segments[2].lower() == "releases":
         owner, repo = path_segments[0], path_segments[1]
+        if is_reserved_repository_namespace(domain, owner):
+            return "domain", domain, domain, f"https://{domain}", domain
         is_tag_release = len(path_segments) >= 5 and path_segments[3].lower() == "tag"
         release_id = path_segments[4] if is_tag_release else path_segments[3]
         object_key = f"{domain}/{owner}/{repo}/release/{release_id}".lower()
@@ -174,6 +207,8 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 3 and path_segments[2].lower() == "releases":
         owner, repo = path_segments[0], path_segments[1]
+        if is_reserved_repository_namespace(domain, owner):
+            return "domain", domain, domain, f"https://{domain}", domain
         object_key = f"{domain}/{owner}/{repo}/release/latest".lower()
         canonical_url = f"https://{domain}/{owner}/{repo}/releases"
         display_name = f"{owner}/{repo} releases"
@@ -191,12 +226,14 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
             return "domain", domain, domain, f"https://{domain}", domain
         if domain == "gitlab.com" and handle.lower() in _RESERVED_GITLAB_SINGLE_SEGMENT_PATHS:
             return "domain", domain, domain, f"https://{domain}", domain
-        object_key = f"{domain}/user/{handle}".lower()
+        object_key = f"{domain}/org/{handle}".lower()
         canonical_url = f"https://{domain}/{handle}"
-        return "person", object_key, handle, canonical_url, domain
+        return "organization", object_key, handle, canonical_url, domain
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 2:
         owner, repo = path_segments[0], path_segments[1]
+        if is_reserved_repository_namespace(domain, owner):
+            return "domain", domain, domain, f"https://{domain}", domain
         object_key = f"{domain}/{owner}/{repo}".lower()
         canonical_url = f"https://{domain}/{owner}/{repo}"
         display_name = f"{owner}/{repo}"
@@ -266,14 +303,25 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
             display_name = f"HN item {item_id}"
             return "signal", object_key, display_name, canonical_url, domain
 
-    if any(segment.lower() in {"events", "event", "summit", "conference", "meetup"} for segment in path_segments):
+    event_segments = {
+        "events",
+        "event",
+        "summit",
+        "conference",
+        "meetup",
+        "workshop",
+        "webinar",
+        "talk",
+        "talks",
+    }
+    if any(_has_event_slug_token(segment, event_segments) for segment in path_segments):
         object_key = f"{domain}:event"
         canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments)}"
         display_name = f"{domain} events"
         return "event", object_key, display_name, canonical_url, domain
 
     if any(
-        segment.lower() in {"changelog", "release", "releases", "release-notes", "announcements"}
+        segment.lower() in {"changelog", "release", "releases", "release-notes", "announcements", "whats-new"}
         or segment.lower().startswith("release-")
         or segment.lower().startswith("announcement-")
         for segment in path_segments

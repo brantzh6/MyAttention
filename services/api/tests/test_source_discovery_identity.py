@@ -1,5 +1,7 @@
 import unittest
 
+from feeds.source_contracts import SourceDiscoveryCandidate
+from feeds.source_postprocess import compress_source_candidates
 from routers.feeds import (
     SourceDiscoveryFocus,
     _build_related_candidate_seed,
@@ -16,6 +18,30 @@ from routers.feeds import (
 
 
 class SourceDiscoveryIdentityTests(unittest.TestCase):
+    def _candidate(
+        self,
+        *,
+        item_type: str,
+        object_key: str,
+        domain: str,
+        authority_score: float,
+    ) -> SourceDiscoveryCandidate:
+        return SourceDiscoveryCandidate(
+            item_type=item_type,
+            object_key=object_key,
+            domain=domain,
+            name=object_key,
+            url=f"https://{object_key}",
+            authority_tier="B",
+            authority_score=authority_score,
+            recommendation="review",
+            recommendation_reason="test",
+            evidence_count=1,
+            matched_queries=["test"],
+            sample_titles=["test"],
+            sample_snippets=["test"],
+        )
+
     def test_identifies_github_release_as_release_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
             "https://github.com/openclaw/openclaw/releases/tag/v0.5.0",
@@ -38,16 +64,112 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertIn("release", display_name)
         self.assertIn("/releases/tag/v1.2.3", canonical_url)
 
-    def test_identifies_event_pages_as_event_object(self) -> None:
+    def test_identifies_github_user_profile_as_organization_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
-            "https://example.org/events/agent-summit-2026",
-            SourceDiscoveryFocus.FRONTIER,
+            "https://github.com/openclaw",
+            SourceDiscoveryFocus.METHOD,
         )
-        self.assertEqual(item_type, "event")
-        self.assertEqual(object_key, "example.org:event")
-        self.assertEqual(domain, "example.org")
-        self.assertIn("events", display_name)
-        self.assertIn("/events/agent-summit-2026", canonical_url)
+        self.assertEqual(item_type, "organization")
+        self.assertEqual(object_key, "github.com/org/openclaw")
+        self.assertEqual(display_name, "openclaw")
+        self.assertEqual(canonical_url, "https://github.com/openclaw")
+        self.assertEqual(domain, "github.com")
+
+    def test_keeps_reserved_github_single_segment_paths_as_domain(self) -> None:
+        for path in ("pricing", "search"):
+            with self.subTest(path=path):
+                item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+                    f"https://github.com/{path}",
+                    SourceDiscoveryFocus.METHOD,
+                )
+                self.assertEqual(item_type, "domain")
+                self.assertEqual(object_key, "github.com")
+                self.assertEqual(display_name, "github.com")
+                self.assertEqual(canonical_url, "https://github.com")
+                self.assertEqual(domain, "github.com")
+
+    def test_keeps_reserved_gitlab_single_segment_paths_as_domain(self) -> None:
+        for path in ("explore", "projects", "groups"):
+            with self.subTest(path=path):
+                item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+                    f"https://gitlab.com/{path}",
+                    SourceDiscoveryFocus.METHOD,
+                )
+                self.assertEqual(item_type, "domain")
+                self.assertEqual(object_key, "gitlab.com")
+                self.assertEqual(display_name, "gitlab.com")
+                self.assertEqual(canonical_url, "https://gitlab.com")
+                self.assertEqual(domain, "gitlab.com")
+
+    def test_identifies_gitlab_user_profile_as_organization_object(self) -> None:
+        item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+            "https://gitlab.com/openclaw",
+            SourceDiscoveryFocus.METHOD,
+        )
+        self.assertEqual(item_type, "organization")
+        self.assertEqual(object_key, "gitlab.com/org/openclaw")
+        self.assertEqual(display_name, "openclaw")
+        self.assertEqual(canonical_url, "https://gitlab.com/openclaw")
+        self.assertEqual(domain, "gitlab.com")
+
+    def test_identifies_gitlab_repository_as_repository_object(self) -> None:
+        item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+            "https://gitlab.com/openclaw/openclaw",
+            SourceDiscoveryFocus.METHOD,
+        )
+        self.assertEqual(item_type, "repository")
+        self.assertEqual(object_key, "gitlab.com/openclaw/openclaw")
+        self.assertEqual(display_name, "openclaw/openclaw")
+        self.assertEqual(canonical_url, "https://gitlab.com/openclaw/openclaw")
+        self.assertEqual(domain, "gitlab.com")
+
+    def test_identifies_changelog_page_as_release_stream_object(self) -> None:
+        for url in ("https://example.com/changelog", "https://example.com/whats-new"):
+            with self.subTest(url=url):
+                item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.LATEST,
+                )
+                self.assertEqual(item_type, "release")
+                self.assertEqual(object_key, "example.com:release")
+                self.assertEqual(domain, "example.com")
+                self.assertIn("release stream", display_name)
+
+    def test_identifies_event_pages_as_event_object(self) -> None:
+        for url in (
+            "https://example.org/events/agent-summit-2026",
+            "https://example.org/ai-conference-2026",
+            "https://example.org/agent-summit-2026",
+            "https://example.org/workshop/agent-evaluation",
+            "https://example.org/webinar/source-intelligence",
+            "https://example.org/talks/agent-memory-boundaries",
+        ):
+            with self.subTest(url=url):
+                item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.FRONTIER,
+                )
+                self.assertEqual(item_type, "event")
+                self.assertEqual(object_key, "example.org:event")
+                self.assertEqual(domain, "example.org")
+                self.assertIn("events", display_name)
+                self.assertIn("example.org", canonical_url)
+
+    def test_event_slug_matching_does_not_use_substrings(self) -> None:
+        for url in (
+            "https://example.org/blog/eventual-consistency-for-agents",
+            "https://example.org/docs/smalltalk-integration",
+            "https://example.org/blog/how-to-talk-to-agents",
+            "https://example.org/docs/talk-to-your-data",
+        ):
+            with self.subTest(url=url):
+                item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.FRONTIER,
+                )
+                self.assertEqual(item_type, "domain")
+                self.assertEqual(object_key, "example.org")
+                self.assertEqual(domain, "example.org")
 
     def test_identifies_reddit_thread_as_signal_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
@@ -71,6 +193,15 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertIn("issue 123", display_name)
         self.assertIn("/issues/123", canonical_url)
 
+    def test_keeps_github_issue_as_domain_in_authoritative_focus(self) -> None:
+        item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+            "https://github.com/openclaw/openclaw/issues/123",
+            SourceDiscoveryFocus.AUTHORITATIVE,
+        )
+        self.assertEqual(item_type, "domain")
+        self.assertEqual(object_key, "github.com")
+        self.assertEqual(domain, "github.com")
+
     def test_identifies_github_discussion_as_signal_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
             "https://github.com/openclaw/openclaw/discussions/456",
@@ -78,6 +209,15 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         )
         self.assertEqual(item_type, "signal")
         self.assertEqual(object_key, "github.com/openclaw/openclaw/discussion/456")
+        self.assertEqual(domain, "github.com")
+
+    def test_keeps_github_discussion_as_domain_in_authoritative_focus(self) -> None:
+        item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+            "https://github.com/openclaw/openclaw/discussions/456",
+            SourceDiscoveryFocus.AUTHORITATIVE,
+        )
+        self.assertEqual(item_type, "domain")
+        self.assertEqual(object_key, "github.com")
         self.assertEqual(domain, "github.com")
 
     def test_identifies_contextual_media_article_as_signal_in_latest_focus(self) -> None:
@@ -157,12 +297,12 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
             _candidate_selection_threshold("domain", SourceDiscoveryFocus.FRONTIER),
         )
 
-    def test_related_repository_owner_can_seed_person_candidate(self) -> None:
+    def test_related_repository_owner_can_seed_organization_candidate(self) -> None:
         candidate = _build_related_candidate_seed(
             {
                 "relation": "owner",
-                "item_type": "person",
-                "object_key": "github.com/user/openclaw",
+                "item_type": "organization",
+                "object_key": "github.com/org/openclaw",
                 "label": "openclaw",
             },
             parent_object_key="github.com/openclaw/openclaw",
@@ -173,9 +313,9 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         )
         self.assertIsNotNone(candidate)
         assert candidate is not None
-        self.assertEqual(candidate["item_type"], "person")
+        self.assertEqual(candidate["item_type"], "organization")
         self.assertEqual(candidate["url"], "https://github.com/openclaw")
-        self.assertIn("maintainer", candidate["inferred_roles"])
+        self.assertEqual(candidate["inferred_roles"], [])
         self.assertGreaterEqual(candidate["authority_score"], 0.45)
 
     def test_x_status_signal_emits_person_relation_hint(self) -> None:
@@ -193,6 +333,202 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
             },
             related,
         )
+
+    def test_github_issue_signal_emits_repository_and_owner_relation_hints(self) -> None:
+        related = _candidate_relation_hints(
+            "signal",
+            "github.com/openclaw/openclaw/issue/123",
+            "https://github.com/openclaw/openclaw/issues/123",
+        )
+
+        self.assertIn(
+            {
+                "relation": "repository",
+                "item_type": "repository",
+                "object_key": "github.com/openclaw/openclaw",
+                "label": "openclaw/openclaw",
+            },
+            related,
+        )
+        self.assertIn(
+            {
+                "relation": "owner",
+                "item_type": "organization",
+                "object_key": "github.com/org/openclaw",
+                "label": "openclaw",
+            },
+            related,
+        )
+
+    def test_github_discussion_and_pull_signals_emit_repository_relation_hint(self) -> None:
+        for object_key, url in (
+            (
+                "github.com/openclaw/openclaw/discussion/456",
+                "https://github.com/openclaw/openclaw/discussions/456",
+            ),
+            (
+                "github.com/openclaw/openclaw/pull/789",
+                "https://github.com/openclaw/openclaw/pull/789",
+            ),
+        ):
+            with self.subTest(object_key=object_key):
+                related = _candidate_relation_hints("signal", object_key, url)
+                self.assertIn(
+                    {
+                        "relation": "repository",
+                        "item_type": "repository",
+                        "object_key": "github.com/openclaw/openclaw",
+                        "label": "openclaw/openclaw",
+                    },
+                    related,
+                )
+
+    def test_reserved_github_namespace_signal_does_not_emit_repository_hints(self) -> None:
+        related = _candidate_relation_hints(
+            "signal",
+            "github.com/orgs/openai/discussion/123",
+            "https://github.com/orgs/openai/discussions/123",
+        )
+
+        self.assertNotIn("repository", {item["relation"] for item in related})
+        self.assertFalse(
+            any(item["object_key"].startswith("github.com/org/orgs") for item in related),
+        )
+
+    def test_reserved_github_namespace_discussion_stays_organization(self) -> None:
+        item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+            "https://github.com/orgs/openai/discussions/123",
+            SourceDiscoveryFocus.METHOD,
+        )
+
+        self.assertEqual(item_type, "organization")
+        self.assertEqual(object_key, "github.com/org/openai")
+        self.assertEqual(display_name, "openai")
+        self.assertEqual(canonical_url, "https://github.com/orgs/openai")
+        self.assertEqual(domain, "github.com")
+
+    def test_github_signal_repository_relation_can_seed_repository_candidate(self) -> None:
+        candidate = _build_related_candidate_seed(
+            {
+                "relation": "repository",
+                "item_type": "repository",
+                "object_key": "github.com/openclaw/openclaw",
+                "label": "openclaw/openclaw",
+            },
+            parent_object_key="github.com/openclaw/openclaw/issue/123",
+            parent_name="openclaw/openclaw issue 123",
+            parent_score=0.82,
+            parent_tier="A",
+            focus=SourceDiscoveryFocus.METHOD,
+        )
+
+        self.assertIsNotNone(candidate)
+        assert candidate is not None
+        self.assertEqual(candidate["item_type"], "repository")
+        self.assertEqual(candidate["object_key"], "github.com/openclaw/openclaw")
+        self.assertEqual(candidate["url"], "https://github.com/openclaw/openclaw")
+        self.assertEqual(candidate["related_entities"][0]["item_type"], "signal")
+        self.assertEqual(candidate["related_entities"][0]["object_key"], "github.com/openclaw/openclaw/issue/123")
+        self.assertNotIn("status", candidate)
+        self.assertNotIn("subscribed", candidate)
+
+    def test_identifies_x_and_twitter_direct_profiles_as_person_objects(self) -> None:
+        for url, object_key, display_name, canonical_url in (
+            ("https://x.com/openclaw", "x.com/openclaw", "@openclaw", "https://x.com/openclaw"),
+            (
+                "https://twitter.com/openclaw",
+                "twitter.com/openclaw",
+                "@openclaw",
+                "https://twitter.com/openclaw",
+            ),
+        ):
+            with self.subTest(url=url):
+                item_type, actual_object_key, actual_display_name, actual_canonical_url, domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.METHOD,
+                )
+                self.assertEqual(item_type, "person")
+                self.assertEqual(actual_object_key, object_key)
+                self.assertEqual(actual_display_name, display_name)
+                self.assertEqual(actual_canonical_url, canonical_url)
+                self.assertIn(domain, {"x.com", "twitter.com"})
+
+    def test_identifies_x_and_twitter_status_urls_as_signal_objects(self) -> None:
+        for url, object_key, display_name in (
+            ("https://x.com/openclaw/status/123456", "x.com/openclaw/status/123456", "@openclaw status 123456"),
+            (
+                "https://twitter.com/openclaw/status/123456",
+                "twitter.com/openclaw/status/123456",
+                "@openclaw status 123456",
+            ),
+        ):
+            with self.subTest(url=url):
+                item_type, actual_object_key, actual_display_name, canonical_url, domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.METHOD,
+                )
+                self.assertEqual(item_type, "signal")
+                self.assertEqual(actual_object_key, object_key)
+                self.assertEqual(actual_display_name, display_name)
+                self.assertEqual(canonical_url, url)
+                self.assertIn(domain, {"x.com", "twitter.com"})
+
+    def test_keeps_reserved_x_and_twitter_status_like_namespaces_as_domain(self) -> None:
+        for url, expected_domain in (
+            ("https://x.com/i/status/123456", "x.com"),
+            ("https://twitter.com/search/status/123456", "twitter.com"),
+        ):
+            with self.subTest(url=url):
+                item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.METHOD,
+                )
+                self.assertEqual(item_type, "domain")
+                self.assertEqual(object_key, expected_domain)
+                self.assertEqual(display_name, expected_domain)
+                self.assertEqual(canonical_url, f"https://{expected_domain}")
+                self.assertEqual(domain, expected_domain)
+
+    def test_keeps_reserved_x_and_twitter_namespaces_as_domain(self) -> None:
+        for url, domain in (
+            ("https://x.com/hashtag/openclaw", "x.com"),
+            ("https://twitter.com/intent/tweet", "twitter.com"),
+            ("https://x.com/login", "x.com"),
+            ("https://x.com/share", "x.com"),
+        ):
+            with self.subTest(url=url):
+                item_type, object_key, display_name, canonical_url, actual_domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.METHOD,
+                )
+                self.assertEqual(item_type, "domain")
+                self.assertEqual(object_key, domain)
+                self.assertEqual(display_name, domain)
+                self.assertEqual(canonical_url, f"https://{domain}")
+                self.assertEqual(actual_domain, domain)
+
+    def test_direct_social_profile_person_does_not_emit_synthetic_latest_signal_hint(self) -> None:
+        self.assertEqual(
+            _candidate_relation_hints("person", "x.com/openclaw", "https://x.com/openclaw"),
+            [],
+        )
+        self.assertEqual(
+            _candidate_relation_hints("person", "twitter.com/openclaw", "https://twitter.com/openclaw"),
+            [],
+        )
+
+    def test_reserved_social_status_like_relation_hints_do_not_emit_author_seed(self) -> None:
+        for object_key, url in (
+            ("x.com/i/status/123456", "https://x.com/i/status/123456"),
+            ("twitter.com/search/status/123456", "https://twitter.com/search/status/123456"),
+        ):
+            with self.subTest(object_key=object_key):
+                related = _candidate_relation_hints("signal", object_key, url)
+                self.assertNotIn("author", {item["relation"] for item in related})
+                self.assertFalse(
+                    any(item["item_type"] == "person" for item in related),
+                )
+                self.assertEqual(_parent_related_item_type(object_key), "domain")
 
     def test_author_relation_can_seed_builder_person_candidate(self) -> None:
         candidate = _build_related_candidate_seed(
@@ -381,6 +717,35 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
             SourceDiscoveryFocus.LATEST,
         )
         self.assertEqual(len(compressed), 2)
+
+    def test_compress_source_candidates_applies_regularized_postprocess_order(self) -> None:
+        candidates = [
+            self._candidate(
+                item_type="domain",
+                object_key="github.com",
+                domain="github.com",
+                authority_score=0.72,
+            ),
+            self._candidate(
+                item_type="repository",
+                object_key="github.com/openclaw/openclaw",
+                domain="github.com",
+                authority_score=0.73,
+            ),
+            self._candidate(
+                item_type="release",
+                object_key="github.com/openclaw/openclaw/release/latest",
+                domain="github.com",
+                authority_score=0.74,
+            ),
+        ]
+
+        compressed = compress_source_candidates(candidates, SourceDiscoveryFocus.LATEST)
+
+        self.assertEqual(
+            [candidate.object_key for candidate in compressed],
+            ["github.com/openclaw/openclaw/release/latest"],
+        )
 
 
 if __name__ == "__main__":

@@ -56,9 +56,9 @@
     "current_phase":  "source_intelligence_quality_resumption",
     "active_branch_context":  {
                                   "controller_worktree":  "D:/code/MyAttention",
-                                  "controller_branch":  "codex/ike-visual-control-surface",
-                                  "dirty_untracked_entries":  "observed_by_classifier: 197 entries, 9 groups, requires_scoped_review_prep",
-                                  "scoped_review_branch":  "codex/ike-scoped-review-20260429",
+                                  "controller_branch":  "codex/source-intel-github-signal-relations-20260502 with scoped governance PR #3",
+                                  "dirty_untracked_entries":  "clean after 2026-05-06 quarantine and scoped governance restore",
+                                  "scoped_review_branch":  "codex/governance-current-surfaces-20260506",
                                   "scoped_review_base":  "origin/codex/pre-ike-restructure-2026-04-09",
                                    "scoped_review_commit":  "bbe2479e7b65dea022f6a66ad4912be406b5cdfa",
                                    "github_pr":  "https://github.com/brantzh6/MyAttention/pull/1",
@@ -275,10 +275,10 @@
                              "stage":  "accepted",
                              "risk":  "R2",
                              "artifacts":  [
-                                               "docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_PACKET_2026-04-30.md",
                                                "scripts/governance/classify_worktree.py",
                                                "scripts/governance/README.md",
-                                               "docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md"
+                                               "codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_PACKET_2026-04-30.md",
+                                               "codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md"
                                            ],
                              "validation":  [
                                                 "python scripts/governance/classify_worktree.py --cwd D:/code/MyAttention",

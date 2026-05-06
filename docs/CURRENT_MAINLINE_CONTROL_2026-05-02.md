@@ -181,6 +181,7 @@ Boundary:
 - GitHub/Codex review is evidence.
 - It is not promotion authority.
 - Local Codex may fix findings but must not accept its own fix as final.
+- The controller must terminate the gate when findings are absorbed, no unresolved thread remains, scope and risk did not expand, validation is recorded, and the PR is mergeable. Do not create an infinite final-review loop for low-risk doc or packet wording fixes.
 
 ### Lane 6: Dirty Worktree Governance
 

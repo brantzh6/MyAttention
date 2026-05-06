@@ -59,6 +59,22 @@ Before producing a new strategic review, consume the previous review:
 
 If closure evidence is insufficient, stop at closure gaps and do not run a greenfield review.
 
+## Review Gate Termination Rule
+
+Review gates are governance controls, not infinite confirmation loops.
+
+For a bounded PR, the controller may stop requesting further automated review and proceed to promotion decision when all of these are true:
+
+1. The latest actionable findings have been explicitly accepted, rejected with reason, or fixed.
+2. No unresolved review thread remains.
+3. The fix does not expand scope, risk level, runtime truth, persistence, scheduler, worker execution, permission, or promotion semantics.
+4. Required validation for the lane has passed or the validation gap is recorded in the promotion decision.
+5. The PR is mergeable and the worktree classifier is clean.
+
+Do not trigger another review only to confirm a low-risk wording or packet correction. Trigger another review when the fix changes code behavior, crosses a lane boundary, changes validation surface, or introduces a new L3 risk.
+
+Temporary review monitors must be time-boxed to the active pending review and deleted after the review returns, the PR is promoted, or the controller terminates the gate.
+
 ## Current Mainline Pointer
 
 Active mainline:

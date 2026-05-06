@@ -11,7 +11,11 @@ Truth status: manually curated active index; non-canonical promotion truth.
 | `docs/CURRENT_OPERATIONS.md` | active | controller operations | Use as the first-read runbook. Current mainline is `flywheel_v1_ai_entry_control_surface`. |
 | `docs/CURRENT_MAINLINE_CONTROL_2026-05-02.md` | active | controller control surface | Defines the three first-class mainline tasks: evolution flywheel, AI entry, and project control surface. |
 | `tasks/codex/project_control_surface_anchor_p0_2026-05-06.md` | active packet | project control surface | Implement next as the visible anchor before opening another source-intelligence support slice. |
+| `tasks/codex/project_control_surface_antigravity_brief_2026-05-06.md` | active delegate brief | project control surface / Antigravity UI | Use as the GitHub-facing UI implementation brief after the control-surface branch is opened. |
+| `tasks/codex/flywheel_v1_e2e_gap_audit_p0_2026-05-06.md` | active audit packet | evolution flywheel v1 | Use for backend/test delegate gap audit and smoke validation. |
+| `tasks/codex/ai_conversation_entry_alignment_p0_2026-05-06.md` | active alignment packet | AI conversation entry | Use to define the smallest bridge from `/chat` into flywheel inspect/controller packets. |
 | `https://github.com/brantzh6/MyAttention/pull/2` | merged | source-intelligence support | Keep as accepted support evidence; do not treat source intelligence as the top-level mainline. |
+| `https://github.com/brantzh6/MyAttention/pull/4` | merged | controller governance | Review gate absorbed and promoted; source-intelligence support no longer owns top-level mainline. |
 
 ## GitHub/Codex Review
 

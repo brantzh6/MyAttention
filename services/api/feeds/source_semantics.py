@@ -1,3 +1,4 @@
+import re
 from typing import TYPE_CHECKING, TypeAlias
 from urllib.parse import urlparse
 
@@ -76,6 +77,10 @@ def is_reserved_repository_namespace(domain: str, owner: str) -> bool:
 
 def _focus_value(focus) -> str:
     return str(getattr(focus, "value", focus) or "").strip().lower()
+
+
+def _slug_tokens(segment: str) -> set[str]:
+    return {token for token in re.split(r"[^a-z0-9]+", segment.lower()) if token}
 
 
 def normalize_domain(value: str) -> str:
@@ -302,7 +307,7 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
         "talk",
         "talks",
     }
-    if any(any(event_segment in segment.lower() for event_segment in event_segments) for segment in path_segments):
+    if any(_slug_tokens(segment) & event_segments for segment in path_segments):
         object_key = f"{domain}:event"
         canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments)}"
         display_name = f"{domain} events"

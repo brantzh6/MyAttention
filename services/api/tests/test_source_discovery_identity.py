@@ -155,6 +155,20 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
                 self.assertIn("events", display_name)
                 self.assertIn("example.org", canonical_url)
 
+    def test_event_slug_matching_does_not_use_substrings(self) -> None:
+        for url in (
+            "https://example.org/blog/eventual-consistency-for-agents",
+            "https://example.org/docs/smalltalk-integration",
+        ):
+            with self.subTest(url=url):
+                item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
+                    url,
+                    SourceDiscoveryFocus.FRONTIER,
+                )
+                self.assertEqual(item_type, "domain")
+                self.assertEqual(object_key, "example.org")
+                self.assertEqual(domain, "example.org")
+
     def test_identifies_reddit_thread_as_signal_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
             "https://reddit.com/r/MachineLearning/comments/abc123/openclaw_release_discussion/",

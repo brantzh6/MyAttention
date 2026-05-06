@@ -177,16 +177,14 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertIn("issue 123", display_name)
         self.assertIn("/issues/123", canonical_url)
 
-    def test_identifies_github_issue_as_signal_object_in_authoritative_focus(self) -> None:
+    def test_keeps_github_issue_as_domain_in_authoritative_focus(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
             "https://github.com/openclaw/openclaw/issues/123",
             SourceDiscoveryFocus.AUTHORITATIVE,
         )
-        self.assertEqual(item_type, "signal")
-        self.assertEqual(object_key, "github.com/openclaw/openclaw/issue/123")
+        self.assertEqual(item_type, "domain")
+        self.assertEqual(object_key, "github.com")
         self.assertEqual(domain, "github.com")
-        self.assertIn("issue 123", display_name)
-        self.assertIn("/issues/123", canonical_url)
 
     def test_identifies_github_discussion_as_signal_object(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
@@ -197,13 +195,13 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         self.assertEqual(object_key, "github.com/openclaw/openclaw/discussion/456")
         self.assertEqual(domain, "github.com")
 
-    def test_identifies_github_discussion_as_signal_object_in_authoritative_focus(self) -> None:
+    def test_keeps_github_discussion_as_domain_in_authoritative_focus(self) -> None:
         item_type, object_key, display_name, canonical_url, domain = _candidate_identity(
             "https://github.com/openclaw/openclaw/discussions/456",
             SourceDiscoveryFocus.AUTHORITATIVE,
         )
-        self.assertEqual(item_type, "signal")
-        self.assertEqual(object_key, "github.com/openclaw/openclaw/discussion/456")
+        self.assertEqual(item_type, "domain")
+        self.assertEqual(object_key, "github.com")
         self.assertEqual(domain, "github.com")
 
     def test_identifies_contextual_media_article_as_signal_in_latest_focus(self) -> None:

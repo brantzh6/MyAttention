@@ -120,6 +120,8 @@ def _github_repo_signal_identity(
     url: str,
     focus,
 ) -> CandidateIdentity | None:
+    if _focus_value(focus) not in {"method", "frontier", "latest"}:
+        return None
     if domain != "github.com":
         return None
     if len(path_segments) < 4:
@@ -171,6 +173,13 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
     github_repo_signal = _github_repo_signal_identity(domain, path_segments, url, focus)
     if github_repo_signal is not None:
         return github_repo_signal
+    if (
+        domain == "github.com"
+        and len(path_segments) >= 4
+        and path_segments[0].lower() != "orgs"
+        and path_segments[2].lower() in {"issues", "pull", "pulls", "discussions"}
+    ):
+        return "domain", domain, domain, f"https://{domain}", domain
 
     if domain in {"github.com", "gitlab.com"} and len(path_segments) >= 4 and path_segments[2].lower() == "releases":
         owner, repo = path_segments[0], path_segments[1]

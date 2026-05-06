@@ -166,22 +166,29 @@ def _derive_flywheel_operational_advice(
 
     if has_knowledge and has_evolution:
         next_step = "review_flywheel_candidates"
+        notes.append("ready for task-packet preview after controller review")
     elif has_knowledge:
         next_step = "review_knowledge_deltas"
+        notes.append("ready for task-packet preview after controller review")
     elif has_evolution:
         next_step = "review_evolution_triggers"
+        notes.append("ready for task-packet preview after controller review")
     elif has_sources:
         next_step = "review_source_candidates"
         notes.append("no knowledge or evolution candidates; source-level candidates only")
+        notes.append("controller review required; not ready for task-packet preview")
     elif has_corrections:
         next_step = "review_corrections"
         notes.append("no knowledge or evolution candidates; corrections only")
+        notes.append("controller review required; not ready for task-packet preview")
     elif segment_intent == "other":
         next_step = "no_action"
         notes.append("segment classified as other; no flywheel candidates to promote")
+        notes.append("insufficient inspect signal for flywheel action")
     else:
         next_step = "manual_review"
         notes.append("segment produced no actionable candidates")
+        notes.append("controller review required; insufficient inspect signal")
 
     return ConversationOperationalAdvice(
         suggested_next_step=next_step,
@@ -205,10 +212,20 @@ def _build_flywheel_controller_packet(
         reason_tags.append("knowledge_delta_review")
     if actionable_triggers:
         reason_tags.append("evolution_trigger_review")
+    if actionable_knowledge or actionable_triggers:
+        reason_tags.append("ready_for_task_packet_preview")
+        reason_tags.append("needs_controller_review")
+    elif operational_advice.suggested_next_step in {
+        "review_source_candidates",
+        "review_corrections",
+        "manual_review",
+    }:
+        reason_tags.append("needs_controller_review")
     if operational_advice.suggested_next_step == "manual_review":
         reason_tags.append("manual_review_required")
     if not reason_tags:
         reason_tags.append("no_action")
+        reason_tags.append("insufficient_signal")
     return ConversationControllerPacket(
         review_mode=operational_advice.suggested_next_step,
         actionable_source_object_keys=[],

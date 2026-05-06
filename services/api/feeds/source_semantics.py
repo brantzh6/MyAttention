@@ -83,6 +83,13 @@ def _slug_tokens(segment: str) -> set[str]:
     return {token for token in re.split(r"[^a-z0-9]+", segment.lower()) if token}
 
 
+def _has_event_slug_token(segment: str, event_segments: set[str]) -> bool:
+    normalized = segment.lower()
+    if normalized == "talk":
+        return True
+    return bool(_slug_tokens(normalized) & (event_segments - {"talk"}))
+
+
 def normalize_domain(value: str) -> str:
     parsed = urlparse(value if "://" in value else f"https://{value}")
     domain = parsed.netloc or parsed.path
@@ -307,7 +314,7 @@ def candidate_identity(url: str, focus: "SourceDiscoveryFocus") -> CandidateIden
         "talk",
         "talks",
     }
-    if any(_slug_tokens(segment) & event_segments for segment in path_segments):
+    if any(_has_event_slug_token(segment, event_segments) for segment in path_segments):
         object_key = f"{domain}:event"
         canonical_url = url if url.startswith("http") else f"https://{domain}/{'/'.join(path_segments)}"
         display_name = f"{domain} events"

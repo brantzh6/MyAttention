@@ -159,6 +159,8 @@ class SourceDiscoveryIdentityTests(unittest.TestCase):
         for url in (
             "https://example.org/blog/eventual-consistency-for-agents",
             "https://example.org/docs/smalltalk-integration",
+            "https://example.org/blog/how-to-talk-to-agents",
+            "https://example.org/docs/talk-to-your-data",
         ):
             with self.subTest(url=url):
                 item_type, object_key, display_name, canonical_url, domain = _candidate_identity(

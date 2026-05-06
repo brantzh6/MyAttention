@@ -91,7 +91,7 @@ Static data is allowed only as a project-control aid. It is not runtime truth.
 
 Implementation must use GitHub:
 
-1. create a clean branch from `codex/pre-ike-restructure-2026-04-09`
+1. create a clean branch from the current post-PR #2 mainline that contains `acf922c`
 2. restore or recreate only the allowed UI files
 3. commit this task packet with the implementation
 4. open a bounded PR

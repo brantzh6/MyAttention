@@ -1,8 +1,17 @@
 # Current Active Artifacts
 
-Date: 2026-04-30
+Date: 2026-05-06
 
 Truth status: manually curated active index; non-canonical promotion truth.
+
+## Mainline Anchor
+
+| Artifact | Status | Owner/Lane | Next Action |
+| --- | --- | --- | --- |
+| `docs/CURRENT_OPERATIONS.md` | active | controller operations | Use as the first-read runbook. Current mainline is `flywheel_v1_ai_entry_control_surface`. |
+| `docs/CURRENT_MAINLINE_CONTROL_2026-05-02.md` | active | controller control surface | Defines the three first-class mainline tasks: evolution flywheel, AI entry, and project control surface. |
+| `tasks/codex/project_control_surface_anchor_p0_2026-05-06.md` | active packet | project control surface | Implement next as the visible anchor before opening another source-intelligence support slice. |
+| `https://github.com/brantzh6/MyAttention/pull/2` | merged | source-intelligence support | Keep as accepted support evidence; do not treat source intelligence as the top-level mainline. |
 
 ## GitHub/Codex Review
 
@@ -35,14 +44,13 @@ Truth status: manually curated active index; non-canonical promotion truth.
 
 | Artifact | Status | Owner/Lane | Next Action |
 | --- | --- | --- | --- |
-| `services/web/app/control/page.tsx` | accepted UI progress surface | visual control surface | Shows mainline, UI line, and governance line together. |
-| `services/web/lib/control-surface/types.ts` | accepted snapshot contract | visual control surface | Canonical shape for the static control surface snapshot. |
-| `services/web/lib/control-surface/static-snapshot.ts` | accepted static snapshot | visual control surface | Static estimate only; no backend runtime truth change. |
-| `docs/IKE_VISUAL_CONTROL_SURFACE_P1_PROGRESS_DASHBOARD_RESULT_2026-04-30.md` | accepted result | visual control surface | Documents the new progress dashboard surface. |
-| `docs/IKE_VISUAL_CONTROL_SURFACE_P0_REVIEW_ABSORPTION_2026-04-29.md` | accepted-with-changes review absorption | visual control surface | Follow-up is now implemented and absorbed; keep as prior finding record. |
-| `docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_PACKET_2026-04-29.md` | accepted follow-up packet | UI implementation delegate | Keep static provenance boundary visible. |
-| `docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_RESULT_2026-04-29.md` | accepted result | visual control surface | Build passed; no backend/runtime truth change. |
-| `docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_REVIEW_ABSORPTION_2026-04-30.md` | accepted review absorption | visual control surface | L1 findings fixed and absorbed. |
+| prior `/control` UI evidence | optional local evidence | visual control surface | May exist only in an unpublished local quarantine snapshot; do not rely on it for collaboration. Recreate or recover through a clean GitHub branch/PR. |
+| prior `control-surface` snapshot evidence | optional local evidence | visual control surface | May inform implementation if available locally, but the PR must be reviewable without unpublished refs. |
+| `docs/IKE_VISUAL_CONTROL_SURFACE_BRANCH_DESIGN_2026-04-29.md` | active design evidence | visual control surface | Reuse as background only; the next packet must reflect the corrected three-task mainline. |
+| `docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_PACKET_2026-04-29.md` | historical packet | UI implementation delegate | Preserve static provenance boundary. |
+| `docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_RESULT_2026-04-29.md` | historical accepted evidence | visual control surface | Build evidence exists historically, but current clean mainline does not contain the UI files. |
+| `docs/IKE_VISUAL_CONTROL_SURFACE_P0_PROVENANCE_FOLLOWUP_REVIEW_ABSORPTION_2026-04-30.md` | historical review absorption | visual control surface | L1 findings were fixed historically; future promotion still requires clean PR review. |
+| `docs/IKE_VISUAL_CONTROL_SURFACE_P1_PROGRESS_DASHBOARD_RESULT_2026-04-30.md` | historical result | visual control surface | Use as design input for Project Control Surface Anchor P0. |
 
 ## Governance / Worktree Cleanup
 
@@ -57,8 +65,8 @@ Truth status: manually curated active index; non-canonical promotion truth.
 | `docs/IKE_MAINLINE_STATE_MANIFEST_P0_RESULT_2026-04-29.md` | accepted result | documentation/governance worker | Use as manifest P0 evidence. |
 | `scripts/governance/classify_worktree.py` | accepted tool | governance tooling | Run before scoped review prep. |
 | `scripts/governance/README.md` | accepted usage note | governance tooling | Keep classifier usage documented. |
-| `codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_PACKET_2026-04-30.md` | quarantined local evidence | governance tooling | Historical classifier packet preserved in quarantine only; not an active continuation dependency. |
-| `codex/dirty-quarantine-20260506:docs/IKE_DIRTY_WORKTREE_CLASSIFIER_P0_RESULT_2026-04-30.md` | quarantined local evidence | governance tooling | Historical classifier result preserved in quarantine only; current active classifier truth comes from rerunning `scripts/governance/classify_worktree.py`. |
+| local dirty-worktree classifier packet evidence | optional local evidence | governance tooling | Historical classifier packet may exist in local quarantine only; not an active continuation dependency. |
+| local dirty-worktree classifier result evidence | optional local evidence | governance tooling | Historical classifier result may exist in local quarantine only; current active classifier truth comes from rerunning `scripts/governance/classify_worktree.py`. |
 | `docs/IKE_WORKTREE_ARCHIVE_INDEX_PLAN_P0_RESULT_2026-04-30.md` | accepted-with-changes plan | governance cleanup | Use as planning boundary; no movement authorized. |
 | `docs/IKE_WORKTREE_ARCHIVE_INDEX_PLAN_P0_REVIEW_ABSORPTION_2026-04-30.md` | accepted review absorption | governance cleanup | Latest observed planning count: 197 entries, 9 groups. |
 | `docs/IKE_DIRTY_WORKTREE_RECONCILIATION_DOCS_ONLY_RESULT_2026-04-30.md` | accepted result | governance cleanup | Documents the docs-only cleanup slice for controller-facing surfaces. |
@@ -78,11 +86,8 @@ Truth status: manually curated active index; non-canonical promotion truth.
 | `docs/IKE_LONG_HANDOFF_BLOCKER_HISTORY_NORMALIZATION_RESULT_2026-04-30.md` | accepted result | controller continuation | Confirms the long handoff blocker-style wording is historical evidence. |
 | `docs/IKE_LONG_HANDOFF_FINAL_BLOCKER_HISTORY_NORMALIZATION_PACKET_2026-04-30.md` | accepted packet | controller continuation | Historical packet that normalized the last remaining current-blocker phrases in the long handoff. |
 | `docs/IKE_LONG_HANDOFF_FINAL_BLOCKER_HISTORY_NORMALIZATION_RESULT_2026-04-30.md` | accepted result | controller continuation | Confirms the long handoff no longer contains live-looking current-blocker phrases. |
-| `docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_PACKET_2026-04-30.md` | active packet | source intelligence quality | Resumes the next bounded source-intelligence quality slice. |
-| `docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_RESULT_2026-04-30.md` | accepted result | source intelligence quality | Confirms the next bounded node is source-intelligence quality resumption. |
-| `docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_IMPLEMENTATION_RESULT_2026-05-01.md` | accepted result | source intelligence quality | GitHub issue/discussion identity recognition now applies across all source-discovery focuses. |
-| `docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_PACKET_2026-05-02.md` | active packet | source intelligence quality | Adds repository and owner relation hints for GitHub repo-scoped signal objects. |
-| `docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_RESULT_2026-05-02.md` | accepted result | source intelligence quality | Locally fixed to avoid false person seeds; scoped GitHub/Codex L1 re-review accepted. |
+| `docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_PACKET_2026-05-02.md` | merged support packet | source intelligence support | Included in PR #2; source intelligence now supports flywheel input quality. |
+| `docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_RESULT_2026-05-02.md` | merged support result | source intelligence support | PR #2 merged at `acf922c`; keep as accepted support evidence. |
 | `docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_REVIEW_ABSORPTION_2026-05-02.md` | accepted review absorption | source intelligence quality | Captures the accepted re-review and controller absorption for the fixed slice. |
 | `docs/IKE_ARCHIVE_INDEX_SCHEMA_P0_RESULT_2026-04-30.md` | accepted schema | governance cleanup | Use for index-only archive/review identity packets. |
 | `docs/IKE_ARCHIVE_INDEX_SCHEMA_P0_REVIEW_ABSORPTION_2026-04-30.md` | accepted review absorption | governance cleanup | L1 findings fixed; movement manifest design deferred. |

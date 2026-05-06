@@ -1,6 +1,6 @@
 # Current Mainline Control
 
-Date: 2026-05-02
+Date: 2026-05-06
 
 Truth status: controller-authored active control note; non-canonical promotion truth.
 
@@ -10,86 +10,156 @@ Operations entry:
 docs/CURRENT_OPERATIONS.md
 ```
 
-Read `CURRENT_OPERATIONS.md` first for execution order, WIP limits, and dirty worktree handling. Use this file for current lane state and mainline pointer details.
+Read `CURRENT_OPERATIONS.md` first for execution order, WIP limits, and dirty-worktree handling.
 
 ## Controller Diagnosis
 
-The project has drifted into too many simultaneously visible artifacts. The immediate problem is not lack of work; it is loss of a single controller-facing answer to:
+The project has too many historical documents and too little visible operational anchoring. The controller recently over-narrowed the mainline to `source_intelligence_quality_resumption`; that is a support lane, not the product objective.
 
-- where the mainline is now
-- which lane owns each active thread
-- what review gate is required before promotion
-- how to prevent the dirty worktree from blocking scoped progress
+The corrected mainline is:
+
+1. Build the first usable IKE evolution flywheel.
+2. Make AI conversation the entry into that flywheel.
+3. Make project progress, phase, capability maturity, gaps, and lane ownership visible in UI so the controller, user, and delegates keep the same target.
 
 This note is the current control surface for those questions.
 
 ## Current Mainline Position
 
-Mainline priority remains:
-
-1. Improve source intelligence quality.
-2. Make active work surfaces understandable.
-3. Move evolution away from watchdog/rule checks toward better reasoning.
-4. Reduce token pressure through controlled delegation.
-
 Current active mainline phase:
 
 ```text
-source_intelligence_quality_resumption
+flywheel_v1_ai_entry_control_surface
 ```
 
-Latest accepted mainline implementation result:
+Current product objective:
 
 ```text
-docs/IKE_SOURCE_INTELLIGENCE_QUALITY_RESUMPTION_IMPLEMENTATION_RESULT_2026-05-01.md
+Build the first usable IKE evolution loop with an AI conversation entry and a visible project control surface.
 ```
 
-Current pending mainline result:
+Latest accepted support implementation:
 
 ```text
-docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_RESULT_2026-05-02.md
+PR #2 / acf922c: GitHub signal relation hints improved source-intelligence input quality.
 ```
 
-Pending state:
+Current mainline gap:
 
 ```text
-implemented locally; target tests passed; initial L1 review flagged a false-person-seed issue; fixed locally; scoped L1 re-review accepted; controller L2 absorption recorded
+The target system is not visible enough. Progress, phase, capability gaps, and active lanes are scattered across chat and historical docs.
 ```
 
-Accepted change:
+Required anchor:
 
-- GitHub issue and discussion identity recognition now applies across all source-discovery focuses.
+```text
+UI must show IKE's mainline, phase, core goals, current capability state, capability gaps, and multi-lane progress.
+```
+
+Capability model to show:
+
+- information brain
+- knowledge brain
+- evolution brain
+- world model
+- thinking methods / method arsenal
 
 Controller interpretation:
 
-- This is accepted as a bounded source-intelligence quality slice.
-- It does not close source intelligence quality as a mainline.
-- The next mainline task must be another bounded source-intelligence quality packet, not a UI task, not review automation, and not broad cleanup.
+- Flywheel V1 and AI entry are the product mainline.
+- Control-surface UI is not cosmetic; it is operations infrastructure.
+- Source intelligence remains important, but it serves the flywheel by improving input quality and candidate-object judgment.
+- More source-intelligence slices should not displace the visible anchor or flywheel closure work.
 
 ## Active Lanes
 
-### Lane 1: Mainline Source Intelligence
+### Lane 1: Mainline Flywheel V1
 
-Owner: controller plus delegated coding/review/test agents.
+Owner: controller plus delegated backend/review/test agents.
 
 Status: active.
 
 Allowed next work:
 
-- one bounded source-intelligence quality packet
-- narrow allowed files
-- explicit validation command
-- GitHub/Codex review after push
+- one bounded end-to-end flywheel vertical-slice packet
+- inspect-only conversation input
+- controller packet generation
+- task packet preview
+- worker packet bridge
+- execution-feedback return
+- review-gated controller decision
 
-Do not mix:
+Hard boundaries:
 
-- `/control` UI work
-- Antigravity visual work
-- review automation implementation
-- archive/index cleanup
-- flywheel runtime broadening
+- no fake autonomous execution
+- no automatic promotion
+- no persistence/runtime truth expansion without L3
+- no delegate self-acceptance
 
-### Lane 2: GitHub/Codex Review Gate
+### Lane 2: Mainline AI Conversation Entry
+
+Owner: controller plus backend/CC delegate.
+
+Status: active.
+
+Allowed next work:
+
+- connect the AI conversation entry to typed candidate objects and controller packets
+- preserve raw conversation as non-canonical
+- expose review-gated next actions
+- reuse existing `conversation_runtime` and source semantics
+
+Hard boundaries:
+
+- no generic chat expansion
+- no raw chat as truth
+- no broad memory/persistence work without L3
+
+### Lane 3: Mainline Project Control Surface
+
+Owner: controller plus Antigravity UI delegate.
+
+Status: active and urgent.
+
+Purpose:
+
+- keep the mainline visible
+- show three mainline tasks: flywheel, AI entry, project control surface
+- show capability maturity and gaps for information brain, knowledge brain, evolution brain, world model, and thinking methods
+- show active lanes, owners, PR/review gates, and blocked/next actions
+
+Allowed work:
+
+- `services/web/app/control/*`
+- `services/web/components/control/*`
+- `services/web/lib/control-surface/*`
+- matching control-surface task/result/review artifacts
+
+Hard boundaries:
+
+- static snapshot must be explicitly labeled as static/provenance-bound evidence
+- no fake live state
+- no backend runtime truth changes unless a separate L3 packet authorizes them
+- Antigravity output requires GitHub PR review and controller acceptance
+
+### Lane 4: Source Intelligence Support
+
+Owner: controller plus backend/CC delegate.
+
+Status: support lane.
+
+Allowed work:
+
+- improve person/source/signal quality when it directly improves flywheel inputs
+- maintain shared source semantics used by conversation runtime
+- run bounded tests and GitHub/Codex review before promotion
+
+Not allowed:
+
+- displace Flywheel V1 / AI entry / control surface as the top-level mainline
+- continue heuristic accumulation without a visible flywheel benefit
+
+### Lane 5: GitHub/Codex Review Gate
 
 Owner: GitHub-triggered Codex review plus local controller absorption.
 
@@ -98,22 +168,13 @@ Status: gate, not implementation lane.
 Required shape:
 
 ```text
-local Codex implementation
-  -> scoped branch / PR
+scoped branch / PR
   -> GitHub-triggered Codex review
-  -> local Codex consumes findings
-  -> local fix push
+  -> local controller consumes findings
+  -> scoped fix push when needed
   -> repeated review until no actionable findings
   -> controller promotion decision
 ```
-
-PR policy:
-
-- any implementation intended for GitHub/Codex review must use a bounded PR
-- PR descriptions must be reviewable from GitHub alone
-- source review, review absorption, and execution packet must be committed or explicitly linked
-- for new implementation branches, prefer `docs/reviews/active/`, `docs/reviews/absorbed/`, and `tasks/codex/`
-- existing `docs/IKE_*.md` packets remain valid only when this control note or `CURRENT_OPERATIONS.md` names them as the active contract
 
 Boundary:
 
@@ -121,112 +182,24 @@ Boundary:
 - It is not promotion authority.
 - Local Codex may fix findings but must not accept its own fix as final.
 
-### Lane 3: Antigravity Visual Control Surface
-
-Owner: Antigravity UI delegate.
-
-Status: independent UI lane.
-
-Allowed work:
-
-- `services/web/app/control/*`
-- `services/web/components/control/*`
-- `services/web/lib/control-surface/*`
-- matching Visual Control Surface packet/result docs
-
-Hard boundaries:
-
-- no backend runtime truth changes
-- no scheduler/persistence changes
-- no promotion semantics
-- no fake live state
-- static dashboard must remain labeled as static/provenance-bound evidence
-
-Antigravity output is not accepted until controller review and validation are recorded.
-
-### Lane 4: Dirty Worktree Governance
+### Lane 6: Dirty Worktree Governance
 
 Owner: controller.
 
-Status: active blocker for broad push; not allowed to consume the mainline by default.
+Status: clean as of 2026-05-06; keep it clean.
 
 Current observed classifier result:
 
 ```text
-total: 222
-groups_with_entries: 9
-recommendation: requires_scoped_review_prep
+total: 0
+recommendation: clean
 ```
 
-This means broad push is not allowed. It does not mean mainline must stop.
+Rule:
 
-## Dirty Worktree Handling Plan
-
-Use a lane-preserving plan instead of trying to clean everything at once.
-
-### Step 1: Freeze Broad Pushes
-
-No broad commit, broad branch push, or mixed PR from the current dirty worktree.
-
-Allowed:
-
-- read-only classification
-- docs-only controller notes
-- scoped branch prep
-- lane-specific task packets
-
-### Step 2: Pick One Promotion Candidate At A Time
-
-A promotion candidate must fit one lane:
-
-- mainline source intelligence
-- visual control surface
-- review automation
-- governance cleanup
-- flywheel readiness
-
-If a candidate needs files from multiple lanes, split it.
-
-### Step 3: Use Scoped Prep Before PR
-
-Before any PR:
-
-1. run `python scripts/governance/classify_worktree.py --cwd D:/code/MyAttention`
-2. list the candidate files
-3. verify they stay inside one lane
-4. create or switch to a scoped branch
-5. stage only the candidate files
-6. run lane validation
-7. push PR for GitHub/Codex review
-
-### Step 4: Reduce The Worktree By Accepted Groups
-
-Reduction order:
-
-1. governance docs that define the active state
-2. source-intelligence mainline slice
-3. visual control surface UI lane
-4. review automation lane
-5. remaining flywheel/evolution docs and code
-6. archive/index review artifacts
-
-Reason:
-
-- governance docs restore orientation
-- mainline stays moving
-- UI remains independent
-- lower-priority historical artifacts do not block the next mainline packet
-
-### Step 5: Stop Conditions
-
-Stop and report instead of pushing if:
-
-- candidate files cross more than one lane
-- validation cannot be run
-- GitHub review output is unavailable
-- the PR contains stale historical artifacts not needed for the candidate
-- a UI task implies backend runtime truth
-- a source-intelligence task implies scheduler/persistence changes
+- no broad commit or mixed PR
+- every implementation goes through a lane-specific branch/PR
+- any local quarantine evidence is optional and unpublished; delegates must recreate or recover bounded files through clean branch/PR work, not rely on the quarantine ref
 
 ## Layered Review Requirements
 
@@ -234,61 +207,25 @@ Every non-trivial task must pass layered review before promotion.
 
 ### L0: Controller Scope Review
 
-Purpose:
-
-- confirm one task, one lane, one result
-- confirm risk level
-- confirm allowed files and validation
-
-Required before:
-
-- delegation
-- local implementation
-- PR creation
-
-Failure result:
-
-- reject or rewrite packet
+Confirm one task, one lane, one result, risk level, allowed files, and validation.
 
 ### L1: Code/Artifact Review
 
-Purpose:
-
-- inspect the actual diff or result artifact
-- find correctness bugs, contract drift, fake truth, missing tests
-
-Acceptable reviewers:
-
-- GitHub/Codex review for PR diffs
-- delegated L1 reviewer for local artifacts
-- controller fallback only for small corrective patches
-
-Failure result:
-
-- accept_with_changes or reject
+Use GitHub/Codex review for PR diffs, delegated L1 review for local artifacts, or controller fallback only for small corrective patches.
 
 ### L2: Integration Review
 
-Purpose:
-
-- confirm the slice works with neighboring contracts
-- confirm validation evidence is enough
-- confirm no lane boundary was crossed
-
 Required for:
 
-- source-intelligence route/contract changes
-- flywheel/runtime changes
-- review automation tooling
+- flywheel/runtime route or contract changes
+- AI conversation entry behavior
 - UI changes that summarize project truth
-
-Failure result:
-
-- do not promote; create a bounded fix packet
+- source-intelligence route/contract changes
+- review automation tooling
 
 ### L3: Reinforced Governance Review
 
-Required if task touches:
+Required if a task touches:
 
 - memory or persistence
 - task orchestration or scheduler logic
@@ -297,37 +234,33 @@ Required if task touches:
 - permissions, deletion, or self-modification rules
 - incident remediation
 
-L3 requires:
-
-- explicit design packet
-- design review
-- implementation review
-- test validation
-- controller promotion decision
-
 ## Immediate Next Task
 
-Current task is:
+Current task:
 
 ```text
-docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_PACKET_2026-05-02.md
+tasks/codex/project_control_surface_anchor_p0_2026-05-06.md
 ```
 
 Purpose:
 
-- add deterministic relation hints for GitHub issue/discussion/pull signal objects so they stay connected to repository and owner context.
+```text
+Make the current IKE mainline, stage, core goals, capability maturity, capability gaps, active lanes, and review gates visible in UI.
+```
 
 Packet must include:
 
-- one quality problem
-- one expected behavioral improvement
-- allowed files
-- excluded files
+- three mainline tasks: evolution flywheel, AI entry, project control surface
+- capability score/gap model: information brain, knowledge brain, evolution brain, world model, thinking methods / method arsenal
+- lane ownership: controller, Antigravity UI, backend/CC, review, test
+- static/provenance boundary
+- GitHub PR collaboration protocol
+- allowed UI files
 - validation commands
 - stop conditions
 - GitHub/Codex review expectation
 
-Implementation has been completed locally. Do not promote before scoped GitHub/Codex L1 review and controller L2 absorption.
+Implementation should be delegated to Antigravity/UI after the packet is written. The controller owns scope and acceptance.
 
 ## Controller Decision
 
@@ -335,14 +268,15 @@ Recommendation: accept_with_changes.
 
 Reason:
 
-- mainline direction is correct
-- GitHub-triggered Codex review is the right gate
-- Antigravity can run independently as UI delegate
-- current dirty worktree is over budget and must be handled by lane-specific scoped promotion
-- the missing piece is a single active controller surface plus a next mainline packet
+- prior source-intelligence work was useful but over-narrowed as a top-level mainline
+- Flywheel V1 plus AI entry are the product mainline
+- control-surface UI is required to keep multi-agent work aligned
+- GitHub-triggered Codex review remains the right gate
+- Antigravity can implement the UI only through a bounded GitHub branch/PR
 
 Next controller action:
 
-1. prepare a scoped PR/review candidate for `docs/IKE_SOURCE_INTELLIGENCE_GITHUB_SIGNAL_RELATION_HINTS_RESULT_2026-05-02.md`
-2. keep Antigravity UI independent
-3. use scoped PR plus GitHub/Codex review for the next promoted code slice
+1. prepare the Project Control Surface Anchor P0 packet
+2. recover or recreate the control-surface UI on a clean GitHub branch
+3. run UI build and review gate
+4. resume Flywheel V1 vertical-slice work with the anchor visible

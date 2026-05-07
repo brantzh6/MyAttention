@@ -16,7 +16,7 @@ This is a UI/control-surface task, not a backend truth task.
 
 ## Base
 
-Create the implementation branch from the current post-PR #2 / post-PR #4 mainline after `29d0443`.
+Create the implementation branch from the updated mainline after this task-packet PR is merged.
 
 Do not depend on unpublished local quarantine refs. Prior UI evidence may be useful if locally available, but the PR must be reviewable from GitHub alone.
 

@@ -24,6 +24,7 @@ import {
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
+import { buildChatFlywheelHandoff, FLYWHEEL_HANDOFF_STORAGE_KEY } from '@/lib/flywheel-handoff'
 import { apiClient } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 
@@ -94,6 +95,8 @@ const TEXT: Record<Locale, Record<string, string>> = {
     primaryBrain: '\u4e3b\u8111',
     supportingBrains: '\u534f\u4f5c',
     thinkingFramework: '\u6846\u67b6',
+    openFlywheel: '\u8fdb\u5165\u98de\u8f6e',
+    flywheelEntryBoundary: '\u4e34\u65f6\u63a2\u6d4b\u8f93\u5165\uff0c\u4e0d\u5199\u5165\u8bb0\u5fc6\u6216\u9879\u76ee\u771f\u503c\u3002',
   },
   en: {
     chatHistory: 'Conversations',
@@ -143,6 +146,8 @@ const TEXT: Record<Locale, Record<string, string>> = {
     primaryBrain: 'Primary brain',
     supportingBrains: 'Supporting',
     thinkingFramework: 'Framework',
+    openFlywheel: 'Open in Flywheel',
+    flywheelEntryBoundary: 'Transient inspect input; not memory or project truth.',
   },
 }
 
@@ -593,6 +598,37 @@ export function ChatInterface() {
     })
   }
 
+  const buildFlywheelEntryText = (message: Message, index: number) => {
+    if (message.role === 'assistant') {
+      const previousUserMessage = [...messages.slice(0, index)].reverse().find(item => item.role === 'user')
+      if (previousUserMessage) {
+        return `User:\n${previousUserMessage.content}\n\nAssistant:\n${message.content}`
+      }
+    }
+    return `${message.role === 'user' ? 'User' : 'Assistant'}:\n${message.content}`
+  }
+
+  const openMessageInFlywheel = (message: Message, index: number) => {
+    if (typeof window === 'undefined' || !message.content.trim()) return
+
+    const topic =
+      message.brainPlan?.problem_type ||
+      message.brainPlan?.route_id ||
+      'chat conversation'
+
+    const payload = buildChatFlywheelHandoff({
+      text: buildFlywheelEntryText(message, index),
+      topic,
+      taskIntent: 'inspect chat turn for IKE flywheel candidate extraction',
+      conversationId: currentConversationId,
+      messageId: message.id,
+      role: message.role,
+    })
+
+    window.sessionStorage.setItem(FLYWHEEL_HANDOFF_STORAGE_KEY, JSON.stringify(payload))
+    window.location.assign('/evolution?handoff=chat')
+  }
+
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation()
     if (!confirm(t(locale, 'deleteConversation'))) return
@@ -744,6 +780,23 @@ export function ChatInterface() {
                       </div>
                     ) : (
                       <MarkdownContent content={message.content} />
+                    )}
+
+                    {message.content.trim() && (
+                      <div className="mt-3 pt-3 border-t border-border/40">
+                        <button
+                          type="button"
+                          onClick={() => openMessageInFlywheel(message, index)}
+                          className="inline-flex items-center gap-1.5 rounded-full border bg-background/80 px-2.5 py-1 text-xs font-medium text-foreground shadow-sm hover:bg-muted"
+                          title={t(locale, 'flywheelEntryBoundary')}
+                        >
+                          <MessageSquare className="h-3 w-3" />
+                          {t(locale, 'openFlywheel')}
+                        </button>
+                        <span className="ml-2 align-middle text-[10px] opacity-70">
+                          {t(locale, 'flywheelEntryBoundary')}
+                        </span>
+                      </div>
                     )}
 
                     {message.sources && message.sources.filter(source => !source.score || source.score >= 0.5).length > 0 && (

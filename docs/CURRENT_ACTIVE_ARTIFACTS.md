@@ -13,9 +13,12 @@ Truth status: manually curated active index; non-canonical promotion truth.
 | `tasks/codex/project_control_surface_anchor_p0_2026-05-06.md` | active packet | project control surface | Implement next as the visible anchor before opening another source-intelligence support slice. |
 | `tasks/codex/project_control_surface_antigravity_brief_2026-05-06.md` | active delegate brief | project control surface / Antigravity UI | Use as the GitHub-facing UI implementation brief after the control-surface branch is opened. |
 | `tasks/codex/flywheel_v1_e2e_gap_audit_p0_2026-05-06.md` | active audit packet | evolution flywheel v1 | Use for backend/test delegate gap audit and smoke validation. |
+| `tasks/codex/flywheel_v1_e2e_gap_audit_result_2026-05-07.md` | accepted-with-changes audit result | evolution flywheel v1 | Backend inspect route chain is validated; next product gap is chat-to-flywheel handoff plus browser-level smoke. |
 | `tasks/codex/ai_conversation_entry_alignment_p0_2026-05-06.md` | active alignment packet | AI conversation entry | Use to define the smallest bridge from `/chat` into flywheel inspect/controller packets. |
+| `tasks/codex/ai_conversation_entry_alignment_result_2026-05-07.md` | accepted-with-changes audit result | AI conversation entry | Use the UI-only bridge as the next implementation slice; do not add backend adapter first. |
 | `https://github.com/brantzh6/MyAttention/pull/2` | merged | source-intelligence support | Keep as accepted support evidence; do not treat source intelligence as the top-level mainline. |
 | `https://github.com/brantzh6/MyAttention/pull/4` | merged | controller governance | Review gate absorbed and promoted; source-intelligence support no longer owns top-level mainline. |
+| `https://github.com/brantzh6/MyAttention/pull/5` | merged | controller governance | Next mainline task packets are accepted; use issues #6, #7, and #8 as GitHub collaboration handles. |
 
 ## GitHub/Codex Review
 

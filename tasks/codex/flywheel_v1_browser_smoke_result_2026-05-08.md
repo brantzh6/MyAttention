@@ -8,7 +8,7 @@ Recommendation: accept_with_changes
 
 ## Summary
 
-The first Flywheel V1 smoke is closed as a usable V1 evidence baseline, with one UI-chain follow-up still tracked.
+The first Flywheel V1 smoke is closed as a usable V1 evidence baseline.
 
 Confirmed:
 
@@ -22,11 +22,7 @@ Confirmed:
 - real browser click from a visible chat message's `Open in Flywheel` action navigates into `/evolution?handoff=chat`.
 - handoff payload is imported into the flywheel panel, storage is cleared, and inspect is not auto-submitted.
 - browser UI can submit a flywheel inspect request and render inspect candidates from a mocked response.
-- browser UI can select inspect candidates and issue the task-packet preview request.
-
-Still partial:
-
-- browser automation did not yet stably verify task-packet preview rendering plus execution-feedback rendering in the same end-to-end UI script. Backend route chain for those two steps is already validated below.
+- browser UI can select inspect candidates, request task-packet preview, render the preview, accept worker feedback text, request execution-feedback inspect, and render the feedback result.
 
 ## Environment
 
@@ -53,7 +49,7 @@ Still partial:
 | handoff boundary | passed | storage cleared; no auto-submit; notice rendered |
 | browser inspect render | passed | mocked inspect response rendered `chat_to_flywheel_bridge_verified` |
 | browser preview request | passed | selecting two candidates enabled preview and issued one preview API call |
-| browser preview + feedback render | partial | backend chain passed; UI render script needs a more stable selector/wait strategy |
+| browser preview + feedback render | passed | preview and execution feedback rendered in the same browser script |
 
 ## Validation Run
 
@@ -123,21 +119,39 @@ Browser flywheel inspect and preview request smoke:
 inspect rendered: chat_to_flywheel_bridge_verified
 selected candidates: 2
 preview API calls: 1
-preview render + feedback render: partial selector/wait follow-up
+preview render + feedback render: passed
+```
+
+Browser full UI loop smoke:
+
+```json
+{
+  "passed": true,
+  "inspectCalls": 1,
+  "previewCalls": 1,
+  "feedbackCalls": 1,
+  "feedbackButtonIndex": 11,
+  "inspectRendered": true,
+  "previewRendered": true,
+  "feedbackRendered": true,
+  "truthBoundaryRendered": true,
+  "pageErrors": [],
+  "consoleErrors": []
+}
 ```
 
 ## Known Risks
 
-- The full browser-rendered preview + execution-feedback loop still needs one stable UI automation pass.
 - The backend chain smoke uses deterministic mocked LLM output through `TestClient`; it validates route wiring and boundaries, not live model quality.
 - This is V1 usability evidence, not a production promotion decision.
+- The browser UI loop smoke uses mocked API responses; it validates UI wiring and boundary rendering, not live model quality.
 
 ## Follow-Up
 
-Next local validation target:
+Next mainline target:
 
 ```text
-/evolution -> inspect -> select candidates -> preview renders -> worker feedback input -> execution feedback renders
+Use the verified UI loop to run the next bounded Flywheel V1 vertical slice.
 ```
 
 Use local review/test only for this follow-up unless it is being packaged as a GitHub promotion candidate.

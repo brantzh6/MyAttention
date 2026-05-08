@@ -15,7 +15,8 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
       'PR #10: chat-to-flywheel handoff bridge accepted',
       'PR #11: Flywheel V1 browser smoke packet accepted',
       'PR #12: /control project control surface accepted',
-      '9977bd2: real chat handoff browser smoke evidence recorded'
+      '9977bd2: real chat handoff browser smoke evidence recorded',
+      'full UI loop smoke: inspect -> preview -> execution feedback passed'
     ]
   },
   tasks: [
@@ -40,7 +41,7 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
   ],
   phase: {
     current: 'Flywheel V1 first evidence baseline accepted',
-    nextGate: 'Stable UI loop smoke for inspect -> preview render -> execution feedback render'
+    nextGate: 'Next bounded Flywheel V1 vertical slice using the verified UI loop'
   },
   capabilities: [
     {
@@ -61,7 +62,7 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
       id: 'evolution-brain',
       title: 'Evolution Brain',
       maturity: 'Prototype+',
-      gap: 'Chat handoff and backend route chain exist; full browser-rendered preview plus execution-feedback loop still needs stable validation',
+      gap: 'Verified inspect -> preview -> execution-feedback UI loop exists; next gap is turning the loop into a useful bounded vertical slice',
       status: 'accepted'
     },
     {
@@ -94,10 +95,10 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
     monitor: 'No standing review monitor unless an active GitHub/Codex promotion review is pending'
   },
   nextActions: [
-    'Stabilize browser UI smoke for inspect -> preview render -> execution feedback render',
+    'Start the next bounded Flywheel V1 vertical slice using the verified UI loop',
     'Keep /control snapshot updated after accepted evidence changes',
     'Use local review for small smoke/docs/snapshot changes',
     'Use GitHub/Codex review only for promotion-ready GitHub versions',
-    'Start the next Flywheel V1 vertical slice after UI loop smoke is closed'
+    'Do not reopen Codex review loops for local smoke evidence'
   ]
 }

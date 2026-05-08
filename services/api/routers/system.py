@@ -48,6 +48,42 @@ EXTERNAL_SERVICES = [
 ]
 
 
+def _build_code_health_snapshot() -> Dict[str, Any]:
+    """Return a code-truth snapshot without probing runtime dependencies."""
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "truth_plane": "code_truth",
+        "overall_status": "healthy",
+        "summary": {
+            "total": 1,
+            "healthy": 1,
+            "unhealthy": 0,
+            "error": 0,
+        },
+        "checks": [
+            {
+                "name": "System router import",
+                "status": "healthy",
+                "running": True,
+                "details": {
+                    "module": __name__,
+                    "routes": ["/health", "/status", "/code-health", "/restart/{container_name}"],
+                    "runtime_dependencies": [
+                        "postgres",
+                        "redis",
+                        "qdrant",
+                        "external_llm",
+                    ],
+                },
+            }
+        ],
+        "notes": [
+            "Code truth reports structure and loadability only.",
+            "Runtime failures are tracked separately in runtime truth.",
+        ],
+    }
+
+
 def _inspect_container_state(container_name: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["docker", "inspect", "--format", "{{.State.Status}}", container_name],
@@ -282,56 +318,86 @@ async def check_llm_service() -> Dict[str, Any]:
 
 @router.get("/health")
 async def get_system_health():
-    """Return full system health status."""
-    results = {
-        "timestamp": datetime.now().isoformat(),
-        "containers": [],
-        "databases": [],
-        "services": [],
-        "external": [],
-        "summary": {
-            "total": 0,
-            "healthy": 0,
-            "unhealthy": 0,
-            "error": 0,
-        },
-    }
+    """Return full runtime health status.
 
-    for container in DOCKER_CONTAINERS:
-        container_status = await check_docker_container(container)
-        results["containers"].append(container_status)
+    This endpoint is runtime truth only. It should never 500 because a
+    missing database or container is itself a runtime signal that must be
+    reported back to the controller.
+    """
+    try:
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "truth_plane": "runtime_truth",
+            "containers": [],
+            "databases": [],
+            "services": [],
+            "external": [],
+            "summary": {
+                "total": 0,
+                "healthy": 0,
+                "unhealthy": 0,
+                "error": 0,
+            },
+        }
 
-    results["databases"].append(await check_database_postgres())
-    results["databases"].append(await check_database_redis())
-    results["databases"].append(await check_database_qdrant())
-    results["services"].append(await check_api_service())
-    results["external"].append(await check_llm_service())
+        for container in DOCKER_CONTAINERS:
+            container_status = await check_docker_container(container)
+            results["containers"].append(container_status)
 
-    all_services = (
-        results["containers"]
-        + results["databases"]
-        + results["services"]
-        + results["external"]
-    )
+        results["databases"].append(await check_database_postgres())
+        results["databases"].append(await check_database_redis())
+        results["databases"].append(await check_database_qdrant())
+        results["services"].append(await check_api_service())
+        results["external"].append(await check_llm_service())
 
-    results["summary"]["total"] = len(all_services)
-    for service in all_services:
-        status = service.get("status", "unknown")
-        if status in ["healthy", "running"]:
-            results["summary"]["healthy"] += 1
-        elif status in ["unhealthy", "not_configured"]:
-            results["summary"]["unhealthy"] += 1
+        all_services = (
+            results["containers"]
+            + results["databases"]
+            + results["services"]
+            + results["external"]
+        )
+
+        results["summary"]["total"] = len(all_services)
+        for service in all_services:
+            status = service.get("status", "unknown")
+            if status in ["healthy", "running"]:
+                results["summary"]["healthy"] += 1
+            elif status in ["unhealthy", "not_configured"]:
+                results["summary"]["unhealthy"] += 1
+            else:
+                results["summary"]["error"] += 1
+
+        if results["summary"]["error"] > 0:
+            results["overall_status"] = "error"
+        elif results["summary"]["unhealthy"] > 0:
+            results["overall_status"] = "degraded"
         else:
-            results["summary"]["error"] += 1
+            results["overall_status"] = "healthy"
 
-    if results["summary"]["error"] > 0:
-        results["overall_status"] = "error"
-    elif results["summary"]["unhealthy"] > 0:
-        results["overall_status"] = "degraded"
-    else:
-        results["overall_status"] = "healthy"
+        return results
+    except Exception as e:
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "truth_plane": "runtime_truth",
+            "overall_status": "error",
+            "summary": {
+                "total": 0,
+                "healthy": 0,
+                "unhealthy": 0,
+                "error": 1,
+            },
+            "containers": [],
+            "databases": [],
+            "services": [],
+            "external": [],
+            "error": str(e),
+        }
 
-    return results
+
+@router.get("/code-health")
+async def get_code_health():
+    """Return code-truth health without probing runtime dependencies."""
+    return _build_code_health_snapshot()
 
 
 @router.get("/status")

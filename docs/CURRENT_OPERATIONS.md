@@ -59,6 +59,35 @@ Before producing a new strategic review, consume the previous review:
 
 If closure evidence is insufficient, stop at closure gaps and do not run a greenfield review.
 
+## Review Trigger Rule
+
+Review gates are governance controls, not default waiting loops.
+
+Local review is the default for ordinary scoped work:
+
+1. Controller scope review.
+2. Required validation commands.
+3. Local Claude Code / delegated L1 review for small code changes, UI patches, packet updates, and review-finding fixes.
+4. Controller absorption and promotion decision.
+
+GitHub/Codex review is only triggered when the work is becoming a GitHub-visible promotion candidate:
+
+- a PR is intended to be merged as a published project version
+- cloud PR evidence is explicitly needed for cross-IDE collaboration
+- the change crosses a runtime/API/integration boundary
+- local review is unavailable or insufficient for the risk
+- the user explicitly requests GitHub/Codex review
+
+Do not trigger GitHub/Codex review for:
+
+- small corrective patches after an already-understood finding
+- docs or packet wording fixes
+- local exploratory branches
+- work that is not ready for promotion
+- validation-only packets unless they are about to be promoted as the canonical test contract
+
+If Codex review was already triggered accidentally, consume the result when it arrives, but do not wait on it as the current blocker unless the PR is the active promotion candidate.
+
 ## Review Gate Termination Rule
 
 Review gates are governance controls, not infinite confirmation loops.
@@ -71,9 +100,9 @@ For a bounded PR, the controller may stop requesting further automated review an
 4. Required validation for the lane has passed or the validation gap is recorded in the promotion decision.
 5. The PR is mergeable and the worktree classifier is clean.
 
-Do not trigger another review only to confirm a low-risk wording or packet correction. Trigger another review when the fix changes code behavior, crosses a lane boundary, changes validation surface, or introduces a new L3 risk.
+Do not trigger another GitHub/Codex review only to confirm a low-risk wording, packet correction, or small local fix that can be reviewed by local Claude Code. Trigger another GitHub/Codex review only when the fix changes promotion-ready code behavior, crosses a lane boundary, changes validation surface, or introduces a new L3 risk.
 
-Temporary review monitors must be time-boxed to the active pending review and deleted after the review returns, the PR is promoted, or the controller terminates the gate.
+Temporary review monitors are allowed only for active GitHub/Codex promotion reviews. They must be deleted after the review returns, the PR is promoted, or the controller terminates the gate. Do not create monitors for local review, small fixes, or non-promotion branches.
 
 ## Current Mainline Pointer
 
@@ -119,23 +148,24 @@ Current UI/control-surface status:
 required mainline anchor; previous accepted UI evidence may exist only in a local quarantine snapshot and must be treated as optional. The clean PR path must recreate or recover the UI without depending on unpublished refs.
 ```
 
-Current gate:
+Current default gate:
 
 ```text
-GitHub-triggered Codex review plus local controller absorption
+local validation plus local Claude Code/delegated L1 review, then controller absorption
 ```
 
-Default PR/review rule:
+GitHub/Codex gate:
 
 ```text
-implementation that needs GitHub visibility or cloud review must go through a bounded PR
+only for promotion-ready GitHub PR versions or explicitly requested cloud review
 ```
 
 Rationale:
 
-- GitHub PRs are the stable review surface for Codex Cloud and other reviewers.
+- GitHub PRs are the stable review surface for published project versions and cross-IDE collaboration.
 - PR-local artifacts prevent review truth from living only in chat or task links.
 - Controller still owns promotion; GitHub/Codex review is evidence, not acceptance.
+- Routine local fixes should not block on Codex Cloud latency or manual triggers.
 
 Current worktree state:
 
@@ -180,7 +210,7 @@ Every new request is classified into exactly one bucket:
 - `mainline_control_surface`: advances the visible project/progress/capability anchor
 - `source_intelligence_support`: improves source/person/signal quality in service of the flywheel
 - `ui_lane`: Antigravity implementation work for the control surface or related UI
-- `review_gate`: GitHub/Codex review, finding absorption, PR readiness
+- `review_gate`: local review, GitHub/Codex promotion review, finding absorption, PR readiness
 - `worktree_ops`: classify, split, stage, branch, or cleanup planning
 - `governance`: changes to policy, lifecycle, or acceptance rules
 - `incident`: broken validation, blocked branch, bad merge, lost state
@@ -278,9 +308,10 @@ Scoped PR checklist:
 7. Push a scoped branch.
 8. Open or update a bounded GitHub PR.
 9. Ensure the PR description links the repo-local task packet, review source, review absorption, changed files, validation, guardrails, non-goals, and known risks.
-10. Trigger or wait for GitHub/Codex review from the PR surface.
-11. Absorb findings locally and push scoped fixes.
-12. Controller decides promotion.
+10. Run local Claude Code/delegated L1 review unless the PR is already a promotion-ready GitHub version.
+11. Trigger GitHub/Codex review only when the PR is ready for merge/published version review or the user explicitly asks for it.
+12. Absorb findings locally and push scoped fixes.
+13. Controller decides promotion.
 
 ### PR Artifact Rule
 
@@ -338,7 +369,8 @@ Stop and report if:
 - active task packet cannot be named
 - request crosses lanes and cannot be split
 - validation cannot be run
-- GitHub/Codex review output is missing for a promotion candidate
+- required local review is missing for a non-promotion candidate
+- GitHub/Codex review output is missing for an active promotion-ready GitHub candidate that explicitly required it
 - required repo-local review, absorption, or execution packet is missing for a new implementation branch
 - dirty worktree candidate exceeds one lane
 - a delegate tries to change architecture or promotion authority

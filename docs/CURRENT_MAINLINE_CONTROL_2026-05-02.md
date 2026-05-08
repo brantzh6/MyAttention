@@ -152,33 +152,44 @@ Allowed work:
 
 - improve person/source/signal quality when it directly improves flywheel inputs
 - maintain shared source semantics used by conversation runtime
-- run bounded tests and GitHub/Codex review before promotion
+- run bounded tests and local review before promotion; use GitHub/Codex only for promotion-ready GitHub versions or explicit cloud review
 
 Not allowed:
 
 - displace Flywheel V1 / AI entry / control surface as the top-level mainline
 - continue heuristic accumulation without a visible flywheel benefit
 
-### Lane 5: GitHub/Codex Review Gate
+### Lane 5: Review Gate
 
-Owner: GitHub-triggered Codex review plus local controller absorption.
+Owner: local reviewer / GitHub-triggered Codex review when warranted, plus local controller absorption.
 
 Status: gate, not implementation lane.
 
-Required shape:
+Default shape:
 
 ```text
-scoped branch / PR
-  -> GitHub-triggered Codex review
+scoped branch
+  -> validation
+  -> local Claude Code/delegated L1 review
+  -> local controller consumes findings
+  -> scoped fix when needed
+  -> controller promotion decision
+```
+
+GitHub/Codex shape:
+
+```text
+promotion-ready GitHub PR
+  -> GitHub/Codex review if cloud review is required
   -> local controller consumes findings
   -> scoped fix push when needed
-  -> repeated review until no actionable findings
+  -> repeat GitHub/Codex only for material promotion-surface changes
   -> controller promotion decision
 ```
 
 Boundary:
 
-- GitHub/Codex review is evidence.
+- GitHub/Codex review is promotion evidence, not a default work loop.
 - It is not promotion authority.
 - Local Codex may fix findings but must not accept its own fix as final.
 - The controller must terminate the gate when findings are absorbed, no unresolved thread remains, scope and risk did not expand, validation is recorded, and the PR is mergeable. Do not create an infinite final-review loop for low-risk doc or packet wording fixes.
@@ -212,7 +223,7 @@ Confirm one task, one lane, one result, risk level, allowed files, and validatio
 
 ### L1: Code/Artifact Review
 
-Use GitHub/Codex review for PR diffs, delegated L1 review for local artifacts, or controller fallback only for small corrective patches.
+Use local Claude Code/delegated L1 review for small scoped code, UI, docs, and packet changes. Use GitHub/Codex review only when the PR is a promotion-ready GitHub version, cloud evidence is required, local review is insufficient, or the user explicitly requests it. Controller fallback is allowed only for very small corrective patches with validation evidence.
 
 ### L2: Integration Review
 
@@ -272,7 +283,7 @@ Reason:
 - prior source-intelligence work was useful but over-narrowed as a top-level mainline
 - Flywheel V1 plus AI entry are the product mainline
 - control-surface UI is required to keep multi-agent work aligned
-- GitHub-triggered Codex review remains the right gate
+- GitHub-triggered Codex review is a promotion gate only, not the default loop for small changes
 - Antigravity can implement the UI only through a bounded GitHub branch/PR
 
 Next controller action:

@@ -72,6 +72,8 @@ class Settings(BaseSettings):
     # LLM API Keys
     qwen_api_key: str = ""
     qwen_base_url: str = ""
+    bailian_coding_plan_api_key: str = ""
+    bailian_api_key: str = ""
     glm_api_key: str = ""
     kimi_api_key: str = ""
     anthropic_api_key: str = ""

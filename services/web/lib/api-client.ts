@@ -39,6 +39,15 @@ export interface LLMProvider {
   priority?: 'high' | 'medium' | 'low'
   use_case?: string[]
   useCase?: string[]
+  base_url?: string
+  api?: string
+  key_env?: string | null
+  reasoning?: boolean
+  input?: string[]
+  context_window?: number
+  max_tokens?: number
+  cost_input?: number
+  cost_output?: number
 }
 
 export interface ChatMessage {

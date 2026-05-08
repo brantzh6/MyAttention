@@ -16,7 +16,8 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
       'PR #11: Flywheel V1 browser smoke packet accepted',
       'PR #12: /control project control surface accepted',
       '9977bd2: real chat handoff browser smoke evidence recorded',
-      'full UI loop smoke: inspect -> preview -> execution feedback passed'
+      'full UI loop smoke: inspect -> preview -> execution feedback passed',
+      'Loop Closure Summary: completed loop now has a controller-readable result surface'
     ]
   },
   tasks: [
@@ -41,7 +42,7 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
   ],
   phase: {
     current: 'Flywheel V1 first evidence baseline accepted',
-    nextGate: 'Next bounded Flywheel V1 vertical slice using the verified UI loop'
+    nextGate: 'Run a real controller rehearsal through the verified loop'
   },
   capabilities: [
     {
@@ -62,7 +63,7 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
       id: 'evolution-brain',
       title: 'Evolution Brain',
       maturity: 'Prototype+',
-      gap: 'Verified inspect -> preview -> execution-feedback UI loop exists; next gap is turning the loop into a useful bounded vertical slice',
+      gap: 'Verified inspect -> preview -> execution-feedback UI loop now has a controller-readable closure summary; next gap is live rehearsal quality',
       status: 'accepted'
     },
     {
@@ -95,7 +96,7 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
     monitor: 'No standing review monitor unless an active GitHub/Codex promotion review is pending'
   },
   nextActions: [
-    'Start the next bounded Flywheel V1 vertical slice using the verified UI loop',
+    'Run a real controller rehearsal through the verified Flywheel V1 loop',
     'Keep /control snapshot updated after accepted evidence changes',
     'Use local review for small smoke/docs/snapshot changes',
     'Use GitHub/Codex review only for promotion-ready GitHub versions',

@@ -5,6 +5,7 @@ import { Loader2, AlertTriangle, BrainCircuit } from 'lucide-react'
 import { FLYWHEEL_HANDOFF_STORAGE_KEY, parseFlywheelHandoffPayload } from '@/lib/flywheel-handoff'
 import { ExecutionFeedbackSection } from './execution-feedback-section'
 import { FlywheelResultsSection } from './flywheel-results-section'
+import { LoopClosureSummarySection } from './loop-closure-summary-section'
 import { ManualAbsorptionSection } from './manual-absorption-section'
 import { ManualDecisionSection } from './manual-decision-section'
 import { ManualReviewSection } from './manual-review-section'
@@ -266,6 +267,16 @@ export function FlywheelInspectPanel() {
               taskPreviewResult={taskPreviewResult}
             />
           }
+        />
+      )}
+
+      {result && taskPreviewResult && executionFeedbackResult && (
+        <LoopClosureSummarySection
+          result={result}
+          taskPreviewResult={taskPreviewResult}
+          executionFeedbackResult={executionFeedbackResult}
+          workerLane={workerLane}
+          executionStatusHint={executionStatusHint}
         />
       )}
 

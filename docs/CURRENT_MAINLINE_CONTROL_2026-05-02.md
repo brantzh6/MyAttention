@@ -47,7 +47,7 @@ PR #2 / acf922c: GitHub signal relation hints improved source-intelligence input
 Current mainline gap:
 
 ```text
-The target system is not visible enough. Progress, phase, capability gaps, and active lanes are scattered across chat and historical docs.
+The target system is not visible enough, and the AI conversation surface is not yet connected to the inspect-only flywheel entry.
 ```
 
 Required anchor:
@@ -77,7 +77,7 @@ Controller interpretation:
 
 Owner: controller plus delegated backend/review/test agents.
 
-Status: active.
+Status: active; backend inspect route chain validated on 2026-05-07.
 
 Allowed next work:
 
@@ -100,7 +100,7 @@ Hard boundaries:
 
 Owner: controller plus backend/CC delegate.
 
-Status: active.
+Status: active; next implementation should be a UI-only bridge from `/chat` to the existing flywheel inspect surface.
 
 Allowed next work:
 
@@ -119,7 +119,7 @@ Hard boundaries:
 
 Owner: controller plus Antigravity UI delegate.
 
-Status: active and urgent.
+Status: delegated to Antigravity UI on branch `codex/project-control-surface-ui-20260507`.
 
 Purpose:
 
@@ -237,31 +237,31 @@ Required if a task touches:
 
 ## Immediate Next Task
 
-Current task:
+Current controller-owned task:
 
 ```text
-tasks/codex/project_control_surface_anchor_p0_2026-05-06.md
+tasks/codex/ai_conversation_entry_bridge_p0_2026-05-07.md
 ```
 
 Purpose:
 
 ```text
-Make the current IKE mainline, stage, core goals, capability maturity, capability gaps, active lanes, and review gates visible in UI.
+Implement the smallest UI-only bridge that lets a chat turn enter the existing flywheel inspect workflow without making raw chat canonical truth.
 ```
 
-Packet must include:
+Parallel delegated UI task:
 
-- three mainline tasks: evolution flywheel, AI entry, project control surface
-- capability score/gap model: information brain, knowledge brain, evolution brain, world model, thinking methods / method arsenal
-- lane ownership: controller, Antigravity UI, backend/CC, review, test
-- static/provenance boundary
-- GitHub PR collaboration protocol
-- allowed UI files
-- validation commands
-- stop conditions
-- GitHub/Codex review expectation
+```text
+tasks/codex/project_control_surface_antigravity_brief_2026-05-06.md
+```
 
-Implementation should be delegated to Antigravity/UI after the packet is written. The controller owns scope and acceptance.
+Flywheel follow-up after the AI bridge:
+
+```text
+Run browser-level smoke for /chat -> /evolution flywheel inspect -> task preview -> execution feedback inspect.
+```
+
+The controller owns scope and acceptance for all three lanes.
 
 ## Controller Decision
 
@@ -277,7 +277,7 @@ Reason:
 
 Next controller action:
 
-1. prepare the Project Control Surface Anchor P0 packet
-2. recover or recreate the control-surface UI on a clean GitHub branch
-3. run UI build and review gate
-4. resume Flywheel V1 vertical-slice work with the anchor visible
+1. publish the flywheel and AI-entry audit results as a scoped PR
+2. implement or delegate the UI-only chat-to-flywheel bridge
+3. keep Antigravity UI work on its GitHub branch/PR
+4. run browser-level Flywheel V1 smoke after the bridge exists

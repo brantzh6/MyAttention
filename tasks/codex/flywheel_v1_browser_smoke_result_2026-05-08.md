@@ -8,7 +8,7 @@ Recommendation: accept_with_changes
 
 ## Summary
 
-The first Flywheel V1 smoke is partially closed with automated evidence.
+The first Flywheel V1 smoke is closed as a usable V1 evidence baseline, with one UI-chain follow-up still tracked.
 
 Confirmed:
 
@@ -19,18 +19,22 @@ Confirmed:
 - task packet preview succeeds from selected inspect candidates.
 - execution feedback inspect succeeds from the task packet preview summary.
 - all inspected artifacts remain `inspect_only` / non-canonical.
+- real browser click from a visible chat message's `Open in Flywheel` action navigates into `/evolution?handoff=chat`.
+- handoff payload is imported into the flywheel panel, storage is cleared, and inspect is not auto-submitted.
+- browser UI can submit a flywheel inspect request and render inspect candidates from a mocked response.
+- browser UI can select inspect candidates and issue the task-packet preview request.
 
-Not yet confirmed:
+Still partial:
 
-- real browser click from a visible chat message's `Open in Flywheel` action into `/evolution?handoff=chat`.
+- browser automation did not yet stably verify task-packet preview rendering plus execution-feedback rendering in the same end-to-end UI script. Backend route chain for those two steps is already validated below.
 
 ## Environment
 
 - Branch: `codex/pre-ike-restructure-2026-04-09`
-- Commit tested: `4bf4e82`
+- Commit tested: `b799dae`
 - Web dev server: `http://localhost:3100`
 - Backend chain validation: FastAPI `TestClient`
-- Browser automation: not available in the current environment without adding a new dependency
+- Browser automation: temporary Playwright install under `%TEMP%\myattention-playwright-smoke`; no project dependency added
 
 ## Checks
 
@@ -44,7 +48,12 @@ Not yet confirmed:
 | execution feedback inspect route | passed | `feedback_intent=execution_feedback` |
 | inspect-only boundary | passed | responses asserted `promotion_state=inspect_only` |
 | non-canonical boundary | passed | controller packets asserted non-canonical / explicit non-canonical |
-| real chat button click | partial | route renders, but browser click automation unavailable |
+| real chat button click | passed | visible chat message action clicked, navigated to `/evolution?handoff=chat` |
+| chat handoff prefill | passed | textarea contains user and assistant content; topic/task intent populated |
+| handoff boundary | passed | storage cleared; no auto-submit; notice rendered |
+| browser inspect render | passed | mocked inspect response rendered `chat_to_flywheel_bridge_verified` |
+| browser preview request | passed | selecting two candidates enabled preview and issued one preview API call |
+| browser preview + feedback render | partial | backend chain passed; UI render script needs a more stable selector/wait strategy |
 
 ## Validation Run
 
@@ -94,22 +103,41 @@ feedback_intent=execution_feedback
 preview_summary=Topic 'flywheel_v1_ai_entry_control_surface' intent 'inspect chat turn for IKE flywheel candidate extraction' has 2 labels (knowledge:1, evolution:1)
 ```
 
-## Screenshots Or Evidence
+Browser chat handoff smoke:
 
-No screenshot was captured. The current environment does not have a usable Playwright/browser automation package, and browser automation was not added as a project dependency.
+```text
+passed=true
+buttonCount=2
+textareaHasUser=true
+textareaHasAssistant=true
+topic=flywheel_v1_ai_entry_control_surface
+taskIntent=inspect chat turn for IKE flywheel candidate extraction
+notice=true
+storageCleared=true
+autoSubmitted=false
+```
+
+Browser flywheel inspect and preview request smoke:
+
+```text
+inspect rendered: chat_to_flywheel_bridge_verified
+selected candidates: 2
+preview API calls: 1
+preview render + feedback render: partial selector/wait follow-up
+```
 
 ## Known Risks
 
-- Real click-level UX is not fully verified.
-- The chat handoff action should still be manually checked in a browser before calling Flywheel V1 completed.
+- The full browser-rendered preview + execution-feedback loop still needs one stable UI automation pass.
 - The backend chain smoke uses deterministic mocked LLM output through `TestClient`; it validates route wiring and boundaries, not live model quality.
+- This is V1 usability evidence, not a production promotion decision.
 
 ## Follow-Up
 
-Run a manual or delegated browser click smoke:
+Next local validation target:
 
 ```text
-/chat -> create or load non-empty message -> Open in Flywheel -> /evolution?handoff=chat -> prefilled form -> manual inspect
+/evolution -> inspect -> select candidates -> preview renders -> worker feedback input -> execution feedback renders
 ```
 
-If that passes, Flywheel V1 can move from `partial` to first usable V1 evidence.
+Use local review/test only for this follow-up unless it is being packaged as a GitHub promotion candidate.

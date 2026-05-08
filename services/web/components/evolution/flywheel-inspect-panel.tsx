@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Loader2, AlertTriangle, BrainCircuit } from 'lucide-react'
+import { FLYWHEEL_HANDOFF_STORAGE_KEY, parseFlywheelHandoffPayload } from '@/lib/flywheel-handoff'
 import { ExecutionFeedbackSection } from './execution-feedback-section'
 import { FlywheelResultsSection } from './flywheel-results-section'
 import { ManualAbsorptionSection } from './manual-absorption-section'
@@ -10,6 +12,7 @@ import { WorkerPacketBridgeSection } from './worker-packet-bridge-section'
 import { TaskPreviewSection } from './task-preview-section'
 import { useFlywheelRuntimeController } from './use-flywheel-runtime-controller'
 export function FlywheelInspectPanel() {
+  const [handoffNotice, setHandoffNotice] = useState<string | null>(null)
   const {
     state,
     selectedPreviewCount,
@@ -64,12 +67,40 @@ export function FlywheelInspectPanel() {
     workerArtifactRef,
   } = state
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('handoff') !== 'chat') return
+
+    const payload = parseFlywheelHandoffPayload(
+      window.sessionStorage.getItem(FLYWHEEL_HANDOFF_STORAGE_KEY),
+    )
+    window.sessionStorage.removeItem(FLYWHEEL_HANDOFF_STORAGE_KEY)
+
+    if (!payload) return
+
+    setField('conversationText', payload.text)
+    setField('topic', payload.topic || 'chat conversation')
+    setField(
+      'taskIntent',
+      payload.taskIntent || 'inspect chat turn for IKE flywheel candidate extraction',
+    )
+    setHandoffNotice('Imported transient chat input. It is inspect-only, non-canonical, and will not be submitted automatically.')
+  }, [setField])
+
   return (
     <div className="rounded-2xl border bg-card p-6 shadow-sm">
       <div className="flex items-center gap-2 mb-4">
         <BrainCircuit className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-sm font-semibold">Flywheel 探测面板</h3>
       </div>
+
+      {handoffNotice && (
+        <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800">
+          {handoffNotice}
+        </div>
+      )}
 
       {/* Input form */}
       <div className="space-y-3">

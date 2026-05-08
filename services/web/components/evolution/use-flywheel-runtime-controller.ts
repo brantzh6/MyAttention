@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import { apiClient } from '@/lib/api-client'
 import { copyTextToClipboard } from './clipboard'
 import {
@@ -74,9 +75,9 @@ export function useFlywheelRuntimeController() {
     dispatch({ type: 'toggleSelection', family, index })
   }
 
-  const setField = (field: StringFieldKey, value: string) => {
+  const setField = useCallback((field: StringFieldKey, value: string) => {
     dispatch({ type: 'setStringField', field, value })
-  }
+  }, [dispatch])
 
   const setWorkerLane = (lane: WorkerLane) => {
     dispatch({ type: 'setWorkerLane', lane })

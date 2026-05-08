@@ -15,12 +15,17 @@ Truth status: manually curated active index; non-canonical promotion truth.
 | `tasks/codex/flywheel_v1_e2e_gap_audit_p0_2026-05-06.md` | active audit packet | evolution flywheel v1 | Use for backend/test delegate gap audit and smoke validation. |
 | `tasks/codex/flywheel_v1_e2e_gap_audit_result_2026-05-07.md` | accepted-with-changes audit result | evolution flywheel v1 | Backend inspect route chain is validated; next product gap is chat-to-flywheel handoff plus browser-level smoke. |
 | `tasks/codex/flywheel_v1_browser_smoke_p0_2026-05-08.md` | queued validation packet | evolution flywheel v1 / test execution | Run after PR #10 is promoted or checked out; proves `/chat` to flywheel inspect in browser. |
+| `tasks/codex/flywheel_v1_browser_smoke_result_2026-05-08.md` | partial smoke result | evolution flywheel v1 / test execution | Automated route and backend-chain smoke passed; real chat button click remains manual/delegated follow-up. |
 | `tasks/codex/ai_conversation_entry_alignment_p0_2026-05-06.md` | active alignment packet | AI conversation entry | Use to define the smallest bridge from `/chat` into flywheel inspect/controller packets. |
 | `tasks/codex/ai_conversation_entry_alignment_result_2026-05-07.md` | accepted-with-changes audit result | AI conversation entry | Use the UI-only bridge as the next implementation slice; do not add backend adapter first. |
 | `tasks/codex/ai_conversation_entry_bridge_p0_2026-05-07.md` | active implementation packet | AI conversation entry | Implement the bounded UI-only `/chat` to flywheel inspect bridge; raw chat remains non-canonical. |
+| `tasks/codex/ai_conversation_entry_bridge_result_2026-05-07.md` | accepted-with-changes result | AI conversation entry | `/chat` can hand transient input to `/evolution`; storage failure finding absorbed. |
 | `https://github.com/brantzh6/MyAttention/pull/2` | merged | source-intelligence support | Keep as accepted support evidence; do not treat source intelligence as the top-level mainline. |
 | `https://github.com/brantzh6/MyAttention/pull/4` | merged | controller governance | Review gate absorbed and promoted; source-intelligence support no longer owns top-level mainline. |
 | `https://github.com/brantzh6/MyAttention/pull/5` | merged | controller governance | Next mainline task packets are accepted; use issues #6, #7, and #8 as GitHub collaboration handles. |
+| `https://github.com/brantzh6/MyAttention/pull/10` | merged | AI conversation entry | Chat-to-flywheel handoff bridge accepted into mainline. |
+| `https://github.com/brantzh6/MyAttention/pull/11` | merged | evolution flywheel v1 / test execution | Browser smoke packet accepted into mainline. |
+| `https://github.com/brantzh6/MyAttention/pull/12` | merged | project control surface | `/control` static project anchor accepted into mainline. |
 
 ## GitHub/Codex Review
 

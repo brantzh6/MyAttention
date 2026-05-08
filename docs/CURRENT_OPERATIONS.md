@@ -380,10 +380,10 @@ Stop and report if:
 Current controller-owned next step:
 
 ```text
-tasks/codex/ai_conversation_entry_bridge_p0_2026-05-07.md
+tasks/codex/flywheel_v1_browser_smoke_result_2026-05-08.md
 ```
 
-Implement or delegate the smallest UI-only bridge from `/chat` into the existing flywheel inspect surface.
+Close the remaining real browser click smoke for the `/chat` to flywheel handoff.
 
 Current delegated UI next step:
 
@@ -391,12 +391,12 @@ Current delegated UI next step:
 tasks/codex/project_control_surface_antigravity_brief_2026-05-06.md
 ```
 
-Antigravity owns the Project Control Surface Anchor UI branch.
+Project Control Surface Anchor P0 is now accepted into mainline as `/control`; future UI work should update the snapshot or add live adapters only through a new packet.
 
 Current flywheel next step after AI bridge:
 
 ```text
-browser-level smoke for /chat -> /evolution flywheel inspect -> task preview -> execution feedback inspect
+manual/delegated browser click smoke for /chat -> Open in Flywheel -> /evolution prefilled form -> manual inspect
 ```
 
-Do not start another source-intelligence quality slice until the AI bridge and/or control-surface anchor has visible progress.
+Do not start another source-intelligence quality slice until the browser click smoke is closed or explicitly parked by controller decision.

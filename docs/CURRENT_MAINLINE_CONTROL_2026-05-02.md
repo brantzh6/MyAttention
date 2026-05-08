@@ -77,7 +77,7 @@ Controller interpretation:
 
 Owner: controller plus delegated backend/review/test agents.
 
-Status: active; backend inspect route chain validated on 2026-05-07.
+Status: partial V1 evidence; backend inspect route chain and automated backend smoke passed, real browser click smoke remains.
 
 Allowed next work:
 
@@ -100,7 +100,7 @@ Hard boundaries:
 
 Owner: controller plus backend/CC delegate.
 
-Status: active; next implementation should be a UI-only bridge from `/chat` to the existing flywheel inspect surface.
+Status: accepted into mainline; `/chat` can hand transient inspect input to the existing flywheel inspect surface.
 
 Allowed next work:
 
@@ -119,7 +119,7 @@ Hard boundaries:
 
 Owner: controller plus Antigravity UI delegate.
 
-Status: delegated to Antigravity UI on branch `codex/project-control-surface-ui-20260507`.
+Status: accepted into mainline; `/control` provides the static project control surface anchor.
 
 Purpose:
 
@@ -251,13 +251,13 @@ Required if a task touches:
 Current controller-owned task:
 
 ```text
-tasks/codex/ai_conversation_entry_bridge_p0_2026-05-07.md
+tasks/codex/flywheel_v1_browser_smoke_result_2026-05-08.md
 ```
 
 Purpose:
 
 ```text
-Implement the smallest UI-only bridge that lets a chat turn enter the existing flywheel inspect workflow without making raw chat canonical truth.
+Close the remaining real browser click smoke for the first usable inspect-only flywheel loop.
 ```
 
 Parallel delegated UI task:
@@ -269,7 +269,7 @@ tasks/codex/project_control_surface_antigravity_brief_2026-05-06.md
 Flywheel follow-up after the AI bridge:
 
 ```text
-Run browser-level smoke for /chat -> /evolution flywheel inspect -> task preview -> execution feedback inspect.
+Run the manual/delegated click smoke for /chat -> Open in Flywheel -> /evolution prefilled form -> manual inspect.
 ```
 
 The controller owns scope and acceptance for all three lanes.
@@ -288,7 +288,7 @@ Reason:
 
 Next controller action:
 
-1. publish the flywheel and AI-entry audit results as a scoped PR
-2. implement or delegate the UI-only chat-to-flywheel bridge
-3. keep Antigravity UI work on its GitHub branch/PR
-4. run browser-level Flywheel V1 smoke after the bridge exists
+1. run the remaining real browser click smoke for the chat-to-flywheel handoff
+2. update `/control` snapshot after smoke closure
+3. start the next Flywheel V1 vertical slice only after smoke evidence is accepted
+4. keep source-intelligence work as support, not mainline displacement

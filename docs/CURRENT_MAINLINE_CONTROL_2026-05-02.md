@@ -240,7 +240,7 @@ Required if a task touches:
 Current controller-owned task:
 
 ```text
-tasks/codex/ai_conversation_entry_alignment_result_2026-05-07.md
+tasks/codex/ai_conversation_entry_bridge_p0_2026-05-07.md
 ```
 
 Purpose:

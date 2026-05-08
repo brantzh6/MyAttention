@@ -11,6 +11,99 @@ type ProviderView = LLMProvider & {
   useCase: string[]
 }
 
+const DEFAULT_PROVIDERS: ProviderView[] = [
+  {
+    id: '1',
+    name: '通义千问 Max',
+    provider: 'qwen',
+    model: 'qwen-max',
+    enabled: false,
+    apiKeySet: false,
+    priority: 'high',
+    useCase: ['摘要', '中文对话', '创意写作'],
+  },
+  {
+    id: '2',
+    name: 'Qwen 3.5 Plus',
+    provider: 'qwen',
+    model: 'qwen3.5-plus',
+    enabled: false,
+    apiKeySet: false,
+    priority: 'high',
+    useCase: ['通用对话', '联网搜索'],
+  },
+  {
+    id: '3',
+    name: 'MiniMax M2.5',
+    provider: 'qwen',
+    model: 'MiniMax-M2.5',
+    enabled: false,
+    apiKeySet: false,
+    priority: 'high',
+    useCase: ['通用对话', '长上下文'],
+  },
+  {
+    id: '4',
+    name: 'DeepSeek V3.2',
+    provider: 'qwen',
+    model: 'deepseek-v3.2',
+    enabled: false,
+    apiKeySet: false,
+    priority: 'high',
+    useCase: ['代码生成', '深度推理', '联网搜索'],
+  },
+  {
+    id: '5',
+    name: 'GLM-5',
+    provider: 'qwen',
+    model: 'glm-5',
+    enabled: false,
+    apiKeySet: false,
+    priority: 'medium',
+    useCase: ['简单问答', '快速响应'],
+  },
+  {
+    id: '6',
+    name: 'Kimi K2.5',
+    provider: 'qwen',
+    model: 'kimi-k2.5',
+    enabled: false,
+    apiKeySet: false,
+    priority: 'medium',
+    useCase: ['长文本处理'],
+  },
+  {
+    id: '7',
+    name: 'Claude 3.5',
+    provider: 'anthropic',
+    model: 'claude-3-5-sonnet',
+    enabled: false,
+    apiKeySet: false,
+    priority: 'medium',
+    useCase: ['深度推理', '代码生成'],
+  },
+  {
+    id: '8',
+    name: 'GPT-4o',
+    provider: 'openai',
+    model: 'gpt-4o',
+    enabled: false,
+    apiKeySet: false,
+    priority: 'medium',
+    useCase: ['综合任务'],
+  },
+  {
+    id: '9',
+    name: 'Ollama 本地',
+    provider: 'ollama',
+    model: 'qwen2:7b',
+    enabled: true,
+    apiKeySet: true,
+    priority: 'low',
+    useCase: ['离线使用', '隐私优先'],
+  },
+]
+
 const priorityColors = {
   high: 'bg-green-100 text-green-700',
   medium: 'bg-yellow-100 text-yellow-700',
@@ -27,8 +120,8 @@ function normalizeProvider(provider: LLMProvider): ProviderView {
 }
 
 export function ModelsConfig() {
-  const [providers, setProviders] = useState<ProviderView[]>([])
-  const [loading, setLoading] = useState(true)
+  const [providers, setProviders] = useState<ProviderView[]>(DEFAULT_PROVIDERS)
+  const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showApiKey, setShowApiKey] = useState<string | null>(null)
   const [draftKeys, setDraftKeys] = useState<Record<string, string>>({})
@@ -41,15 +134,15 @@ export function ModelsConfig() {
   )
 
   const loadProviders = async () => {
-    setLoading(true)
+    setSyncing(true)
     setError(null)
     try {
       const data = await apiClient.getLLMProviders()
       setProviders(data.map(normalizeProvider))
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Failed to load providers')
+      setError(loadError instanceof Error ? loadError.message : 'Failed to load live provider status')
     } finally {
-      setLoading(false)
+      setSyncing(false)
     }
   }
 
@@ -82,22 +175,22 @@ export function ModelsConfig() {
   return (
     <div className="space-y-6">
       <div className="rounded-lg border bg-card p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h3 className="font-medium">LLM Provider Keys</h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Keys are saved to a gitignored local runtime secret file. Environment variables still
-              take precedence.
+              This page renders even when no keys are configured. Keys are saved to a gitignored
+              local runtime secret file, and environment variables still take precedence.
             </p>
           </div>
           <button
             type="button"
             onClick={loadProviders}
-            disabled={loading}
+            disabled={syncing}
             className="inline-flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm hover:bg-muted disabled:opacity-50"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            Refresh
+            {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Sync live status
           </button>
         </div>
 
@@ -109,15 +202,15 @@ export function ModelsConfig() {
             </div>
           </div>
           <div className="rounded-md border bg-muted/30 px-3 py-2 md:col-span-2">
-            <div className="text-xs text-muted-foreground">Storage boundary</div>
+            <div className="text-xs text-muted-foreground">Main UI rule</div>
             <div className="mt-1 text-sm">
-              Local runtime secret only; no git commit, no project truth, no key echo.
+              Provider cards stay visible without keys. Keys only affect runtime activation.
             </div>
           </div>
         </div>
 
         {error && (
-          <div className="mt-4 flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <div className="mt-4 flex items-start gap-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-800">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             {error}
           </div>
@@ -125,22 +218,16 @@ export function ModelsConfig() {
       </div>
 
       <div className="space-y-3">
-        {loading && providers.length === 0 && (
-          <div className="flex items-center gap-2 rounded-lg border bg-card p-4 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Loading providers...
-          </div>
-        )}
-
         {providers.map((provider) => {
           const draft = draftKeys[provider.id] || ''
           const canSave = draft.trim().length > 0 && savingProviderId !== provider.id
           const canStoreKey = provider.provider !== 'ollama'
+          const configured = provider.apiKeySet
 
           return (
             <div
               key={provider.id}
-              className={cn('rounded-lg border bg-card p-4', !provider.enabled && 'opacity-70')}
+              className={cn('rounded-lg border bg-card p-4', !provider.enabled && 'opacity-80')}
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -155,13 +242,11 @@ export function ModelsConfig() {
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">{provider.model}</p>
                   {provider.useCase.length > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {provider.useCase.join(' / ')}
-                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{provider.useCase.join(' / ')}</p>
                   )}
                 </div>
 
-                {provider.apiKeySet ? (
+                {configured ? (
                   <span className="inline-flex items-center gap-1 rounded bg-green-50 px-2 py-1 text-xs text-green-700">
                     <Check className="h-3.5 w-3.5" />
                     configured
@@ -169,7 +254,7 @@ export function ModelsConfig() {
                 ) : (
                   <span className="inline-flex items-center gap-1 rounded bg-yellow-50 px-2 py-1 text-xs text-yellow-700">
                     <X className="h-3.5 w-3.5" />
-                    missing key
+                    not configured
                   </span>
                 )}
               </div>
@@ -218,7 +303,7 @@ export function ModelsConfig() {
 
               {savedProviderId === provider.id && (
                 <div className="mt-2 text-xs text-green-700">
-                  Saved to local runtime secret store. Restart is not required for new requests.
+                  Saved to local runtime secret store.
                 </div>
               )}
             </div>

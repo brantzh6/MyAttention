@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from config import get_settings
+from config import get_settings, write_local_secret
 
 router = APIRouter()
 
@@ -173,7 +173,45 @@ async def get_providers():
 
 @router.put("/providers/{provider_id}/api-key")
 async def update_api_key(provider_id: str, data: APIKeyUpdate):
-    raise HTTPException(status_code=501, detail="API key updates must be made in server environment configuration")
+    api_key = (data.api_key or "").strip()
+    if not api_key:
+        raise HTTPException(status_code=400, detail="API key cannot be empty")
+
+    providers = _build_providers()
+    provider = next(
+        (item for item in providers if item.id == provider_id or item.provider == provider_id),
+        None,
+    )
+    if provider is None:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    env_key_by_provider = {
+        "qwen": "QWEN_API_KEY",
+        "anthropic": "ANTHROPIC_API_KEY",
+        "openai": "OPENAI_API_KEY",
+    }
+    env_key = env_key_by_provider.get(provider.provider)
+    if not env_key:
+        raise HTTPException(status_code=400, detail="This provider does not use a local API key")
+
+    try:
+        write_local_secret(env_key, api_key)
+        get_settings.cache_clear()
+        try:
+            from llm.adapter import LLMAdapter
+
+            LLMAdapter._providers = None
+        except Exception:
+            pass
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {
+        "status": "updated",
+        "provider": provider.provider,
+        "api_key_set": True,
+        "storage": "local_runtime_secret",
+    }
 
 
 @router.put("/providers/{provider_id}/toggle")

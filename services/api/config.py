@@ -1,11 +1,62 @@
 from functools import lru_cache
+import os
 from pathlib import Path
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from qdrant_client import QdrantClient
 
 
 _qdrant_clients: dict[str, QdrantClient] = {}
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+LOCAL_SECRET_ENV_PATH = REPO_ROOT / ".runtime" / "secrets" / "llm.local.env"
+
+
+def _load_local_env_files() -> None:
+    """Load local, gitignored runtime configuration without overriding process env."""
+    for path in (
+        REPO_ROOT / ".env",
+        Path(__file__).resolve().parent / ".env",
+        LOCAL_SECRET_ENV_PATH,
+    ):
+        if path.exists():
+            load_dotenv(path, override=False)
+
+
+def get_local_secret_env_path() -> Path:
+    return LOCAL_SECRET_ENV_PATH
+
+
+def write_local_secret(name: str, value: str) -> Path:
+    if not name.isidentifier() or not name.isupper():
+        raise ValueError("Secret name must be an uppercase environment variable name")
+
+    LOCAL_SECRET_ENV_PATH.parent.mkdir(parents=True, exist_ok=True)
+    existing: dict[str, str] = {}
+    if LOCAL_SECRET_ENV_PATH.exists():
+        for line in LOCAL_SECRET_ENV_PATH.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, raw_value = stripped.split("=", 1)
+            existing[key.strip()] = raw_value.strip().strip('"').strip("'")
+
+    existing[name] = value
+    lines = [
+        "# Local runtime LLM secrets. Gitignored; do not commit.",
+        "# Environment variables still override these values.",
+    ]
+    for key in sorted(existing):
+        escaped = existing[key].replace("\\", "\\\\").replace('"', '\\"')
+        lines.append(f'{key}="{escaped}"')
+    LOCAL_SECRET_ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    try:
+        os.chmod(LOCAL_SECRET_ENV_PATH, 0o600)
+    except OSError:
+        pass
+    return LOCAL_SECRET_ENV_PATH
 
 
 class Settings(BaseSettings):
@@ -48,6 +99,7 @@ class Settings(BaseSettings):
 
 @lru_cache()
 def get_settings() -> Settings:
+    _load_local_env_files()
     return Settings()
 
 

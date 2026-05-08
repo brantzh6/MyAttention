@@ -34,7 +34,11 @@ export interface LLMProvider {
   provider: string
   model: string
   enabled: boolean
-  apiKeySet: boolean
+  apiKeySet?: boolean
+  api_key_set?: boolean
+  priority?: 'high' | 'medium' | 'low'
+  use_case?: string[]
+  useCase?: string[]
 }
 
 export interface ChatMessage {
@@ -357,6 +361,22 @@ export const apiClient = {
     const res = await fetch(`${API_URL}/api/llm/providers`)
     if (!res.ok) throw new Error('Failed to fetch LLM providers')
     return res.json()
+  },
+
+  async updateLLMProviderApiKey(providerId: string, apiKey: string): Promise<void> {
+    const res = await fetch(`${API_URL}/api/llm/providers/${providerId}/api-key`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey }),
+    })
+    if (!res.ok) {
+      let detail = 'Failed to update API key'
+      try {
+        const payload = await res.json()
+        detail = payload.detail || detail
+      } catch {}
+      throw new Error(detail)
+    }
   },
 
   async chat(message: string, useVoting?: boolean): Promise<ReadableStream<Uint8Array>> {

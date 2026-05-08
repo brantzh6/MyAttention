@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity, Brain, Home, MessageSquare, Settings } from 'lucide-react'
+import { Activity, Brain, Home, LayoutDashboard, MessageSquare, Settings } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -10,6 +10,7 @@ const navItems = [
   { href: '/', label: '信息大脑', icon: Home },
   { href: '/chat', label: '知识大脑', icon: MessageSquare },
   { href: '/evolution', label: '进化大脑', icon: Activity },
+  { href: '/control', label: '项目控制面', icon: LayoutDashboard },
   { href: '/settings', label: '设置', icon: Settings },
 ]
 

@@ -3,8 +3,8 @@ import { ControlSnapshot } from './types'
 export const STATIC_SNAPSHOT: ControlSnapshot = {
   provenance: {
     sourceKind: 'manual_curated',
-    sourceLabel: 'Controller curation (Anchor P0)',
-    freshnessLabel: '2026-05-06',
+    sourceLabel: 'Controller curation (Anchor P0 + smoke absorption)',
+    freshnessLabel: '2026-05-08',
     truthStatus: 'non_canonical',
     caveat: 'This is a controller-curated static project anchor. It is not live backend truth.'
   },
@@ -12,34 +12,35 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
     name: 'flywheel_v1_ai_entry_control_surface',
     objective: 'First usable IKE evolution loop with AI conversation entry and visible project control',
     latestAcceptedEvidence: [
-      'PR #2 merged at acf922c',
-      'PR #4 merged at 29d0443',
-      'source-intelligence GitHub signal relation hints'
+      'PR #10: chat-to-flywheel handoff bridge accepted',
+      'PR #11: Flywheel V1 browser smoke packet accepted',
+      'PR #12: /control project control surface accepted',
+      '9977bd2: real chat handoff browser smoke evidence recorded'
     ]
   },
   tasks: [
     {
       id: 'evolution_flywheel_v1',
       title: 'Evolution Flywheel V1',
-      status: 'estimated',
-      description: 'First usable inspect-only AI-assisted evolution loop.'
+      status: 'accepted',
+      description: 'First usable inspect-only AI-assisted evolution loop; route chain and chat handoff smoke are now evidenced.'
     },
     {
       id: 'ai_conversation_entry',
       title: 'AI Conversation Entry',
-      status: 'estimated',
-      description: 'AI conversation as the entry into typed candidates, controller packets, and review-gated next actions.'
+      status: 'accepted',
+      description: 'AI conversation can hand transient, non-canonical input into the flywheel inspect surface.'
     },
     {
       id: 'project_control_surface',
       title: 'Project Control Surface',
-      status: 'estimated',
+      status: 'accepted',
       description: 'Visible project/progress/capability anchor for controller, user, and delegates.'
     }
   ],
   phase: {
-    current: 'Project Control Surface Anchor P0 Implementation',
-    nextGate: 'Controller absorption of Antigravity UI implementation and PR promotion'
+    current: 'Flywheel V1 first evidence baseline accepted',
+    nextGate: 'Stable UI loop smoke for inspect -> preview render -> execution feedback render'
   },
   capabilities: [
     {
@@ -59,9 +60,9 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
     {
       id: 'evolution-brain',
       title: 'Evolution Brain',
-      maturity: 'Prototype',
-      gap: 'Lacks automated loop transition and worker invocation',
-      status: 'estimated'
+      maturity: 'Prototype+',
+      gap: 'Chat handoff and backend route chain exist; full browser-rendered preview plus execution-feedback loop still needs stable validation',
+      status: 'accepted'
     },
     {
       id: 'world-model',
@@ -80,8 +81,8 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
   ],
   lanes: [
     { id: 'controller', name: 'Controller', owner: 'User / GPT / Codex', status: 'Active (Scopes, accepts, promotes)' },
-    { id: 'antigravity', name: 'Antigravity UI', owner: 'Claude / Qwen / AI Delegate', status: 'Active (Implements UI)' },
-    { id: 'backend-cc', name: 'Backend/CC', owner: 'Claude / OpenClaw', status: 'Standby (Assists only if adapter/build needs fix)' },
+    { id: 'antigravity', name: 'Antigravity UI', owner: 'Claude / Qwen / AI Delegate', status: 'P0 accepted; available for next UI packet' },
+    { id: 'backend-cc', name: 'Backend/CC', owner: 'Claude / OpenClaw', status: 'Standby for bounded flywheel/UI smoke hardening' },
     { id: 'code-review', name: 'Code Review', owner: 'Delegated Model', status: 'Available' },
     { id: 'test-exec', name: 'Test Execution', owner: 'Test Runner', status: 'Available' },
     { id: 'review-gate', name: 'Review Gate', owner: 'Local reviewer / Codex when needed', status: 'Local review first; GitHub/Codex only for promotion-ready versions' }
@@ -93,10 +94,10 @@ export const STATIC_SNAPSHOT: ControlSnapshot = {
     monitor: 'No standing review monitor unless an active GitHub/Codex promotion review is pending'
   },
   nextActions: [
-    'Absorb control-surface UI on a clean branch',
-    'Run UI build',
-    'Run local review for small UI changes',
-    'Open bounded PR only when ready to publish',
-    'Controller decides promotion'
+    'Stabilize browser UI smoke for inspect -> preview render -> execution feedback render',
+    'Keep /control snapshot updated after accepted evidence changes',
+    'Use local review for small smoke/docs/snapshot changes',
+    'Use GitHub/Codex review only for promotion-ready GitHub versions',
+    'Start the next Flywheel V1 vertical slice after UI loop smoke is closed'
   ]
 }

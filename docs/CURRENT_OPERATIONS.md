@@ -345,18 +345,26 @@ Stop and report if:
 
 ## Current Next Step
 
-Implement the scoped control-surface anchor packet:
+Current controller-owned next step:
 
 ```text
-tasks/codex/project_control_surface_anchor_p0_2026-05-06.md
+tasks/codex/ai_conversation_entry_bridge_p0_2026-05-07.md
 ```
 
-The packet must specify:
+Implement or delegate the smallest UI-only bridge from `/chat` into the existing flywheel inspect surface.
 
-- visible capability model: information brain, knowledge brain, evolution brain, world model, thinking-method arsenal
-- current phase/completion estimates and capability gaps
-- active lanes and owners: controller, Antigravity UI, backend/CC, review, test
-- static/provenance boundary: no fake live state unless backed by an adapter
-- GitHub PR collaboration protocol for UI work
+Current delegated UI next step:
 
-Do not start another source-intelligence quality slice until this anchor is in place or explicitly parked by controller decision.
+```text
+tasks/codex/project_control_surface_antigravity_brief_2026-05-06.md
+```
+
+Antigravity owns the Project Control Surface Anchor UI branch.
+
+Current flywheel next step after AI bridge:
+
+```text
+browser-level smoke for /chat -> /evolution flywheel inspect -> task preview -> execution feedback inspect
+```
+
+Do not start another source-intelligence quality slice until the AI bridge and/or control-surface anchor has visible progress.

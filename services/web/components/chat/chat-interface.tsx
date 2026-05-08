@@ -97,6 +97,7 @@ const TEXT: Record<Locale, Record<string, string>> = {
     thinkingFramework: '\u6846\u67b6',
     openFlywheel: '\u8fdb\u5165\u98de\u8f6e',
     flywheelEntryBoundary: '\u4e34\u65f6\u63a2\u6d4b\u8f93\u5165\uff0c\u4e0d\u5199\u5165\u8bb0\u5fc6\u6216\u9879\u76ee\u771f\u503c\u3002',
+    flywheelHandoffFailed: '\u65e0\u6cd5\u521b\u5efa\u98de\u8f6e\u4e34\u65f6\u8f93\u5165\u3002\u8bf7\u7f29\u77ed\u672c\u8f6e\u5185\u5bb9\u540e\u91cd\u8bd5\uff0c\u6216\u624b\u52a8\u590d\u5236\u5230\u8fdb\u5316\u98de\u8f6e\u3002',
   },
   en: {
     chatHistory: 'Conversations',
@@ -148,6 +149,7 @@ const TEXT: Record<Locale, Record<string, string>> = {
     thinkingFramework: 'Framework',
     openFlywheel: 'Open in Flywheel',
     flywheelEntryBoundary: 'Transient inspect input; not memory or project truth.',
+    flywheelHandoffFailed: 'Could not create a transient flywheel input. Shorten this turn and retry, or copy it into the evolution flywheel manually.',
   },
 }
 
@@ -312,6 +314,7 @@ export function ChatInterface() {
   const [selectedKbIds, setSelectedKbIds] = useState<string[]>([])
   const [showKbDropdown, setShowKbDropdown] = useState(false)
   const [chatStatus, setChatStatus] = useState('')
+  const [flywheelHandoffError, setFlywheelHandoffError] = useState('')
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const modelDropdownRef = useRef<HTMLDivElement>(null)
@@ -610,6 +613,7 @@ export function ChatInterface() {
 
   const openMessageInFlywheel = (message: Message, index: number) => {
     if (typeof window === 'undefined' || !message.content.trim()) return
+    setFlywheelHandoffError('')
 
     const topic =
       message.brainPlan?.problem_type ||
@@ -625,8 +629,13 @@ export function ChatInterface() {
       role: message.role,
     })
 
-    window.sessionStorage.setItem(FLYWHEEL_HANDOFF_STORAGE_KEY, JSON.stringify(payload))
-    window.location.assign('/evolution?handoff=chat')
+    try {
+      window.sessionStorage.setItem(FLYWHEEL_HANDOFF_STORAGE_KEY, JSON.stringify(payload))
+      window.location.assign('/evolution?handoff=chat')
+    } catch (error) {
+      console.error('Failed to create flywheel handoff:', error)
+      setFlywheelHandoffError(t(locale, 'flywheelHandoffFailed'))
+    }
   }
 
   const handleDeleteConversation = async (id: string, e: React.MouseEvent) => {
@@ -876,6 +885,11 @@ export function ChatInterface() {
 
         <div className="border-t p-4">
           <form onSubmit={async (e) => { e.preventDefault(); await sendMessage(input, { clearInput: true }) }} className="max-w-4xl mx-auto">
+            {flywheelHandoffError && (
+              <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                {flywheelHandoffError}
+              </div>
+            )}
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <div className="relative" ref={modelDropdownRef}>
                 <button type="button" onClick={() => setShowModelDropdown(prev => !prev)} className={cn('flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-colors', 'bg-muted text-muted-foreground hover:bg-muted/80', useVoting && 'opacity-50 cursor-not-allowed')} disabled={useVoting}>

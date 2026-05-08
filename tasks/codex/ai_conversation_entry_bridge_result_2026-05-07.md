@@ -65,6 +65,34 @@ Result:
 not usable yet; Next.js entered interactive ESLint configuration because the project has no committed ESLint setup.
 ```
 
+## Review Absorption
+
+GitHub/Codex review on PR #10 raised one P2 finding:
+
+```text
+Handle sessionStorage failures during handoff.
+```
+
+Absorption:
+
+- accepted
+- wrapped `sessionStorage.setItem` in `try/catch`
+- added a visible handoff failure message in the chat UI
+- kept the fallback non-persistent and did not add a backend adapter
+
+Validation after absorption:
+
+```powershell
+cd services/web
+npm run build
+```
+
+Result:
+
+```text
+passed
+```
+
 ## Known Risks
 
 - Browser `sessionStorage` is transient and tab-local. That is intentional for V1, but it is not a durable handoff.

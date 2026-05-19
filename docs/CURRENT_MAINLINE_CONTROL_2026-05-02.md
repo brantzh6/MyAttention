@@ -47,7 +47,28 @@ PR #2 / acf922c: GitHub signal relation hints improved source-intelligence input
 Current mainline gap:
 
 ```text
-The target system is not visible enough, and the AI conversation surface is not yet connected to the inspect-only flywheel entry.
+The flywheel can now produce a copy-ready inspect-only delegate handoff packet
+and a copy-ready execution-feedback return packet, with one smoke worker result
+and one product-use worker result consumed through review and controller
+absorption. Runtime operator repaired API startup, runtime review accepted the
+repair, live task-packet preview route validation is accepted, and the
+chat-origin guided path is accepted as the first visible AI-entry/Flywheel
+product-use slice. Manual candidate-selection friction is reduced with a
+reviewed UI-only filter and deterministic smoke coverage. The post-preview
+next action is now explicit in the UI without introducing fake candidates,
+automatic delegation, or promotion. The first small bounded product-use worker
+packet after that gate cleaned copied packet output for cross-tool readability.
+The readable copied packets have now been used to run one real delegated worker
+result through execution-feedback inspect, with local L1 review and controller
+absorption. The next gap is making the AI conversation entry select a useful
+next bounded packet and carry it through this same reviewed loop without
+automatic execution or promotion.
+```
+
+Current accepted flywheel evidence:
+
+```text
+Flywheel V1 browser smoke and loop closure summary are accepted as the working evidence baseline.
 ```
 
 Required anchor:
@@ -77,11 +98,18 @@ Controller interpretation:
 
 Owner: controller plus delegated backend/review/test agents.
 
-Status: partial V1 evidence; backend inspect route chain and automated backend smoke passed, real browser click smoke remains.
+Status: accepted handoff-preview evidence; backend inspect route chain,
+browser smoke, candidate packet preview, inspect-only handoff preview, manual
+candidate filtering, post-preview next-action visibility, ASCII-safe copied
+packet generation, and one real worker-result execution-feedback inspect loop
+are accepted.
+Current accepted slice: task-packet preview can return a controller-ready
+`candidate_packet`; the manual absorption panel can filter candidate rows while
+preserving original indexes for controller selection.
 
 Allowed next work:
 
-- one bounded end-to-end flywheel vertical-slice packet
+- one bounded AI-entry-originated flywheel vertical-slice packet
 - inspect-only conversation input
 - controller packet generation
 - task packet preview
@@ -102,9 +130,21 @@ Owner: controller plus backend/CC delegate.
 
 Status: accepted into mainline; `/chat` can hand transient inspect input to the existing flywheel inspect surface.
 
+Current accepted slice: `/chat -> /evolution` handoff now carries transient
+provenance into the Flywheel reviewer note, so typed preview/handoff can retain
+chat origin without making raw chat canonical truth.
+
+Current validation state: deterministic browser smoke now validates the
+chat-originated path through typed preview and execution-feedback closure. The
+preview payload preserves reviewer note provenance, carries
+`explicit_non_canonical=true`, and the loop closure summary remains
+inspect-only / non-canonical.
+
 Allowed next work:
 
-- connect the AI conversation entry to typed candidate objects and controller packets
+- select a small product-facing bounded delegate packet to run through the
+  accepted inspect-only loop
+- keep execution feedback as reviewed evidence, not automatic promotion
 - preserve raw conversation as non-canonical
 - expose review-gated next actions
 - reuse existing `conversation_runtime` and source semantics
@@ -117,7 +157,7 @@ Hard boundaries:
 
 ### Lane 3: Mainline Project Control Surface
 
-Owner: controller plus Antigravity UI delegate.
+Owner: controller plus Gemini CLI UI delegate.
 
 Status: accepted into mainline; `/control` provides the static project control surface anchor.
 
@@ -140,7 +180,8 @@ Hard boundaries:
 - static snapshot must be explicitly labeled as static/provenance-bound evidence
 - no fake live state
 - no backend runtime truth changes unless a separate L3 packet authorizes them
-- Antigravity output requires GitHub PR review and controller acceptance
+- Gemini UI output requires local review and controller absorption; GitHub/Codex
+  review is reserved for promotion-ready PR versions
 
 ### Lane 4: Source Intelligence Support
 
@@ -198,13 +239,14 @@ Boundary:
 
 Owner: controller.
 
-Status: clean as of 2026-05-06; keep it clean.
+Status: over budget as of 2026-05-18; containment accepted.
 
 Current observed classifier result:
 
 ```text
-total: 0
-recommendation: clean
+total: 178
+recommendation: requires_scoped_review_prep
+largest group: flywheel_readiness
 ```
 
 Rule:
@@ -212,6 +254,8 @@ Rule:
 - no broad commit or mixed PR
 - every implementation goes through a lane-specific branch/PR
 - any local quarantine evidence is optional and unpublished; delegates must recreate or recover bounded files through clean branch/PR work, not rely on the quarantine ref
+- no new implementation patch starts from the shared dirty tree until the
+  scoped package boundary is accepted
 
 ## Layered Review Requirements
 
@@ -251,25 +295,31 @@ Required if a task touches:
 Current controller-owned task:
 
 ```text
-tasks/codex/flywheel_v1_browser_smoke_result_2026-05-08.md
+run a real delegated worker result through execution-feedback inspect
 ```
 
 Purpose:
 
 ```text
-Close the remaining real browser click smoke for the first usable inspect-only flywheel loop.
+The copy-ready forward and return packet path is accepted. Runtime operator
+restored API readiness, live task-packet preview route validation is accepted,
+the chat-origin guided path is accepted, manual candidate-selection filtering
+is accepted, the post-preview next action is explicit, and copied packets are
+ASCII-safe after local review and full browser smoke. The next packet should
+move from inspect-only loop infrastructure toward real user-facing AI
+conversation/flywheel workflow value.
 ```
 
 Parallel delegated UI task:
 
 ```text
-tasks/codex/project_control_surface_antigravity_brief_2026-05-06.md
+tasks/codex/project_control_surface_p1_gemini_ui_packet_2026-05-11.md
 ```
 
 Flywheel follow-up after the AI bridge:
 
 ```text
-Run the manual/delegated click smoke for /chat -> Open in Flywheel -> /evolution prefilled form -> manual inspect.
+chat-originated context -> candidate_packet -> filtered manual selection -> explicit post-preview next action -> ASCII-safe copy-ready delegate packet -> execution feedback inspect.
 ```
 
 The controller owns scope and acceptance for all three lanes.
@@ -284,11 +334,15 @@ Reason:
 - Flywheel V1 plus AI entry are the product mainline
 - control-surface UI is required to keep multi-agent work aligned
 - GitHub-triggered Codex review is a promotion gate only, not the default loop for small changes
-- Antigravity can implement the UI only through a bounded GitHub branch/PR
+- Gemini CLI is the current UI delegate for bounded local UI packets; GitHub PR
+  remains the collaboration/promotion surface when the UI slice is ready to
+  publish
 
 Next controller action:
 
-1. run the remaining real browser click smoke for the chat-to-flywheel handoff
-2. update `/control` snapshot after smoke closure
-3. start the next Flywheel V1 vertical slice only after smoke evidence is accepted
-4. keep source-intelligence work as support, not mainline displacement
+1. prepare the `flywheel_readiness` scoped package boundary to reduce dirty-tree risk
+2. dispatch `AI Entry Task Packet Composer P0` only after the scoped package boundary is accepted
+3. keep chat input transient and non-canonical unless a later promotion decision says otherwise
+4. use local review first for the next bounded implementation; reserve GitHub/Codex review for promotion-ready PR scope
+5. keep runtime operator follow-ups for Redis process accounting, standalone server smoke, and watchdog registration out of the mainline unless they block active validation
+6. keep source-intelligence work as support, not mainline displacement

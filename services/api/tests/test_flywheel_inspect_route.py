@@ -866,6 +866,38 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertIn("inspect-only and advisory", handoff["handoff_markdown"])
         self.assertIn("does not trigger execution", handoff["handoff_markdown"])
 
+    def test_task_packet_preview_candidate_task_id_is_path_safe(self):
+        """Candidate task IDs are safe before deriving result artifact paths."""
+        response = self.client.post(
+            "/api/conversation-runtime/flywheel/task-packet/preview",
+            json={
+                "topic": "Flywheel / unsafe\\topic: v1?",
+                "task_intent": "mainline flywheel progression",
+                "selected_knowledge_labels": ["claim:source-value"],
+                "selected_evolution_labels": ["study:flywheel-preview-improvement"],
+                "selected_source_labels": [],
+                "reviewer_note": "Ready for next packet candidate",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        candidate = data["candidate_packet"]
+        handoff = data["handoff_preview"]
+
+        self.assertIsNotNone(candidate)
+        self.assertIsNotNone(handoff)
+        self.assertEqual(
+            candidate["candidate_task_id"],
+            "flywheel_candidate_flywheel_unsafe_topic_v1",
+        )
+        self.assertEqual(
+            handoff["result_artifact_path"],
+            "tasks/codex/flywheel_candidate_flywheel_unsafe_topic_v1_result.md",
+        )
+        self.assertNotIn("\\", handoff["result_artifact_path"])
+        self.assertNotIn(":", handoff["result_artifact_path"])
+
     def test_task_packet_preview_no_candidate_without_flywheel_signals(self):
         """Context and labels without any flywheel signals do not yield candidate packet."""
         response = self.client.post(

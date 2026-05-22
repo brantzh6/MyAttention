@@ -315,7 +315,7 @@ async function run() {
             const textarea = document.querySelector('textarea')
             if (!textarea) return false
             const value = textarea.value || ''
-            return value.length > 50 && value.includes('User:') || value.includes('Assistant:')
+            return value.length > 50 && (value.includes('User:') || value.includes('Assistant:'))
           },
           { timeout: 5000 }
         )

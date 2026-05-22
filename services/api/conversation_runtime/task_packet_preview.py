@@ -9,6 +9,7 @@ This module is strictly inspect-only:
 - promotion_state is always inspect_only
 """
 
+import re
 from typing import List
 
 from conversation_runtime.contracts import (
@@ -127,6 +128,15 @@ def _derive_suggested_next_step(
     if packet_intent == "source_driven":
         return "review_source_candidates"
     return "manual_review"
+
+
+def _safe_task_id_fragment(value: str, max_length: int = 30) -> str:
+    """Normalize user-controlled text before it is used in artifact paths."""
+    normalized = re.sub(r"[^a-z0-9_-]+", "_", str(value).strip().lower())
+    normalized = re.sub(r"_+", "_", normalized).strip("_-")
+    if not normalized:
+        return "untitled"
+    return normalized[:max_length].strip("_-") or "untitled"
 
 
 def _build_task_packet_summary(
@@ -286,8 +296,8 @@ def _derive_candidate_packet(
         "validation cannot run for reasons unrelated to this task",
     ]
 
-    # Generate task ID
-    candidate_task_id = f"flywheel_candidate_{topic.replace(' ', '_').lower()[:30]}"
+    # Generate path-safe task ID.
+    candidate_task_id = f"flywheel_candidate_{_safe_task_id_fragment(topic)}"
 
     return CandidatePacket(
         candidate_task_id=candidate_task_id,

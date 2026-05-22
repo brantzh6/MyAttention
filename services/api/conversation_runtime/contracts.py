@@ -278,6 +278,113 @@ class TaskPacketPreviewResponse(BaseModel):
     truth_boundary: List[str] = []
     promotion_state: str = "inspect_only"
     notes: List[str] = []
+    candidate_packet: Optional["CandidatePacket"] = Field(
+        None, description="Optional controller-ready candidate packet for mainline flywheel progression"
+    )
+    handoff_preview: Optional["ExecutionHandoffPreview"] = Field(
+        None,
+        description="Optional delegate-ready inspect-only handoff preview derived from candidate_packet",
+    )
+
+
+class CandidatePacket(BaseModel):
+    """Controller-ready candidate packet for mainline flywheel progression.
+
+    This is an inspect-only advisory shape that helps the controller
+    hand off the next bounded implementation task without manual reinterpretation.
+    """
+
+    candidate_task_id: str = Field(
+        "", description="Generated task ID for the candidate packet (non-canonical)"
+    )
+    candidate_lane: str = Field(
+        "", description="Target lane for delegation: mainline_flywheel, knowledge_review, etc."
+    )
+    candidate_goal: str = Field(
+        "", description="Clear goal statement for the candidate task"
+    )
+    allowed_files: List[str] = Field(
+        default_factory=list, description="Bounded list of files the delegate may touch"
+    )
+    non_goals: List[str] = Field(
+        default_factory=list, description="Explicit scope boundaries"
+    )
+    validation_commands: List[str] = Field(
+        default_factory=list, description="Required validation commands"
+    )
+    review_gate: str = Field(
+        "", description="Review gate requirement: local_delegated_L1, controller_absorption, etc."
+    )
+    stop_conditions: List[str] = Field(
+        default_factory=list, description="Conditions that should halt the task"
+    )
+    delegation_target: str = Field(
+        "", description="Target delegate lane: local coding delegate, etc."
+    )
+    truth_status: str = Field(
+        "non_canonical", description="Always non_canonical; for advisory purposes only"
+    )
+
+
+class ExecutionHandoffPreview(BaseModel):
+    """Delegate-ready handoff preview derived from a candidate packet.
+
+    This remains inspect-only and advisory. It does not trigger execution,
+    persistence, scheduling, or promotion.
+    """
+
+    task_id: str = Field("", description="Candidate task id to hand off")
+    owner_lane: str = Field("", description="Target owner lane for the handoff")
+    objective: str = Field("", description="Delegate-facing objective")
+    current_evidence: List[str] = Field(
+        default_factory=list,
+        description="Evidence the delegate should treat as input context",
+    )
+    allowed_files: List[str] = Field(
+        default_factory=list,
+        description="Bounded file set for implementation",
+    )
+    non_goals: List[str] = Field(
+        default_factory=list,
+        description="Explicit non-goals for the handoff",
+    )
+    validation_commands: List[str] = Field(
+        default_factory=list,
+        description="Commands required before returning the result",
+    )
+    review_gate: str = Field("", description="Required review gate")
+    expected_result_format: List[str] = Field(
+        default_factory=list,
+        description="Required fields the delegate must return",
+    )
+    stop_conditions: List[str] = Field(
+        default_factory=list,
+        description="Conditions requiring the delegate to stop and report",
+    )
+    delegation_target: str = Field("", description="Target delegate type")
+    truth_status: str = Field("non_canonical", description="Advisory truth status")
+    promotion_state: str = Field("inspect_only", description="Always inspect_only")
+    # New metadata fields for delegate packet readiness
+    sdlc_stage: str = Field(
+        "code_implementation",
+        description="SDLC stage: design, design_review, code_implementation, code_review, testing, promotion_decision, runtime_monitoring",
+    )
+    risk_level: str = Field(
+        "R2",
+        description="Risk level: R1 (low), R2 (default), R3 (high-risk escalation)",
+    )
+    result_artifact_path: str = Field(
+        "",
+        description="Expected path for the result artifact markdown file",
+    )
+    write_policy: str = Field(
+        "result_only",
+        description="Write policy: result_only (no persistence), bounded_patch (limited changes), full_implementation (requires controller approval)",
+    )
+    handoff_markdown: str = Field(
+        "",
+        description="Generated markdown body for controller inspection and delegate handoff",
+    )
 
 
 class FlywheelExecutionFeedbackInspectRequest(BaseModel):

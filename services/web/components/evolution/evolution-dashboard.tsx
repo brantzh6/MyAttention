@@ -371,6 +371,16 @@ export function EvolutionDashboard() {
   const [runningSelfTest, setRunningSelfTest] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  async function fetchOptional<T>(url: string, fallback: T): Promise<{ data: T; ok: boolean }> {
+    try {
+      const response = await fetch(url)
+      if (!response.ok) return { data: fallback, ok: false }
+      return { data: await response.json(), ok: true }
+    } catch {
+      return { data: fallback, ok: false }
+    }
+  }
+
   const load = async (silent = false) => {
     if (silent) {
       setRefreshing(true)
@@ -379,34 +389,36 @@ export function EvolutionDashboard() {
     }
 
     try {
-      const [systemRes, evolutionRes, collectionRes, mvpRes, issuesRes, contextsRes, taskMemoryRes, proceduralMemoryRes] = await Promise.all([
-        fetch(`${API_URL}/api/settings/system`),
-        fetch(`${API_URL}/api/evolution/status`),
-        fetch(`${API_URL}/api/evolution/collection-health?fresh=true`),
-        fetch(`${API_URL}/api/evolution/mvp-status`),
-        fetch(`${API_URL}/api/testing/issues`),
-        fetch(`${API_URL}/api/evolution/contexts`),
-        fetch(`${API_URL}/api/evolution/memories/task`),
-        fetch(`${API_URL}/api/evolution/memories/procedural`),
+      const [systemLoad, evolutionLoad, collectionLoad, mvpLoad, issuesLoad, contextsLoad, taskMemoryLoad, proceduralMemoryLoad] = await Promise.all([
+        fetchOptional<SystemStatusPayload | null>(`${API_URL}/api/settings/system`, null),
+        fetchOptional<EvolutionStatusPayload | null>(`${API_URL}/api/evolution/status`, null),
+        fetchOptional<CollectionHealthPayload>(`${API_URL}/api/evolution/collection-health?fresh=true`, {
+          summary: { status: 'degraded', raw_ingest_24h: 0, feed_items_24h: 0 },
+          pending_sources_1h: [],
+          error_sources_24h: [],
+        }),
+        fetchOptional<MvpStatusPayload>(`${API_URL}/api/evolution/mvp-status`, {
+          trial_ready: false,
+          self_test: { healthy: false, failed_checks: [] },
+          open_issues: { total: 0, p0: 0, p1: 0, active_blockers_6h: 0 },
+        }),
+        fetchOptional<{ issues?: TestingIssue[] } | TestingIssue[]>(`${API_URL}/api/testing/issues`, { issues: [] }),
+        fetchOptional<{ contexts?: ContextSummary[] }>(`${API_URL}/api/evolution/contexts`, { contexts: [] }),
+        fetchOptional<{ memories?: TaskMemoryItem[] }>(`${API_URL}/api/evolution/memories/task`, { memories: [] }),
+        fetchOptional<{ memories?: ProceduralMemoryItem[] }>(`${API_URL}/api/evolution/memories/procedural`, { memories: [] }),
       ])
 
-      if (!systemRes.ok || !evolutionRes.ok || !collectionRes.ok || !mvpRes.ok || !issuesRes.ok || !contextsRes.ok || !taskMemoryRes.ok || !proceduralMemoryRes.ok) {
-        throw new Error('进化大脑数据加载失败')
-      }
-
-      const [systemData, evolutionData, collectionData, mvpData, issuesData, contextsData, taskMemoryData, proceduralMemoryData] = await Promise.all([
-        systemRes.json(),
-        evolutionRes.json(),
-        collectionRes.json(),
-        mvpRes.json(),
-        issuesRes.json(),
-        contextsRes.json(),
-        taskMemoryRes.json(),
-        proceduralMemoryRes.json(),
-      ])
+      const systemData = systemLoad.data
+      const evolutionData = evolutionLoad.data
+      const collectionData = collectionLoad.data
+      const mvpData = mvpLoad.data
+      const issuesData = issuesLoad.data
+      const contextsData = contextsLoad.data
+      const taskMemoryData = taskMemoryLoad.data
+      const proceduralMemoryData = proceduralMemoryLoad.data
 
       const nextContexts = Array.isArray(contextsData?.contexts) ? contextsData.contexts : []
-      const nextIssues = Array.isArray(issuesData?.issues) ? issuesData.issues : Array.isArray(issuesData) ? issuesData : []
+      const nextIssues = Array.isArray(issuesData) ? issuesData : Array.isArray(issuesData?.issues) ? issuesData.issues : []
 
       setSystemStatus(systemData)
       setEvolutionStatus(evolutionData)
@@ -424,7 +436,8 @@ export function EvolutionDashboard() {
         return nextContexts[0]?.id ?? null
       })
 
-      setError(null)
+      const failedLoads = [systemLoad, evolutionLoad, collectionLoad, mvpLoad, issuesLoad, contextsLoad, taskMemoryLoad, proceduralMemoryLoad].filter((item) => !item.ok).length
+      setError(failedLoads ? 'Runtime dependency degraded; partial data shown.' : null)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : '加载失败')
     } finally {

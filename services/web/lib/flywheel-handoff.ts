@@ -8,6 +8,9 @@ export interface FlywheelHandoffPayload {
   conversationId?: string | null
   messageId?: string
   role?: 'user' | 'assistant'
+  brainRouteId?: string
+  primaryBrain?: string
+  thinkingFramework?: string
   createdAt: string
 }
 
@@ -18,6 +21,9 @@ export function buildChatFlywheelHandoff(params: {
   conversationId?: string | null
   messageId?: string
   role?: 'user' | 'assistant'
+  brainRouteId?: string
+  primaryBrain?: string
+  thinkingFramework?: string
 }): FlywheelHandoffPayload {
   return {
     source: 'chat',
@@ -27,6 +33,9 @@ export function buildChatFlywheelHandoff(params: {
     conversationId: params.conversationId,
     messageId: params.messageId,
     role: params.role,
+    brainRouteId: params.brainRouteId,
+    primaryBrain: params.primaryBrain,
+    thinkingFramework: params.thinkingFramework,
     createdAt: new Date().toISOString(),
   }
 }
@@ -47,6 +56,9 @@ export function parseFlywheelHandoffPayload(raw: string | null): FlywheelHandoff
       conversationId: typeof parsed.conversationId === 'string' ? parsed.conversationId : null,
       messageId: typeof parsed.messageId === 'string' ? parsed.messageId : undefined,
       role: parsed.role === 'user' || parsed.role === 'assistant' ? parsed.role : undefined,
+      brainRouteId: typeof parsed.brainRouteId === 'string' ? parsed.brainRouteId : undefined,
+      primaryBrain: typeof parsed.primaryBrain === 'string' ? parsed.primaryBrain : undefined,
+      thinkingFramework: typeof parsed.thinkingFramework === 'string' ? parsed.thinkingFramework : undefined,
       createdAt: typeof parsed.createdAt === 'string' ? parsed.createdAt : new Date().toISOString(),
     }
   } catch {

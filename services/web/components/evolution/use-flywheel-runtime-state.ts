@@ -163,7 +163,6 @@ function reducer(state: FlywheelRuntimeState, action: Action): FlywheelRuntimeSt
         selectedKnowledge: new Set(),
         selectedTriggers: new Set(),
         selectedSources: new Set(),
-        reviewerNote: '',
         absorptionCopied: false,
         decisionCopied: false,
         taskPreviewLoading: false,

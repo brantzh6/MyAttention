@@ -785,6 +785,228 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         self.assertEqual(data["selected_label_groups"], [])
         self.assertIn("no_action", data["controller_packet"]["reason_tags"])
 
+    def test_task_packet_preview_candidate_packet_for_flywheel_progression(self):
+        """Mixed intent with flywheel evolution labels yields a controller-ready candidate packet."""
+        response = self.client.post(
+            "/api/conversation-runtime/flywheel/task-packet/preview",
+            json={
+                "topic": "Flywheel V1 Controller Selection",
+                "task_intent": "mainline flywheel progression",
+                "selected_knowledge_labels": ["claim:source-value"],
+                "selected_evolution_labels": ["study:flywheel-preview-improvement", "review:controller-packet"],
+                "selected_source_labels": [],
+                "reviewer_note": "Ready for next packet candidate",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["packet_intent"], "mixed")
+        self.assertEqual(data["suggested_lane"], "mixed_review")
+        self.assertEqual(data["promotion_state"], "inspect_only")
+
+        # Candidate packet should be generated
+        self.assertIsNotNone(data["candidate_packet"])
+        candidate = data["candidate_packet"]
+
+        self.assertEqual(candidate["candidate_lane"], "mainline_flywheel")
+        self.assertEqual(candidate["delegation_target"], "local_coding_delegate")
+        self.assertEqual(candidate["truth_status"], "non_canonical")
+        self.assertIn("Flywheel V1 Controller Selection", candidate["candidate_goal"])
+        self.assertEqual(candidate["review_gate"], "local_delegated_L1_review_then_controller_absorption")
+
+        # Allowed files should be bounded
+        self.assertTrue(len(candidate["allowed_files"]) > 0)
+        self.assertIn("services/api/conversation_runtime/contracts.py", candidate["allowed_files"])
+        self.assertIn("services/api/conversation_runtime/task_packet_preview.py", candidate["allowed_files"])
+
+        # Validation commands should be present
+        self.assertTrue(len(candidate["validation_commands"]) > 0)
+
+        # Non-goals should be explicitly defined
+        self.assertTrue(len(candidate["non_goals"]) > 0)
+        self.assertIn("no persistence", candidate["non_goals"])
+
+        # Notes should reflect candidate packet generation
+        self.assertIn("candidate_packet_generated=true", data["notes"])
+        self.assertIn("handoff_preview_generated=true", data["notes"])
+
+        # Handoff preview should be delegate-ready while remaining inspect-only
+        self.assertIsNotNone(data["handoff_preview"])
+        handoff = data["handoff_preview"]
+        self.assertEqual(handoff["task_id"], candidate["candidate_task_id"])
+        self.assertEqual(handoff["owner_lane"], "mainline_flywheel")
+        self.assertEqual(handoff["delegation_target"], "local_coding_delegate")
+        self.assertEqual(handoff["review_gate"], "local_delegated_L1_review_then_controller_absorption")
+        self.assertEqual(handoff["truth_status"], "non_canonical")
+        self.assertEqual(handoff["promotion_state"], "inspect_only")
+        self.assertIn("summary", handoff["expected_result_format"])
+        self.assertIn("validation_run", handoff["expected_result_format"])
+        self.assertIn("stop_condition", handoff["expected_result_format"])
+        self.assertIn("promotion_state=inspect_only", handoff["current_evidence"])
+
+        # New metadata fields for delegate packet readiness
+        self.assertIn("sdlc_stage", handoff)
+        self.assertEqual(handoff["sdlc_stage"], "code_implementation")
+        self.assertIn("risk_level", handoff)
+        self.assertIn(handoff["risk_level"], ["R2", "R3"])
+        self.assertIn("result_artifact_path", handoff)
+        self.assertTrue(handoff["result_artifact_path"].startswith("tasks/codex/"))
+        self.assertTrue(handoff["result_artifact_path"].endswith("_result.md"))
+        self.assertIn("write_policy", handoff)
+        # No persistence/scheduler remains a non-goal, but coding delegates still need a bounded patch.
+        self.assertEqual(handoff["write_policy"], "bounded_patch")
+        self.assertIn("handoff_markdown", handoff)
+        self.assertTrue(len(handoff["handoff_markdown"]) > 0)
+        # Verify the handoff markdown contains the inspect-only disclaimer
+        self.assertIn("## Scope", handoff["handoff_markdown"])
+        self.assertIn("## Acceptance Criteria", handoff["handoff_markdown"])
+        self.assertIn("## Validation Commands", handoff["handoff_markdown"])
+        self.assertIn("## Stop Conditions", handoff["handoff_markdown"])
+        self.assertIn("inspect-only and advisory", handoff["handoff_markdown"])
+        self.assertIn("does not trigger execution", handoff["handoff_markdown"])
+
+    def test_task_packet_preview_no_candidate_without_flywheel_signals(self):
+        """Context and labels without any flywheel signals do not yield candidate packet."""
+        response = self.client.post(
+            "/api/conversation-runtime/flywheel/task-packet/preview",
+            json={
+                "topic": "Feature development",
+                "task_intent": "prototype a new module",
+                "selected_knowledge_labels": [],
+                "selected_evolution_labels": ["prototype:module-design"],
+                "selected_source_labels": [],
+                "reviewer_note": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["packet_intent"], "evolution_driven")
+
+        # No candidate packet because no flywheel signals in context or labels
+        self.assertIsNone(data["candidate_packet"])
+        self.assertIsNone(data["handoff_preview"])
+        self.assertNotIn("candidate_packet_generated=true", data["notes"])
+        self.assertNotIn("handoff_preview_generated=true", data["notes"])
+
+    def test_task_packet_preview_candidate_from_flywheel_context(self):
+        """Flywheel-related topic/intent yields candidate even if evolution labels lack signal words."""
+        response = self.client.post(
+            "/api/conversation-runtime/flywheel/task-packet/preview",
+            json={
+                "topic": "Flywheel execution feedback collector",
+                "task_intent": "mainline flywheel progression",
+                "selected_knowledge_labels": ["execution_feedback_collector", "execution_evidence_impact"],
+                "selected_evolution_labels": ["implement_feedback_collector"],
+                "selected_source_labels": [],
+                "reviewer_note": "L4 browser UI smoke absorption candidate",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["packet_intent"], "mixed")
+        self.assertEqual(data["suggested_lane"], "mixed_review")
+
+        # Candidate packet should be generated because topic/task_intent contain flywheel signals
+        self.assertIsNotNone(data["candidate_packet"])
+        candidate = data["candidate_packet"]
+        self.assertEqual(candidate["candidate_lane"], "mainline_flywheel")
+        self.assertEqual(candidate["delegation_target"], "local_coding_delegate")
+        self.assertEqual(candidate["truth_status"], "non_canonical")
+
+        # Handoff preview should also be generated
+        self.assertIsNotNone(data["handoff_preview"])
+        handoff = data["handoff_preview"]
+        self.assertEqual(handoff["owner_lane"], "mainline_flywheel")
+        self.assertEqual(handoff["promotion_state"], "inspect_only")
+
+        # Notes should reflect candidate packet generation
+        self.assertIn("candidate_packet_generated=true", data["notes"])
+        self.assertIn("handoff_preview_generated=true", data["notes"])
+
+    def test_task_packet_preview_candidate_from_reviewer_note_flywheel_signal(self):
+        """Flywheel signal in reviewer_note yields candidate even if labels lack signal words."""
+        response = self.client.post(
+            "/api/conversation-runtime/flywheel/task-packet/preview",
+            json={
+                "topic": "Worker execution result",
+                "task_intent": "reflect on delegate packet",
+                "selected_knowledge_labels": [],
+                "selected_evolution_labels": ["absorption_candidate"],
+                "selected_source_labels": [],
+                "reviewer_note": "Flywheel handoff preview needs review",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["packet_intent"], "evolution_driven")
+
+        # Candidate packet should be generated because reviewer_note contains flywheel signals
+        self.assertIsNotNone(data["candidate_packet"])
+        candidate = data["candidate_packet"]
+        self.assertEqual(candidate["candidate_lane"], "mainline_flywheel")
+
+        # Handoff preview should also be generated
+        self.assertIsNotNone(data["handoff_preview"])
+
+        self.assertIn("candidate_packet_generated=true", data["notes"])
+
+    def test_task_packet_preview_no_candidate_for_generic_evolution_topic(self):
+        """Generic evolution topic/labels without explicit flywheel signals do not yield candidate packet.
+
+        This test proves the scope fix: 'evolution' alone is not a flywheel signal.
+        Unrelated generic evolution input should NOT generate a candidate_packet or handoff_preview.
+        """
+        response = self.client.post(
+            "/api/conversation-runtime/flywheel/task-packet/preview",
+            json={
+                "topic": "Evolution design review",
+                "task_intent": "evolution architecture planning",
+                "selected_knowledge_labels": [],
+                "selected_evolution_labels": ["prototype:new-feature", "review:existing-code"],
+                "selected_source_labels": [],
+                "reviewer_note": "Consider next iteration cycle",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["packet_intent"], "evolution_driven")
+        self.assertEqual(data["suggested_lane"], "evolution_review")
+
+        # CRITICAL: No candidate packet because "evolution" alone is not a flywheel signal
+        # The topic, task_intent, and labels contain only generic evolution terms
+        # without explicit flywheel/mainline/controller/runtime signals
+        self.assertIsNone(data["candidate_packet"])
+        self.assertIsNone(data["handoff_preview"])
+        self.assertNotIn("candidate_packet_generated=true", data["notes"])
+        self.assertNotIn("handoff_preview_generated=true", data["notes"])
+
+    def test_task_packet_preview_no_candidate_for_knowledge_only(self):
+        """Knowledge-driven intent does not yield candidate packet."""
+        response = self.client.post(
+            "/api/conversation-runtime/flywheel/task-packet/preview",
+            json={
+                "topic": "Knowledge Review",
+                "task_intent": "knowledge review only",
+                "selected_knowledge_labels": ["claim:test", "concept:review"],
+                "selected_evolution_labels": [],
+                "selected_source_labels": [],
+                "reviewer_note": "",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["packet_intent"], "knowledge_driven")
+
+        # No candidate packet for knowledge-only case
+        self.assertIsNone(data["candidate_packet"])
+        self.assertIsNone(data["handoff_preview"])
+
     def test_execution_feedback_inspect_extracts_reflection_candidates(self):
         """Worker execution feedback yields bounded knowledge and evolution reflection."""
 

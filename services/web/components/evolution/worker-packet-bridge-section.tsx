@@ -38,7 +38,7 @@ export function WorkerPacketBridgeSection({
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold">Worker Packet Bridge</span>
           <span className="text-[10px] text-muted-foreground">
-            基于后端预览生成 coding / review / test 手动包
+            Create manual coding/review/test packets from accepted preview
           </span>
         </div>
       </div>
@@ -63,17 +63,17 @@ export function WorkerPacketBridgeSection({
           type="button"
           onClick={() => onCopyWorkerPacket(workerLane)}
           className="inline-flex items-center gap-1 rounded-md border bg-background px-2 py-1 text-xs hover:bg-muted transition-colors"
-          title={`复制 ${workerLane} packet`}
+          title={`Copy ${workerLane} packet`}
         >
           {workerCopiedMap[workerLane] ? (
             <>
               <Check className="h-3 w-3 text-green-600" />
-              <span className="text-green-600">已复制</span>
+              <span className="text-green-600">Copied</span>
             </>
           ) : (
             <>
               <Copy className="h-3 w-3" />
-              <span>复制</span>
+              <span>Copy</span>
             </>
           )}
         </button>
@@ -84,7 +84,7 @@ export function WorkerPacketBridgeSection({
           {buildWorkerPacket(
             workerLane,
             result.topic,
-            result.task_intent || '(未指定)',
+            result.task_intent || '(not specified)',
             taskPreviewResult,
             result,
           )}

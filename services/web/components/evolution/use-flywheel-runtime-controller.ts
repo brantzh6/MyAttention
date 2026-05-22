@@ -116,7 +116,7 @@ export function useFlywheelRuntimeController() {
     const safe = getSafeSelections()
     const text = buildAbsorptionPacket({
       topic: state.result.topic,
-      taskIntent: state.result.task_intent || '(未指定)',
+      taskIntent: state.result.task_intent || '(not specified)',
       selectedKnowledge: safe.knowledge.map((i) => {
         const d = state.result!.knowledge_delta_candidates[i]
         return `[${d.delta_type}] ${d.label}`
@@ -127,12 +127,12 @@ export function useFlywheelRuntimeController() {
       }),
       selectedSources: safe.sources.map((i) => {
         const s = state.result!.source_candidates[i]
-        return s.name || s.id || '未命名'
+        return s.name || s.id || 'Unnamed source'
       }),
       suggestedNextStep:
         state.result.operational_advice?.suggested_next_step !== 'no_action'
-          ? state.result.operational_advice?.suggested_next_step || '无'
-          : '无',
+          ? state.result.operational_advice?.suggested_next_step || 'none'
+          : 'none',
       reasonTags: state.result.controller_packet?.reason_tags || [],
       reviewerNote: state.reviewerNote,
     })
@@ -146,7 +146,7 @@ export function useFlywheelRuntimeController() {
     const safe = getSafeSelections()
     const text = buildDecisionPacket({
       topic: state.result.topic,
-      taskIntent: state.result.task_intent || '(未指定)',
+      taskIntent: state.result.task_intent || '(not specified)',
       selectedKnowledge: safe.knowledge
         .map((i) => {
           const d = state.result!.knowledge_delta_candidates[i]
@@ -162,13 +162,13 @@ export function useFlywheelRuntimeController() {
       selectedSources: safe.sources
         .map((i) => {
           const s = state.result!.source_candidates[i]
-          return s ? s.name || s.id || '未命名' : ''
+          return s ? s.name || s.id || 'Unnamed source' : ''
         })
         .filter(Boolean),
       suggestedNextStep:
         state.result.operational_advice?.suggested_next_step !== 'no_action'
-          ? state.result.operational_advice?.suggested_next_step || '无'
-          : '无',
+          ? state.result.operational_advice?.suggested_next_step || 'none'
+          : 'none',
       reasonTags: state.result.controller_packet?.reason_tags || [],
       reviewerNote: state.reviewerNote,
     })
@@ -227,7 +227,7 @@ export function useFlywheelRuntimeController() {
     const text = buildWorkerPacket(
       lane,
       state.result.topic,
-      state.result.task_intent || '(未指定)',
+      state.result.task_intent || '(not specified)',
       state.taskPreviewResult,
       state.result,
     )
@@ -242,7 +242,7 @@ export function useFlywheelRuntimeController() {
       buildLoopPacket(
         state.workerLane,
         state.result.topic,
-        state.result.task_intent || '(未指定)',
+        state.result.task_intent || '(not specified)',
         state.taskPreviewResult,
         state.result,
       ),

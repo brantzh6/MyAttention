@@ -1,4 +1,16 @@
 const API_URL = process.env.API_URL || 'http://localhost:8000'
+const RUNTIME_FETCH_TIMEOUT_MS = 12000
+const FLYWHEEL_INSPECT_TIMEOUT_MS = 60000
+
+async function fetchRuntime(input: RequestInfo | URL, init?: RequestInit, timeoutMs?: number): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs ?? RUNTIME_FETCH_TIMEOUT_MS)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 export interface FeedItem {
   id: string
@@ -219,6 +231,41 @@ export interface SelectedLabelGroup {
   count: number
 }
 
+export interface CandidatePacket {
+  candidate_task_id: string
+  candidate_lane: string
+  candidate_goal: string
+  allowed_files: string[]
+  non_goals: string[]
+  validation_commands: string[]
+  review_gate: string
+  stop_conditions: string[]
+  delegation_target: string
+  truth_status: string
+}
+
+export interface ExecutionHandoffPreview {
+  task_id: string
+  owner_lane: string
+  objective: string
+  current_evidence: string[]
+  allowed_files: string[]
+  non_goals: string[]
+  validation_commands: string[]
+  review_gate: string
+  expected_result_format: string[]
+  stop_conditions: string[]
+  delegation_target: string
+  truth_status: string
+  promotion_state: string
+  // New metadata fields for delegate packet readiness
+  sdlc_stage: string
+  risk_level: string
+  result_artifact_path: string
+  write_policy: string
+  handoff_markdown: string
+}
+
 export interface TaskPacketPreviewRequest {
   topic: string
   task_intent: string
@@ -239,6 +286,8 @@ export interface TaskPacketPreviewResponse {
   truth_boundary: string[]
   promotion_state: string
   notes: string[]
+  candidate_packet?: CandidatePacket
+  handoff_preview?: ExecutionHandoffPreview
 }
 
 export interface FlywheelExecutionFeedbackInspectRequest {
@@ -776,10 +825,12 @@ export const apiClient = {
     provider?: string
     model?: string
   }): Promise<FlywheelInspectResponse> {
-    const res = await fetch(`${API_URL}/api/conversation-runtime/flywheel/inspect`, {
+    const res = await fetchRuntime(`${API_URL}/api/conversation-runtime/flywheel/inspect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+    }, FLYWHEEL_INSPECT_TIMEOUT_MS).catch(() => {
+      throw new Error('Runtime dependency unavailable; flywheel inspection could not reach the API.')
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Flywheel inspection failed' }))
@@ -789,10 +840,12 @@ export const apiClient = {
   },
 
   async previewTaskPacket(data: TaskPacketPreviewRequest): Promise<TaskPacketPreviewResponse> {
-    const res = await fetch(`${API_URL}/api/conversation-runtime/flywheel/task-packet/preview`, {
+    const res = await fetchRuntime(`${API_URL}/api/conversation-runtime/flywheel/task-packet/preview`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+    }).catch(() => {
+      throw new Error('Runtime dependency unavailable; task-packet preview could not reach the API.')
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Task-packet preview failed' }))
@@ -802,10 +855,12 @@ export const apiClient = {
   },
 
   async inspectExecutionFeedback(data: FlywheelExecutionFeedbackInspectRequest): Promise<FlywheelExecutionFeedbackInspectResponse> {
-    const res = await fetch(`${API_URL}/api/conversation-runtime/flywheel/execution-feedback/inspect`, {
+    const res = await fetchRuntime(`${API_URL}/api/conversation-runtime/flywheel/execution-feedback/inspect`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+    }).catch(() => {
+      throw new Error('Runtime dependency unavailable; execution-feedback inspect could not reach the API.')
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: 'Execution feedback inspection failed' }))

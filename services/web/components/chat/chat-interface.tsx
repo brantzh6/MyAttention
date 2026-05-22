@@ -623,10 +623,13 @@ export function ChatInterface() {
     const payload = buildChatFlywheelHandoff({
       text: buildFlywheelEntryText(message, index),
       topic,
-      taskIntent: 'inspect chat turn for IKE flywheel candidate extraction',
+      taskIntent: 'inspect chat-originated turn for typed IKE flywheel candidate extraction and delegate handoff preview',
       conversationId: currentConversationId,
       messageId: message.id,
       role: message.role,
+      brainRouteId: message.brainPlan?.route_id,
+      primaryBrain: message.brainPlan?.primary_brain,
+      thinkingFramework: message.brainPlan?.thinking_framework,
     })
 
     try {

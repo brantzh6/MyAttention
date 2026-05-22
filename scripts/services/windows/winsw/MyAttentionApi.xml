@@ -1,13 +1,13 @@
 <service>
-  <id>MyAttentionApi</id>
-  <name>MyAttentionApi</name>
-  <description>MyAttention API service</description>
-  <executable>D:\code\MyAttention\.venv\Scripts\python.exe</executable>
+  <id>IKEApi</id>
+  <name>IKEApi</name>
+  <description>IKE API service</description>
+  <executable>D:\code\IKE\.venv\Scripts\python.exe</executable>
   <arguments>run_service.py --host 0.0.0.0 --port 8000</arguments>
-  <workingdirectory>D:\code\MyAttention\services\api</workingdirectory>
+  <workingdirectory>D:\code\IKE\services\api</workingdirectory>
   <stoptimeout>15sec</stoptimeout>
   <startmode>Manual</startmode>
-  <logpath>D:\code\MyAttention\.runtime\logs</logpath>
+  <logpath>D:\code\IKE\.runtime\logs</logpath>
   <log mode="roll-by-size-time">
     <sizeThreshold>10240</sizeThreshold>
     <pattern>yyyyMMdd</pattern>

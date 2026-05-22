@@ -16,6 +16,22 @@ from typing import Dict, Any, List
 logger = logging.getLogger(__name__)
 
 
+def _classify_log_insight_feedback(insight) -> Dict[str, Any]:
+    from feeds.task_processor import classify_feedback_signal
+
+    source_data = {
+        "type": "log_insight",
+        "category": getattr(insight, "category", ""),
+        "severity": getattr(insight, "severity", ""),
+        "evidence": getattr(insight, "evidence", []),
+    }
+    return classify_feedback_signal(
+        source_type="log_analysis",
+        category=getattr(insight, "category", ""),
+        source_data=source_data,
+    )
+
+
 class LogAnalysisScheduler:
     """日志分析调度器 - 定期分析日志并生成改进建议"""
 
@@ -101,9 +117,16 @@ class LogAnalysisScheduler:
             "info": 2
         }
         priority = priority_map.get(insight.severity, 2)
+        feedback_routing = _classify_log_insight_feedback(insight)
+        if feedback_routing["feedback_class"] == "acceleration_degradation":
+            priority = max(priority, 2)
 
         # 确定是否可自动处理
-        auto_processible = insight.severity == "critical" and insight.category in ("performance", "reliability")
+        auto_processible = (
+            insight.severity == "critical"
+            and insight.category in ("performance", "reliability")
+            and not feedback_routing.get("controller_escalation", False)
+        )
         task_title = f"[日志分析] {insight.title}"
         task_description = insight.description + "\n\n建议: " + insight.suggestion
         task_source_data = {
@@ -111,6 +134,7 @@ class LogAnalysisScheduler:
             "severity": insight.severity,
             "evidence": insight.evidence
         }
+        task_source_data.update(feedback_routing)
 
         # 保存到数据库
         async for db in get_db():

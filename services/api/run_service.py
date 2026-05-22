@@ -6,7 +6,7 @@ import uvicorn
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="MyAttention API service entrypoint")
+    parser = argparse.ArgumentParser(description="IKE API service entrypoint")
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8000)
     args = parser.parse_args()

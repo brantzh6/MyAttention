@@ -33,10 +33,30 @@ LOG_SOURCES = {
         "encoding": "utf-8",
     },
     "web_frontend": {
-        "path": "services/web/frontend.log",
+        "path": ".runtime/logs/web.log",
         "encoding": "utf-8",
     },
 }
+
+SQL_NOISE_PATTERNS = (
+    r"^\[cached since .*",
+    r"^\[generated in .*",
+    r"^\(\s*datetime\.datetime",
+    r"^select\s+",
+    r"^insert\s+into\s+",
+    r"^update\s+",
+    r"^delete\s+from\s+",
+    r"^from\s+",
+    r"^where\s+",
+    r"^limit\s+\$\d+",
+    r"^commit$",
+    r"^begin(\s*\(implicit\))?$",
+    r"^rollback$",
+    r"^exception terminating connection <adaptedconnection <asyncpg\.connection\.Connection object at .*>>$",
+    r"^cancelled via cancel scope .*",
+)
+
+INFO_PROBLEM_KEYWORDS = ("exception", "traceback", "fatal", "crash", "timed out", "refused", "blocked", "unauthorized")
 
 
 def _resolve_project_root() -> Path:
@@ -44,6 +64,18 @@ def _resolve_project_root() -> Path:
     if env_path:
         return Path(env_path).expanduser().resolve()
     return Path(__file__).resolve().parents[3]
+
+
+def _is_noise_log_entry(log: "LogEntry") -> bool:
+    message = str(log.message or "").strip().lower()
+    logger_name = str(log.logger or "").strip().lower()
+    raw = str(log.raw or "").strip().lower()
+
+    if "sqlalchemy.engine.engine" in logger_name:
+        return True
+    if raw.startswith("info sqlalchemy.engine.engine"):
+        return True
+    return any(re.search(pattern, message, re.IGNORECASE) for pattern in SQL_NOISE_PATTERNS)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -233,6 +265,24 @@ class LogMonitor:
                 "description": "前端请求失败",
                 "suggestion": "检查网络状态，添加错误边界"
             },
+            r"cannot\s+find\s+module\s+'.*\.js'": {
+                "severity": "critical",
+                "category": "frontend",
+                "description": "前端构建产物模块缺失",
+                "suggestion": "清理 Next 构建缓存并重建前端，检查 dev/build 产物是否漂移"
+            },
+            r"webpack-runtime": {
+                "severity": "high",
+                "category": "frontend",
+                "description": "前端 webpack 运行时错误",
+                "suggestion": "检查 Next.js 开发缓存、热更新状态和构建产物一致性"
+            },
+            r"page(notfounderror|.*cannot\s+find\s+module\s+for\s+page)": {
+                "severity": "high",
+                "category": "frontend",
+                "description": "前端页面模块加载失败",
+                "suggestion": "检查页面路由、构建缓存和缺失页面引用"
+            },
         }
 
     def _init_metrics_patterns(self) -> Dict[str, Dict]:
@@ -408,14 +458,16 @@ class LogMonitor:
             List[ErrorPattern]: 错误模式列表
         """
         # 收集所有非 INFO 级别的日志
-        error_logs = [l for l in logs if l.level in ("ERROR", "CRITICAL", "WARNING")]
+        error_logs = [l for l in logs if l.level in ("ERROR", "CRITICAL", "WARNING") and not _is_noise_log_entry(l)]
 
         # 也检查 INFO 中可能的问题
         info_logs = [l for l in logs if l.level == "INFO"]
         for log in info_logs:
+            if _is_noise_log_entry(log):
+                continue
             msg = log.message.lower()
             # 检查关键问题关键词
-            if any(kw in msg for kw in ["exception", "fail", "error", "timeout", "blocked", "refused"]):
+            if any(kw in msg for kw in INFO_PROBLEM_KEYWORDS):
                 error_logs.append(log)
 
         # 按模式分组
@@ -711,8 +763,10 @@ def quick_health_check() -> Dict[str, Any]:
     # 快速分析严重问题
     critical_issues = []
     for log in logs:
+        if _is_noise_log_entry(log):
+            continue
         msg = log.message.lower()
-        if log.level in ("ERROR", "CRITICAL") or any(kw in msg for kw in ["exception", "fatal", "crash", "failed"]):
+        if log.level in ("ERROR", "CRITICAL") or any(kw in msg for kw in INFO_PROBLEM_KEYWORDS):
             critical_issues.append({
                 "timestamp": log.timestamp.isoformat(),
                 "level": log.level,

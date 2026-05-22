@@ -12,7 +12,7 @@ import logging
 import os
 from pathlib import Path
 
-from routers import chat, feeds, models, settings, rag, conversations, memories, system, evolution, testing, feishu
+from routers import brains, chat, feeds, models, settings, rag, conversations, memories, system, evolution, testing, feishu, ike_v0, conversation_runtime
 
 
 def configure_runtime_logging() -> None:
@@ -45,7 +45,7 @@ configure_runtime_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup - pre-warm expensive resources
-    print("Starting MyAttention API...")
+    print("Starting IKE API...")
 
     # 预加载 RAG
     print("  Pre-loading RAG engine and embedding model...")
@@ -136,10 +136,10 @@ async def lifespan(app: FastAPI):
     else:
         print("  Pipeline scheduler disabled (DISABLE_PIPELINE=1).")
 
-    print("MyAttention API ready.")
+    print("IKE API ready.")
     yield
     # Shutdown
-    print("Shutting down MyAttention API...")
+    print("Shutting down IKE API...")
 
     # 停止自动进化系统
     try:
@@ -159,7 +159,7 @@ async def lifespan(app: FastAPI):
         print("  Pipeline scheduler stopped.")
 
 app = FastAPI(
-    title="MyAttention API",
+    title="IKE API",
     description="AI-driven intelligent decision support system",
     version="0.1.0",
     lifespan=lifespan,
@@ -186,6 +186,9 @@ app.include_router(system.router, prefix="/api", tags=["system"])
 app.include_router(evolution.router, prefix="/api/evolution", tags=["self-evolution"])
 app.include_router(testing.router, prefix="/api/testing", tags=["ai-testing"])
 app.include_router(feishu.router, prefix="/api", tags=["feishu"])
+app.include_router(brains.router, prefix="/api/brains", tags=["brains"])
+app.include_router(ike_v0.router, prefix="/api", tags=["ike-v0"])
+app.include_router(conversation_runtime.router, prefix="/api", tags=["conversation-runtime"])
 
 
 @app.get("/health")
@@ -229,7 +232,7 @@ async def trigger_digest(digest_type: str = "daily"):
 
 @app.get("/")
 async def root():
-    return {"message": "MyAttention API", "docs": "/docs"}
+    return {"message": "IKE API", "docs": "/docs"}
 
 
 if __name__ == "__main__":

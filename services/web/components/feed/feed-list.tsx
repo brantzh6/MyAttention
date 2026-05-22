@@ -4,7 +4,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { ExternalLink, Star, Check, Clock, RefreshCw, Loader2, X, ArrowUpDown, Wifi, WifiOff, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { apiClient, type FeedItem } from '@/lib/api-client'
+import { apiClient, type FeedHealthSnapshot, type FeedItem } from '@/lib/api-client'
 import { feedCache, localStorageCache } from '@/lib/feed-cache'
 
 // 分类和Tag配置
@@ -74,6 +74,16 @@ function formatTime(dateStr: string) {
   return `${days}天前`
 }
 
+function formatAbsoluteTime(dateStr: string) {
+  const date = new Date(dateStr)
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function FeedList() {
   // ========== 数据状态 ==========
   const [feeds, setFeeds] = useState<FeedItem[]>([])
@@ -89,15 +99,25 @@ export function FeedList() {
   const [loadingKb, setLoadingKb] = useState(false)
   const [kbSubmitting, setKbSubmitting] = useState(false)
   const [kbMessage, setKbMessage] = useState<{type: 'success' | 'error'; text: string} | null>(null)
+  const [feedHealth, setFeedHealth] = useState<FeedHealthSnapshot | null>(null)
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const dataFingerprintRef = useRef<string>('')
+
+  const loadFeedHealth = useCallback(async () => {
+    try {
+      const health = await apiClient.getFeedsHealth()
+      setFeedHealth(health)
+    } catch (e) {
+      console.error('[FeedList] 获取 feed health 失败:', e)
+    }
+  }, [])
 
   // ========== 筛选状态 ==========
   const [category, setCategory] = useState<string | null>(null)
   const [subTag, setSubTag] = useState<string | null>(null)
   const [importanceLevel, setImportanceLevel] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string | null>(null)
-  const [sortMode, setSortMode] = useState<SortMode>('importance-desc')
+  const [sortMode, setSortMode] = useState<SortMode>('time')
   const [showLow, setShowLow] = useState(false)
 
   // ========== 初始化：优先从缓存加载，无论缓存是否过期 ==========
@@ -160,6 +180,8 @@ export function FeedList() {
         }
       }
 
+      await loadFeedHealth()
+
       setInitialLoadDone(true)
     }
 
@@ -171,7 +193,17 @@ export function FeedList() {
         clearTimeout(refreshTimeoutRef.current)
       }
     }
-  }, [])
+  }, [loadFeedHealth])
+
+  useEffect(() => {
+    if (!initialLoadDone) return
+
+    const interval = setInterval(() => {
+      loadFeedHealth()
+    }, 60_000)
+
+    return () => clearInterval(interval)
+  }, [initialLoadDone, loadFeedHealth])
 
   // ========== 带重试的加载 ==========
   const loadFeedsWithRetry = async (retryCount: number): Promise<void> => {
@@ -191,6 +223,8 @@ export function FeedList() {
         Promise.resolve(localStorageCache.set(CACHE_KEY, data)),
         Promise.resolve(localStorageCache.setTimestamp(CACHE_KEY, now)),
       ])
+
+      await loadFeedHealth()
 
       console.log('[FeedList] API 加载成功:', data.length, '条')
     } catch (e) {
@@ -248,6 +282,8 @@ export function FeedList() {
         await Promise.resolve(localStorageCache.setTimestamp(CACHE_KEY, now))
       }
 
+      await loadFeedHealth()
+
       setIsOffline(false)
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : '刷新失败'
@@ -259,7 +295,7 @@ export function FeedList() {
     } finally {
       setIsRefreshing(false)
     }
-  }, [isRefreshing])
+  }, [isRefreshing, loadFeedHealth])
 
   // ========== 客户端筛选（纯内存计算，零延迟） ==========
   const filteredFeeds = useMemo(() => {
@@ -338,6 +374,16 @@ export function FeedList() {
       }
     })
     return result
+  }, [feeds])
+
+  const latestPublishedAt = useMemo(() => {
+    if (feeds.length === 0) return null
+    return feeds.reduce((latest, item) => {
+      if (!latest) return item.published_at
+      return new Date(item.published_at).getTime() > new Date(latest).getTime()
+        ? item.published_at
+        : latest
+    }, null as string | null)
   }, [feeds])
 
   // ========== 事件处理 ==========
@@ -424,6 +470,32 @@ export function FeedList() {
     return `${Math.floor(diff / 3600000)}小时前`
   }
 
+  const cacheAgeMs = cacheTime > 0 ? Date.now() - cacheTime : null
+  const cacheIsStale = cacheAgeMs !== null && cacheAgeMs > CACHE_DURATION
+  const freshnessBadgeLabel = isRefreshing ? '后台刷新中' : cacheIsStale ? '缓存快照' : '新鲜'
+  const freshnessSummary = isRefreshing
+    ? '正在同步最新内容'
+    : cacheTime > 0
+      ? cacheIsStale
+        ? '当前优先展示本地缓存快照，后台需要补刷'
+        : '当前界面已加载最近快照'
+      : '等待首批数据加载'
+  const sortModeLabel = sortMode === 'time' ? '按最新发布时间排序' : '按重要性排序'
+  const backendReadBackend = feedHealth?.storage.feeds_read_backend || 'unknown'
+  const backendCacheLayers = feedHealth?.storage.cache_layers?.join(' + ') || 'memory'
+  const backendLatestFeedAt = feedHealth?.freshness.last_feed_item_at || null
+  const backendSyncLabel = feedHealth
+    ? feedHealth.summary.status === 'healthy'
+      ? '后端同步正常'
+      : '后端同步需关注'
+    : '等待后端状态'
+  const backendSyncDetail = feedHealth
+    ? `后端读取：${backendReadBackend} · 缓存层：${backendCacheLayers}`
+    : '正在获取后端同步状态'
+  const backendThroughput = feedHealth
+    ? `近1小时新增 ${feedHealth.counts.feed_items_1h} 条 · 24小时活跃源 ${feedHealth.counts.active_sources_24h} 个`
+    : null
+
   return (
     <div className="space-y-4">
       {/* 错误提示 */}
@@ -454,6 +526,67 @@ export function FeedList() {
           </div>
         </div>
       )}
+
+      <div
+        className={cn(
+          'rounded-xl border px-4 py-3',
+          isRefreshing
+            ? 'border-blue-300 bg-blue-50/70 dark:bg-blue-950/20'
+            : cacheIsStale
+              ? 'border-amber-300 bg-amber-50/70 dark:bg-amber-950/20'
+              : 'border-border bg-muted/30'
+        )}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              {isRefreshing ? (
+                <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />
+              ) : cacheIsStale ? (
+                <AlertCircle className="h-4 w-4 text-amber-500" />
+              ) : (
+                <Wifi className="h-4 w-4 text-green-500" />
+              )}
+              <span>{freshnessSummary}</span>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+              {cacheTime > 0 && (
+                <span>
+                  界面快照：{formatCacheTime()} ({formatAbsoluteTime(new Date(cacheTime).toISOString())})
+                </span>
+              )}
+              {latestPublishedAt && (
+                <span>
+                  最新内容：{formatTime(latestPublishedAt)} ({formatAbsoluteTime(latestPublishedAt)})
+                </span>
+              )}
+              <span>{sortModeLabel}</span>
+              <span>{backendSyncDetail}</span>
+            </div>
+            <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1 text-xs text-muted-foreground">
+              <span>{backendSyncLabel}</span>
+              {backendLatestFeedAt && (
+                <span>
+                  后端最新入库：{formatTime(backendLatestFeedAt)} ({formatAbsoluteTime(backendLatestFeedAt)})
+                </span>
+              )}
+              {backendThroughput && <span>{backendThroughput}</span>}
+            </div>
+          </div>
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-1 text-xs font-medium',
+              isRefreshing
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300'
+                : cacheIsStale
+                  ? 'bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
+                  : 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-300'
+            )}
+          >
+            {freshnessBadgeLabel}
+          </span>
+        </div>
+      </div>
 
       {/* 顶部工具栏 */}
       <div className="flex flex-wrap items-center gap-2 pb-3 border-b">

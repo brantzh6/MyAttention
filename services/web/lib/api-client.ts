@@ -1,4 +1,16 @@
 const API_URL = process.env.API_URL || 'http://localhost:8000'
+const RUNTIME_FETCH_TIMEOUT_MS = 12000
+const FLYWHEEL_INSPECT_TIMEOUT_MS = 60000
+
+async function fetchRuntime(input: RequestInfo | URL, init?: RequestInit, timeoutMs?: number): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs ?? RUNTIME_FETCH_TIMEOUT_MS)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
 
 export interface FeedItem {
   id: string
@@ -34,7 +46,20 @@ export interface LLMProvider {
   provider: string
   model: string
   enabled: boolean
-  apiKeySet: boolean
+  apiKeySet?: boolean
+  api_key_set?: boolean
+  priority?: 'high' | 'medium' | 'low'
+  use_case?: string[]
+  useCase?: string[]
+  base_url?: string
+  api?: string
+  key_env?: string | null
+  reasoning?: boolean
+  input?: string[]
+  context_window?: number
+  max_tokens?: number
+  cost_input?: number
+  cost_output?: number
 }
 
 export interface ChatMessage {
@@ -55,6 +80,44 @@ export interface RAGDocument {
   chunk_count: number
   preview: string
   created_at?: string
+}
+
+export interface FeedHealthSnapshot {
+  timestamp: string
+  storage: {
+    object_store_backend: string
+    feeds_read_backend: string
+    cache_layers?: string[]
+  }
+  counts: {
+    raw_ingest_total: number
+    feed_items_total: number
+    raw_ingest_1h: number
+    raw_ingest_24h: number
+    feed_items_1h: number
+    feed_items_24h: number
+    raw_errors_24h: number
+    raw_durable_24h: number
+    raw_duplicate_24h: number
+    raw_pending_1h: number
+    raw_pending_24h: number
+    active_sources_24h: number
+  }
+  freshness: {
+    last_raw_ingest_at: string | null
+    last_feed_item_at: string | null
+    last_raw_ingest_age_hours: number | null
+    last_feed_item_age_hours: number | null
+  }
+  ratios: {
+    durable_ratio_24h: number
+    persist_ratio_24h: number
+  }
+  summary: {
+    status: string
+    state: string
+    message: string
+  }
 }
 
 export interface RAGSource {
@@ -102,10 +165,213 @@ export interface ConversationMessage {
   model: string | null
   tokens_used: number | null
   sources: { title: string; url: string; source?: string; score?: number }[]
+  metadata?: Record<string, any>
   created_at: string
 }
 
+// Flywheel inspect types
+export interface FlywheelKnowledgeDeltaCandidate {
+  delta_type: string
+  label: string
+  content: string
+  provenance_note: string
+  trust_state: string
+  proposal_state: string
+  review_gate: string
+  absorption_state: string
+}
+
+export interface FlywheelEvolutionTriggerCandidate {
+  trigger_type: string
+  label: string
+  rationale: string
+  provenance_note: string
+  trust_state: string
+  proposal_state: string
+  review_gate: string
+  absorption_state: string
+}
+
+export interface FlywheelOperationalAdvice {
+  suggested_next_step: string
+  controller_notes: string[]
+}
+
+export interface FlywheelControllerPacket {
+  review_mode: string
+  actionable_source_object_keys: string[]
+  actionable_correction_targets: string[]
+  reason_tags: string[]
+  advisory_scope: string
+  truth_status: string
+}
+
+export interface FlywheelInspectResponse {
+  topic: string
+  task_intent: string
+  provider: string
+  model: string
+  segment_intent: string
+  source_candidates: Array<{ id?: string; name?: string; type?: string; url?: string; category?: string; tags?: string[] }>
+  correction_events: Array<{ target_scope: string; target_ref: string; correction_content: string }>
+  knowledge_delta_candidates: FlywheelKnowledgeDeltaCandidate[]
+  evolution_trigger_candidates: FlywheelEvolutionTriggerCandidate[]
+  extraction_summary: string
+  operational_advice: FlywheelOperationalAdvice
+  controller_packet: FlywheelControllerPacket
+  notes: string[]
+  truth_boundary: string[]
+  promotion_state: string
+}
+
+// Task-packet preview types (inspect-only, non-canonical)
+export interface SelectedLabelGroup {
+  label_type: 'knowledge' | 'evolution' | 'source'
+  labels: string[]
+  count: number
+}
+
+export interface CandidatePacket {
+  candidate_task_id: string
+  candidate_lane: string
+  candidate_goal: string
+  allowed_files: string[]
+  non_goals: string[]
+  validation_commands: string[]
+  review_gate: string
+  stop_conditions: string[]
+  delegation_target: string
+  truth_status: string
+}
+
+export interface ExecutionHandoffPreview {
+  task_id: string
+  owner_lane: string
+  objective: string
+  current_evidence: string[]
+  allowed_files: string[]
+  non_goals: string[]
+  validation_commands: string[]
+  review_gate: string
+  expected_result_format: string[]
+  stop_conditions: string[]
+  delegation_target: string
+  truth_status: string
+  promotion_state: string
+  // New metadata fields for delegate packet readiness
+  sdlc_stage: string
+  risk_level: string
+  result_artifact_path: string
+  write_policy: string
+  handoff_markdown: string
+}
+
+export interface TaskPacketPreviewRequest {
+  topic: string
+  task_intent: string
+  selected_knowledge_labels: string[]
+  selected_evolution_labels: string[]
+  selected_source_labels: string[]
+  reviewer_note?: string
+  explicit_non_canonical?: boolean
+}
+
+export interface TaskPacketPreviewResponse {
+  task_packet_summary: string
+  packet_intent: string
+  suggested_lane: string
+  suggested_next_step: string
+  selected_label_groups: SelectedLabelGroup[]
+  controller_packet: FlywheelControllerPacket
+  truth_boundary: string[]
+  promotion_state: string
+  notes: string[]
+  candidate_packet?: CandidatePacket
+  handoff_preview?: ExecutionHandoffPreview
+}
+
+export interface FlywheelExecutionFeedbackInspectRequest {
+  topic: string
+  task_intent: string
+  worker_lane: string
+  task_packet_summary: string
+  execution_feedback_text: string
+  execution_status_hint?: string
+  provider?: string
+  model?: string
+  // Caller-provided provenance (inspect-only, not verified)
+  worker_run_id?: string
+  worker_provider?: string
+  worker_model?: string
+  worker_artifact_ref?: string
+}
+
+export interface FlywheelWorkerProvenance {
+  worker_run_id: string
+  worker_provider: string
+  worker_model: string
+  worker_artifact_ref: string
+  provenance_source: string
+  verified: boolean
+  completeness_status: string
+  provided_fields: string[]
+  missing_fields: string[]
+}
+
+export interface FlywheelExecutionFeedbackInspectResponse {
+  topic: string
+  task_intent: string
+  worker_lane: string
+  execution_status_hint: string
+  provider: string
+  model: string
+  feedback_intent: string
+  feedback_summary: string
+  knowledge_delta_candidates: FlywheelKnowledgeDeltaCandidate[]
+  evolution_trigger_candidates: FlywheelEvolutionTriggerCandidate[]
+  operational_advice: FlywheelOperationalAdvice
+  controller_packet: FlywheelControllerPacket
+  truth_boundary: string[]
+  promotion_state: string
+  notes: string[]
+  provenance: FlywheelWorkerProvenance
+}
+
 export const apiClient = {
+  async bootstrapRuntimeProjectSurface(data: {
+    project_key: string
+    title: string
+    current_phase?: string
+    priority?: number
+  }): Promise<any> {
+    const res = await fetch(`${API_URL}/api/ike/v0/runtime/project-surface/bootstrap`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to bootstrap runtime surface' }))
+      throw new Error(err.detail || 'Failed to bootstrap runtime surface')
+    }
+    return res.json()
+  },
+
+  async importRuntimeBenchmarkCandidate(data: {
+    project_key: string
+    candidate_payload: Record<string, any>
+  }): Promise<any> {
+    const res = await fetch(`${API_URL}/api/ike/v0/runtime/benchmark-candidate/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to import benchmark candidate' }))
+      throw new Error(err.detail || 'Failed to import benchmark candidate')
+    }
+    return res.json()
+  },
+
   async getFeeds(sourceId?: string, category?: string): Promise<FeedItem[]> {
     const params = new URLSearchParams()
     if (sourceId) params.set('source_id', sourceId)
@@ -119,6 +385,12 @@ export const apiClient = {
   async refreshFeeds(): Promise<{ status: string; count: number }> {
     const res = await fetch(`${API_URL}/api/feeds/refresh`, { method: 'POST' })
     if (!res.ok) throw new Error('Failed to refresh feeds')
+    return res.json()
+  },
+
+  async getFeedsHealth(): Promise<FeedHealthSnapshot> {
+    const res = await fetch(`${API_URL}/api/feeds/health`)
+    if (!res.ok) throw new Error('Failed to fetch feed health')
     return res.json()
   },
 
@@ -147,6 +419,22 @@ export const apiClient = {
     const res = await fetch(`${API_URL}/api/llm/providers`)
     if (!res.ok) throw new Error('Failed to fetch LLM providers')
     return res.json()
+  },
+
+  async updateLLMProviderApiKey(providerId: string, apiKey: string): Promise<void> {
+    const res = await fetch(`${API_URL}/api/llm/providers/${providerId}/api-key`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ api_key: apiKey }),
+    })
+    if (!res.ok) {
+      let detail = 'Failed to update API key'
+      try {
+        const payload = await res.json()
+        detail = payload.detail || detail
+      } catch {}
+      throw new Error(detail)
+    }
   },
 
   async chat(message: string, useVoting?: boolean): Promise<ReadableStream<Uint8Array>> {
@@ -490,5 +778,133 @@ export const apiClient = {
       linked_at: string | null
       notes: string | null
     }>
+  },
+
+  // ========== IKE v0.1 Experimental API ==========
+
+  async inspectObservation(feedItem: {
+    source_id: string
+    title: string
+    summary?: string
+    fetched_at?: string
+    url?: string
+  }): Promise<{
+    ref: {
+      id: string
+      kind: string
+      id_scope: 'provisional'
+      stability: 'experimental'
+      permalink: null
+    }
+    data: {
+      id: string
+      kind: 'observation'
+      title: string
+      summary: string
+      source_ref: string
+      [key: string]: any
+    }
+  }> {
+    const res = await fetch(`${API_URL}/api/ike/v0/observations/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feed_item: feedItem }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Inspection failed' }))
+      throw new Error(err.detail || 'Failed to inspect observation')
+    }
+    return res.json()
+  },
+
+  async inspectFlywheel(data: {
+    conversation_text: string
+    topic: string
+    task_intent?: string
+    thread_id?: string
+    provider?: string
+    model?: string
+  }): Promise<FlywheelInspectResponse> {
+    const res = await fetchRuntime(`${API_URL}/api/conversation-runtime/flywheel/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }, FLYWHEEL_INSPECT_TIMEOUT_MS).catch(() => {
+      throw new Error('Runtime dependency unavailable; flywheel inspection could not reach the API.')
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Flywheel inspection failed' }))
+      throw new Error(err.detail || 'Flywheel inspection failed')
+    }
+    return res.json()
+  },
+
+  async previewTaskPacket(data: TaskPacketPreviewRequest): Promise<TaskPacketPreviewResponse> {
+    const res = await fetchRuntime(`${API_URL}/api/conversation-runtime/flywheel/task-packet/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).catch(() => {
+      throw new Error('Runtime dependency unavailable; task-packet preview could not reach the API.')
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Task-packet preview failed' }))
+      throw new Error(err.detail || 'Task-packet preview failed')
+    }
+    return res.json()
+  },
+
+  async inspectExecutionFeedback(data: FlywheelExecutionFeedbackInspectRequest): Promise<FlywheelExecutionFeedbackInspectResponse> {
+    const res = await fetchRuntime(`${API_URL}/api/conversation-runtime/flywheel/execution-feedback/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).catch(() => {
+      throw new Error('Runtime dependency unavailable; execution-feedback inspect could not reach the API.')
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Execution feedback inspection failed' }))
+      throw new Error(err.detail || 'Execution feedback inspection failed')
+    }
+    return res.json()
+  },
+
+  async inspectChain(artifactId: string): Promise<{
+    ref: {
+      id: string
+      kind: string
+      id_scope: 'provisional'
+      stability: 'experimental'
+      permalink: null
+    }
+    data: {
+      chain_id: string
+      is_complete: boolean
+      observation?: any
+      entity?: any
+      claim?: any
+      research_task?: any
+      experiment?: any
+      decision?: any
+      harness_case?: any
+      [key: string]: any
+    }
+    completeness: {
+      chain_id: string
+      is_complete: boolean
+      objects: Record<string, string | null>
+      object_count: number
+    }
+  }> {
+    const res = await fetch(`${API_URL}/api/ike/v0/chains/inspect`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ artifact_id: artifactId }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Chain inspection failed' }))
+      throw new Error(err.detail || 'Failed to inspect chain')
+    }
+    return res.json()
   },
 }

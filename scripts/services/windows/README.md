@@ -1,25 +1,25 @@
-# Windows 服务模板
+# Windows Service Templates
 
-用于 MyAttention 在 Windows 环境下的服务化运行说明。
+Used for running IKE on Windows as services.
 
-当前建议：
+Current recommendation:
 
-- PostgreSQL：使用 `pg_ctl register`
-- Redis：使用 `redis-server --service-install`
-- API / Web / Watchdog：建议使用 NSSM 或专门的 Windows Service 包装
+- PostgreSQL: use `pg_ctl register`
+- Redis: use `redis-server --service-install`
+- API / Web / Watchdog: use `NSSM` or a dedicated Windows service wrapper
 
-当前本机已采用的服务名：
+Current local infrastructure service names:
 
 - `MyAttentionPostgres`
 - `MyAttentionRedis`
 
-应用层推荐服务名：
+Current application-layer recommended service names:
 
-- `MyAttentionApi`
-- `MyAttentionWeb`
-- `MyAttentionWatchdog`
+- `IKEApi`
+- `IKEWeb`
+- `IKEWatchdog`
 
-示例注册命令：
+Example registration commands:
 
 ```powershell
 D:\tools\postgresql17\pgsql\bin\pg_ctl.exe register `
@@ -32,7 +32,7 @@ D:\tools\redis\Redis-x64-5.0.14.1\redis-server.exe `
   --service-name MyAttentionRedis
 ```
 
-常用操作：
+Common operations:
 
 ```powershell
 sc.exe start MyAttentionPostgres
@@ -41,19 +41,23 @@ sc.exe stop MyAttentionPostgres
 sc.exe stop MyAttentionRedis
 ```
 
-应用层模板脚本：
+Application-layer install script:
 
 - `install-app-services.ps1`
 - `uninstall-app-services.ps1`
 
-WinSW XML 模板：
+WinSW XML templates:
 
 - `winsw/MyAttentionApi.xml`
 - `winsw/MyAttentionWeb.xml`
 - `winsw/MyAttentionWatchdog.xml`
 
-说明：
+Notes:
 
-- 这两个脚本默认使用 `NSSM`
-- 不会自动执行
-- 需要先确认 `.venv`、Next standalone 产物和日志目录已准备好
+- the install script defaults to:
+  - `RepoRoot = D:\code\IKE`
+  - `ServicePrefix = IKE`
+- the uninstall script defaults to:
+  - `ServicePrefix = IKE`
+- it does not execute automatically
+- confirm `.venv`, Next standalone output, and log directories are ready before install

@@ -9,6 +9,8 @@ from typing import Dict, Any, Optional
 from enum import Enum
 from dataclasses import dataclass
 
+from config import get_effective_qwen_default_model, get_settings
+
 
 class TaskType(str, Enum):
     SIMPLE_QA = "simple_qa"
@@ -31,61 +33,65 @@ class ModelConfig:
     temperature: float = 0.7
 
 
-# Task-to-model routing configuration (using Alibaba Cloud Bailian API)
-ROUTING_CONFIG: Dict[TaskType, ModelConfig] = {
-    TaskType.SIMPLE_QA: ModelConfig(
-        provider="qwen",
-        model="qwen-turbo",
-        fallback_provider="qwen",
-        fallback_model="qwen-plus",
-        temperature=0.3,
-    ),
-    TaskType.SUMMARIZATION: ModelConfig(
-        provider="qwen",
-        model="qwen-plus",
-        fallback_provider="qwen",
-        fallback_model="qwen-max",
-        temperature=0.5,
-    ),
-    TaskType.DEEP_ANALYSIS: ModelConfig(
-        provider="qwen",
-        model="qwen-max",
-        fallback_provider="qwen",
-        fallback_model="qwen-plus",
-        temperature=0.7,
-    ),
-    TaskType.LONG_CONTEXT: ModelConfig(
-        provider="qwen",
-        model="qwen-long",
-        fallback_provider="qwen",
-        fallback_model="qwen-max",
-        max_tokens=8192,
-    ),
-    TaskType.CODE_GENERATION: ModelConfig(
-        provider="qwen",
-        model="qwen-max",
-        fallback_provider="qwen",
-        fallback_model="qwen-plus",
-        temperature=0.3,
-    ),
-    TaskType.CREATIVE_WRITING: ModelConfig(
-        provider="qwen",
-        model="qwen-max",
-        fallback_provider="qwen",
-        fallback_model="qwen-plus",
-        temperature=0.9,
-    ),
-    TaskType.CRITICAL_DECISION: ModelConfig(
-        provider="voting",  # Special: triggers multi-model voting
-        model="voting",
-        temperature=0.5,
-    ),
-    TaskType.FACT_CHECK: ModelConfig(
-        provider="voting",  # Use voting for fact checking
-        model="voting",
-        temperature=0.3,
-    ),
-}
+def _build_routing_config() -> Dict[TaskType, ModelConfig]:
+    default_qwen_model = get_effective_qwen_default_model(get_settings())
+    return {
+        TaskType.SIMPLE_QA: ModelConfig(
+            provider="qwen",
+            model=default_qwen_model,
+            fallback_provider="ollama",
+            fallback_model="qwen2:7b",
+            temperature=0.3,
+        ),
+        TaskType.SUMMARIZATION: ModelConfig(
+            provider="qwen",
+            model=default_qwen_model,
+            fallback_provider="ollama",
+            fallback_model="qwen2:7b",
+            temperature=0.5,
+        ),
+        TaskType.DEEP_ANALYSIS: ModelConfig(
+            provider="qwen",
+            model=default_qwen_model,
+            fallback_provider="ollama",
+            fallback_model="qwen2:7b",
+            temperature=0.7,
+        ),
+        TaskType.LONG_CONTEXT: ModelConfig(
+            provider="qwen",
+            model="kimi-k2.5",
+            fallback_provider="qwen",
+            fallback_model=default_qwen_model,
+            max_tokens=8192,
+        ),
+        TaskType.CODE_GENERATION: ModelConfig(
+            provider="qwen",
+            model="deepseek-v3.2",
+            fallback_provider="qwen",
+            fallback_model=default_qwen_model,
+            temperature=0.3,
+        ),
+        TaskType.CREATIVE_WRITING: ModelConfig(
+            provider="qwen",
+            model=default_qwen_model,
+            fallback_provider="ollama",
+            fallback_model="qwen2:7b",
+            temperature=0.9,
+        ),
+        TaskType.CRITICAL_DECISION: ModelConfig(
+            provider="voting",
+            model="voting",
+            temperature=0.5,
+        ),
+        TaskType.FACT_CHECK: ModelConfig(
+            provider="voting",
+            model="voting",
+            temperature=0.3,
+        ),
+    }
+
+
+ROUTING_CONFIG: Dict[TaskType, ModelConfig] = _build_routing_config()
 
 
 class TaskRouter:

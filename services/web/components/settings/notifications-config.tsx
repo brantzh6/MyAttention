@@ -54,7 +54,11 @@ interface SystemHealth {
   external: ServiceStatus[]
 }
 
-export function NotificationsConfig() {
+interface NotificationsConfigProps {
+  showSystemStatus?: boolean
+}
+
+export function NotificationsConfig({ showSystemStatus = true }: NotificationsConfigProps) {
   const [channels, setChannels] = useState<NotificationChannel[]>([])
   const [pushSettings, setPushSettings] = useState<PushSettings>({
     push_important: true,
@@ -132,7 +136,7 @@ export function NotificationsConfig() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: '🔔 测试通知',
-          message: '这是一条来自 MyAttention 的测试消息',
+          message: '这是一条来自 IKE 的测试消息',
         }),
       })
 
@@ -332,7 +336,7 @@ export function NotificationsConfig() {
 
   return (
     <div className="space-y-6">
-      {/* System Status Panel */}
+      {showSystemStatus && (
       <div className="p-4 rounded-lg border bg-card">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -433,6 +437,7 @@ export function NotificationsConfig() {
           <p className="text-sm text-muted-foreground">加载中...</p>
         )}
       </div>
+      )}
 
       {/* Push Settings */}
       <div className="p-4 rounded-lg border bg-card">

@@ -1,0 +1,43 @@
+# Copy this file to staging.local.toml and adjust for the staging machine.
+
+[setup]
+migrate_command = "{python} -m alembic upgrade head"
+
+[postgres]
+use_service = true
+service_name = "IKEStagingPostgres"
+log_path = "D:/envs/IKE/staging/.runtime/logs/postgres.log"
+start_command = "pg_ctl -D D:/envs/IKE/staging/data/postgres -l D:/envs/IKE/staging/.runtime/logs/postgres.log start"
+stop_command = "pg_ctl -D D:/envs/IKE/staging/data/postgres -m fast stop"
+
+[redis]
+use_service = true
+service_name = "IKEStagingRedis"
+log_path = "D:/envs/IKE/staging/.runtime/logs/redis.log"
+start_command = "redis-server.exe --service-run IKEStagingRedis"
+stop_command = "taskkill /FI \"SERVICES eq IKEStagingRedis\" /F"
+
+[qdrant]
+mode = "embedded"
+
+[api]
+use_service = true
+service_name = "IKEStagingApi"
+log_path = "D:/envs/IKE/staging/.runtime/logs/api-service.log"
+command = "{python} run_service.py --host {api_host} --port {api_port}"
+
+[web]
+use_service = true
+service_name = "IKEStagingWeb"
+log_path = "D:/envs/IKE/staging/.runtime/logs/web-service.log"
+command = "node .next/standalone/server.js"
+
+[watchdog]
+auto_start = true
+interval_seconds = 20
+manage_infra = false
+manage_api = true
+manage_web = true
+use_service = true
+service_name = "IKEStagingWatchdog"
+log_path = "D:/envs/IKE/staging/.runtime/logs/watchdog-service.log"

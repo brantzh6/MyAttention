@@ -1,95 +1,171 @@
 """
-System Health Check Router
+System health router.
 
-提供全套服务健康检查，包括：
-- Docker 容器状态
-- 数据库连接状态
-- 外部 API 状态
-- 依赖服务状态
+Provides narrow operational visibility for:
+- local containers
+- local databases
+- API health
+- external LLM reachability
 """
 
-import os
-import subprocess
 import asyncio
-from typing import Dict, Any, List
-from datetime import datetime
 import socket
+import subprocess
+from datetime import datetime
+from typing import Any, Dict, List
 from urllib.parse import urlparse
 
 import httpx
 from fastapi import APIRouter, HTTPException
 from sqlalchemy import text
 
-from config import create_qdrant_client, get_settings, is_local_qdrant_mode
+from config import create_qdrant_client, get_effective_qwen_base_url, get_settings, is_local_qdrant_mode
 from db.session import async_session_maker
 
-router = APIRouter(prefix="/system", tags=["系统状态"])
+router = APIRouter(prefix="/system", tags=["system-status"])
 
-# Docker 容器名称
+# Canonical container identities with legacy aliases kept for compatibility.
 DOCKER_CONTAINERS = [
-    "myattention-postgres",
-    "myattention-redis",
-    "myattention-qdrant",
+    {
+        "key": "ike-postgres",
+        "display_name": "IKE PostgreSQL",
+        "aliases": ["ike-postgres", "myattention-postgres"],
+    },
+    {
+        "key": "ike-redis",
+        "display_name": "IKE Redis",
+        "aliases": ["ike-redis", "myattention-redis"],
+    },
+    {
+        "key": "ike-qdrant",
+        "display_name": "IKE Qdrant",
+        "aliases": ["ike-qdrant", "myattention-qdrant"],
+    },
 ]
 
-# 外部服务健康检查
 EXTERNAL_SERVICES = [
     {"name": "qwen", "url": "https://dashscope.aliyuncs.com/api/v1/services", "timeout": 5},
 ]
 
 
-async def check_docker_container(container_name: str) -> Dict[str, Any]:
-    """检查单个 Docker 容器状态"""
-    try:
-        result = subprocess.run(
-            ["docker", "inspect", "--format", "{{.State.Status}}", container_name],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+def _build_code_health_snapshot() -> Dict[str, Any]:
+    """Return a code-truth snapshot without probing runtime dependencies."""
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "truth_plane": "code_truth",
+        "overall_status": "healthy",
+        "summary": {
+            "total": 1,
+            "healthy": 1,
+            "unhealthy": 0,
+            "error": 0,
+        },
+        "checks": [
+            {
+                "name": "System router import",
+                "status": "healthy",
+                "running": True,
+                "details": {
+                    "module": __name__,
+                    "routes": ["/health", "/status", "/code-health", "/restart/{container_name}"],
+                    "runtime_dependencies": [
+                        "postgres",
+                        "redis",
+                        "qdrant",
+                        "external_llm",
+                    ],
+                },
+            }
+        ],
+        "notes": [
+            "Code truth reports structure and loadability only.",
+            "Runtime failures are tracked separately in runtime truth.",
+        ],
+    }
 
+
+def _inspect_container_state(container_name: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["docker", "inspect", "--format", "{{.State.Status}}", container_name],
+        capture_output=True,
+        text=True,
+        timeout=5,
+    )
+
+
+def _resolve_container_alias(container_aliases: List[str]) -> str | None:
+    for alias in container_aliases:
+        result = _inspect_container_state(alias)
+        if result.returncode == 0:
+            return alias
+    return None
+
+
+async def check_docker_container(container_spec: Dict[str, Any]) -> Dict[str, Any]:
+    """Check one Docker container using canonical name plus legacy aliases."""
+    display_name = container_spec["display_name"]
+    container_name = _resolve_container_alias(container_spec["aliases"])
+    try:
+        if not container_name:
+            return {
+                "name": display_name,
+                "container_key": container_spec["key"],
+                "container_name": None,
+                "status": "not_found",
+                "health": None,
+                "running": False,
+            }
+
+        result = _inspect_container_state(container_name)
         if result.returncode == 0:
             status = result.stdout.strip()
-            # 获取更多信息
             inspect_result = subprocess.run(
                 ["docker", "inspect", "--format", "{{.State.Health.Status}}", container_name],
                 capture_output=True,
                 text=True,
-                timeout=5
+                timeout=5,
             )
             health = inspect_result.stdout.strip() if inspect_result.returncode == 0 else None
 
             return {
-                "name": container_name,
+                "name": display_name,
+                "container_key": container_spec["key"],
+                "container_name": container_name,
                 "status": "running" if status == "running" else "stopped",
                 "health": health if health and health != "" else "unknown",
-                "running": status == "running"
+                "running": status == "running",
             }
-        else:
-            return {
-                "name": container_name,
-                "status": "not_found",
-                "health": None,
-                "running": False
-            }
+
+        return {
+            "name": display_name,
+            "container_key": container_spec["key"],
+            "container_name": container_name,
+            "status": "not_found",
+            "health": None,
+            "running": False,
+        }
     except subprocess.TimeoutExpired:
         return {
-            "name": container_name,
+            "name": display_name,
+            "container_key": container_spec["key"],
+            "container_name": container_name,
             "status": "timeout",
             "health": None,
-            "running": False
+            "running": False,
         }
     except Exception as e:
         return {
-            "name": container_name,
+            "name": display_name,
+            "container_key": container_spec["key"],
+            "container_name": container_name,
             "status": "error",
             "error": str(e),
-            "running": False
+            "running": False,
         }
 
 
 async def check_database_postgres() -> Dict[str, Any]:
-    """检查 PostgreSQL 连接"""
+    """Check PostgreSQL connectivity."""
     try:
         async with async_session_maker() as session:
             await session.execute(text("SELECT 1"))
@@ -98,7 +174,7 @@ async def check_database_postgres() -> Dict[str, Any]:
             "type": "local",
             "status": "healthy",
             "running": True,
-            "details": "local process connection ok"
+            "details": "local process connection ok",
         }
     except Exception as e:
         return {
@@ -106,12 +182,12 @@ async def check_database_postgres() -> Dict[str, Any]:
             "type": "local",
             "status": "error",
             "running": False,
-            "error": str(e)
+            "error": str(e),
         }
 
 
 async def check_database_redis() -> Dict[str, Any]:
-    """检查 Redis 连接"""
+    """Check Redis connectivity."""
     try:
         settings = get_settings()
         redis = urlparse(settings.redis_url)
@@ -124,7 +200,7 @@ async def check_database_redis() -> Dict[str, Any]:
             "type": "local",
             "status": "healthy",
             "running": True,
-            "details": f"tcp://{redis_host}:{redis_port}"
+            "details": f"tcp://{redis_host}:{redis_port}",
         }
     except Exception as e:
         return {
@@ -132,12 +208,12 @@ async def check_database_redis() -> Dict[str, Any]:
             "type": "local",
             "status": "unhealthy",
             "running": False,
-            "error": str(e)
+            "error": str(e),
         }
 
 
 async def check_database_qdrant() -> Dict[str, Any]:
-    """检查 Qdrant 连接"""
+    """Check Qdrant connectivity."""
     settings = get_settings()
     try:
         if is_local_qdrant_mode(settings):
@@ -148,7 +224,7 @@ async def check_database_qdrant() -> Dict[str, Any]:
                 "type": "embedded",
                 "status": "healthy",
                 "running": True,
-                "details": settings.qdrant_local_path
+                "details": settings.qdrant_local_path,
             }
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get(f"{settings.qdrant_url}/readyz")
@@ -159,7 +235,7 @@ async def check_database_qdrant() -> Dict[str, Any]:
             "type": "service",
             "status": "healthy" if running else "unhealthy",
             "running": running,
-            "details": response.text if response.text else ""
+            "details": response.text if response.text else "",
         }
     except Exception as e:
         return {
@@ -167,169 +243,213 @@ async def check_database_qdrant() -> Dict[str, Any]:
             "type": "embedded" if is_local_qdrant_mode(settings) else "service",
             "status": "error",
             "running": False,
-            "error": str(e)
+            "error": str(e),
         }
 
 
 async def check_api_service() -> Dict[str, Any]:
-    """检查 API 服务自身状态"""
-    settings = get_settings()
+    """Check the API service itself."""
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await client.get("http://localhost:8000/health")
             data = response.json()
             return {
-                "name": "MyAttention API",
+                "name": "IKE API",
                 "type": "service",
                 "status": "healthy" if response.status_code == 200 else "unhealthy",
                 "running": True,
-                "details": data
+                "details": data,
             }
     except Exception as e:
         return {
-            "name": "MyAttention API",
+            "name": "IKE API",
             "type": "service",
             "status": "error",
             "running": False,
-            "error": str(e)
+            "error": str(e),
         }
 
 
 async def check_llm_service() -> Dict[str, Any]:
-    """检查 LLM 服务 (通义千问)"""
+    """Check external Qwen model service reachability."""
     settings = get_settings()
-    if not settings.qwen_api_key:
+    api_key = (settings.qwen_api_key or "").strip()
+    base_url = get_effective_qwen_base_url(settings)
+    if not api_key:
         return {
-            "name": "通义千问 (LLM)",
+            "name": "Tongyi Qwen (LLM)",
             "type": "external",
             "status": "not_configured",
-            "running": False
+            "running": False,
+            "detail": "QWEN_API_KEY is not configured",
         }
 
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(
-                "https://dashscope.aliyuncs.com/api/v1/services",
-                headers={"Authorization": f"Bearer {settings.qwen_api_key}"}
+                f"{base_url}/models",
+                headers={"Authorization": f"Bearer {api_key}"},
             )
-            running = response.status_code in [200, 401]  # 401 means valid key but wrong endpoint
+            running = response.status_code == 200
+            if response.status_code == 401:
+                return {
+                    "name": "Tongyi Qwen (LLM)",
+                    "type": "external",
+                    "status": "unhealthy",
+                    "running": False,
+                    "detail": f"QWEN_API_KEY authentication failed at {base_url}",
+                }
             return {
-                "name": "通义千问 (LLM)",
+                "name": "Tongyi Qwen (LLM)",
                 "type": "external",
                 "status": "healthy" if running else "unhealthy",
-                "running": running
+                "running": running,
+                "detail": f"{base_url} -> HTTP {response.status_code}",
             }
     except Exception as e:
         return {
-            "name": "通义千问 (LLM)",
+            "name": "Tongyi Qwen (LLM)",
             "type": "external",
             "status": "error",
             "running": False,
-            "error": str(e)
+            "error": str(e),
         }
 
 
 @router.get("/health")
 async def get_system_health():
-    """
-    获取系统完整健康状态
+    """Return full runtime health status.
 
-    返回所有依赖服务的健康检查结果：
-    - Docker 容器状态
-    - 数据库连接状态
-    - 外部 API 状态
+    This endpoint is runtime truth only. It should never 500 because a
+    missing database or container is itself a runtime signal that must be
+    reported back to the controller.
     """
-    results = {
-        "timestamp": datetime.now().isoformat(),
-        "containers": [],
-        "databases": [],
-        "services": [],
-        "external": [],
-        "summary": {
-            "total": 0,
-            "healthy": 0,
-            "unhealthy": 0,
-            "error": 0
+    try:
+        results = {
+            "timestamp": datetime.now().isoformat(),
+            "truth_plane": "runtime_truth",
+            "containers": [],
+            "databases": [],
+            "services": [],
+            "external": [],
+            "summary": {
+                "total": 0,
+                "healthy": 0,
+                "unhealthy": 0,
+                "error": 0,
+            },
         }
-    }
 
-    # 1. 检查 Docker 容器
-    for container in DOCKER_CONTAINERS:
-        container_status = await check_docker_container(container)
-        results["containers"].append(container_status)
+        for container in DOCKER_CONTAINERS:
+            container_status = await check_docker_container(container)
+            results["containers"].append(container_status)
 
-    # 2. 检查数据库服务
-    results["databases"].append(await check_database_postgres())
-    results["databases"].append(await check_database_redis())
-    results["databases"].append(await check_database_qdrant())
+        results["databases"].append(await check_database_postgres())
+        results["databases"].append(await check_database_redis())
+        results["databases"].append(await check_database_qdrant())
+        results["services"].append(await check_api_service())
+        results["external"].append(await check_llm_service())
 
-    # 3. 检查 API 服务
-    results["services"].append(await check_api_service())
+        all_services = (
+            results["containers"]
+            + results["databases"]
+            + results["services"]
+            + results["external"]
+        )
 
-    # 4. 检查外部服务
-    results["external"].append(await check_llm_service())
+        results["summary"]["total"] = len(all_services)
+        for service in all_services:
+            status = service.get("status", "unknown")
+            if status in ["healthy", "running"]:
+                results["summary"]["healthy"] += 1
+            elif status in ["unhealthy", "not_configured"]:
+                results["summary"]["unhealthy"] += 1
+            else:
+                results["summary"]["error"] += 1
 
-    # 5. 汇总统计
-    all_services = (
-        results["containers"] +
-        results["databases"] +
-        results["services"] +
-        results["external"]
-    )
-
-    results["summary"]["total"] = len(all_services)
-    for service in all_services:
-        status = service.get("status", "unknown")
-        if status in ["healthy", "running"]:
-            results["summary"]["healthy"] += 1
-        elif status in ["unhealthy", "not_configured"]:
-            results["summary"]["unhealthy"] += 1
+        if results["summary"]["error"] > 0:
+            results["overall_status"] = "error"
+        elif results["summary"]["unhealthy"] > 0:
+            results["overall_status"] = "degraded"
         else:
-            results["summary"]["error"] += 1
+            results["overall_status"] = "healthy"
 
-    # 设置总体状态
-    if results["summary"]["error"] > 0:
-        results["overall_status"] = "error"
-    elif results["summary"]["unhealthy"] > 0:
-        results["overall_status"] = "degraded"
-    else:
-        results["overall_status"] = "healthy"
+        return results
+    except Exception as e:
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "truth_plane": "runtime_truth",
+            "overall_status": "error",
+            "summary": {
+                "total": 0,
+                "healthy": 0,
+                "unhealthy": 0,
+                "error": 1,
+            },
+            "containers": [],
+            "databases": [],
+            "services": [],
+            "external": [],
+            "error": str(e),
+        }
 
-    return results
+
+@router.get("/code-health")
+async def get_code_health():
+    """Return code-truth health without probing runtime dependencies."""
+    return _build_code_health_snapshot()
 
 
 @router.get("/status")
 async def get_system_status():
-    """获取简化的系统状态（供前端轮询使用）"""
+    """Return a simplified system status for polling surfaces."""
     health = await get_system_health()
-
     return {
         "overall_status": health["overall_status"],
         "summary": health["summary"],
         "services": [
             {"name": s["name"], "status": s["status"], "running": s.get("running", False)}
             for s in health["databases"] + health["services"]
-        ]
+        ],
     }
 
 
 @router.post("/restart/{container_name}")
 async def restart_container(container_name: str):
-    """重启指定容器"""
-    if container_name not in DOCKER_CONTAINERS:
+    """Restart one canonical or legacy-named container."""
+    container_spec = next(
+        (
+            spec
+            for spec in DOCKER_CONTAINERS
+            if container_name == spec["key"] or container_name in spec["aliases"]
+        ),
+        None,
+    )
+    if container_spec is None:
+        raise HTTPException(status_code=404, detail=f"Container {container_name} not found")
+
+    resolved_name = _resolve_container_alias(container_spec["aliases"])
+    if resolved_name is None:
         raise HTTPException(status_code=404, detail=f"Container {container_name} not found")
 
     try:
         result = subprocess.run(
-            ["docker", "restart", container_name],
+            ["docker", "restart", resolved_name],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=30,
         )
 
         if result.returncode == 0:
-            return {"status": "success", "message": f"Container {container_name} restarted"}
-        else:
-            raise HTTPException(status_code=500, detail=f"Failed to restart: {result.stderr}")
+            return {
+                "status": "success",
+                "message": f"Container {resolved_name} restarted",
+                "requested_name": container_name,
+                "resolved_name": resolved_name,
+            }
+
+        raise HTTPException(status_code=500, detail=f"Failed to restart: {result.stderr}")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

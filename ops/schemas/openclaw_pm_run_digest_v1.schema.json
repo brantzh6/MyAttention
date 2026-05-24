@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openclaw_pm_run_digest_v1",
+  "title": "OpenClaw PM Run Digest v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "checked_at",
+    "source",
+    "cron_job_id",
+    "decision",
+    "status",
+    "evidence",
+    "next_expected_run"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "run_id": {
+      "type": "string",
+      "pattern": "^openclaw_pm_run_[0-9]{8}_[0-9]{6}"
+    },
+    "checked_at": {
+      "type": "string"
+    },
+    "source": {
+      "const": "openclaw-ike-pm"
+    },
+    "cron_job_id": {
+      "type": "string"
+    },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "quiet",
+        "triggered",
+        "bridge_busy",
+        "bridge_failed",
+        "invalid_state"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "ok",
+        "warning",
+        "error"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "last_real_progress_at": {
+      "type": "string"
+    },
+    "staleness_minutes": {
+      "type": "number"
+    },
+    "trigger_path": {
+      "type": "string"
+    },
+    "bridge_result_path": {
+      "type": "string"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "next_expected_run": {
+      "type": "string"
+    },
+    "controller_action_needed": {
+      "type": "boolean"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "staleness_minutes": {
+            "type": "number",
+            "minimum": 240
+          }
+        },
+        "required": [
+          "staleness_minutes"
+        ]
+      },
+      "then": {
+        "properties": {
+          "decision": {
+            "not": {
+              "const": "quiet"
+            }
+          },
+          "controller_action_needed": {
+            "const": true
+          }
+        },
+        "required": [
+          "controller_action_needed"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": false
+}

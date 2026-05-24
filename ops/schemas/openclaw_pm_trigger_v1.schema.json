@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openclaw_pm_trigger_v1",
+  "title": "OpenClaw PM Trigger v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "trigger_id",
+    "created_at",
+    "source",
+    "decision",
+    "reason",
+    "evidence",
+    "requested_controller_action",
+    "forbidden_actions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "trigger_id": {
+      "type": "string",
+      "pattern": "^openclaw_pm_[0-9]{8}_[0-9]{6}"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "source": {
+      "const": "openclaw-ike-pm"
+    },
+    "decision": {
+      "const": "notify_controller"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "mainline_stalled",
+        "invalid_gate",
+        "runtime_not_ready",
+        "review_pending",
+        "runner_not_ready",
+        "dirty_tree_gate",
+        "controller_bridge_escalation"
+      ]
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1
+    },
+    "requested_controller_action": {
+      "type": "string",
+      "minLength": 1
+    },
+    "forbidden_actions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "not": {
+        "contains": {
+          "const": "do not author tasks"
+        }
+      },
+      "minItems": 1
+    },
+    "bridge": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

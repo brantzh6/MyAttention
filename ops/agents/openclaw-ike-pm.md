@@ -114,11 +114,11 @@ Trigger file shape:
   "decision": "notify_controller",
   "reason": "mainline_stalled | invalid_gate | runtime_not_ready | review_pending | runner_not_ready | dirty_tree_gate",
   "evidence": ["short factual evidence"],
-  "requested_controller_action": "one sentence",
+  "requested_controller_action": "one advisory sentence for controller attention, not a binding instruction",
   "forbidden_actions": [
-    "do not edit source",
-    "do not operate runtime",
-    "do not decide promotion"
+    "pm must not edit source",
+    "pm must not operate runtime",
+    "pm must not decide promotion"
   ]
 }
 ```
@@ -126,11 +126,20 @@ Trigger file shape:
 Trigger boundary:
 
 - `ike-pm` itself must not author tasks.
-- The trigger must not forbid Codex controller task authoring when the requested
-  controller action is to write or dispatch a bounded task packet.
-- The trigger should forbid source edits, runtime operation, review absorption,
-  and promotion decisions unless the requested controller action explicitly
-  requires one of those controller-owned operations.
+- The trigger is a wakeup signal and evidence packet. It is not a work order.
+- `requested_controller_action` is advisory context only. It must be phrased as
+  a PM observation, not an imperative that constrains Codex.
+- The Codex controller may ignore or supersede the advisory action when
+  `ops/state/current_state.json`, mainline priorities, runtime truth, review
+  state, or dirty-tree gates show a better next action.
+- `forbidden_actions` describe PM/delegate boundaries by default. They must not
+  forbid Codex controller-owned work such as task authoring, review absorption,
+  promotion decision, runtime-operator dispatch, or bounded source edits when
+  Codex decides those are the correct next action under the current gates.
+- If PM detects that its previous trigger advisory is stale or already
+  superseded, it should still wake Codex when the mainline is stalled, but the
+  advisory should say: `controller should inspect current_state and choose the
+  next mainline action; prior PM advisory may be stale`.
 
 Schema:
 

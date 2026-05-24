@@ -52,7 +52,8 @@
     },
     "requested_controller_action": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "Advisory PM observation for controller attention. This is not a binding instruction; Codex controller may supersede it after reading current project truth."
     },
     "forbidden_actions": {
       "type": "array",
@@ -64,6 +65,7 @@
           "const": "do not author tasks"
         }
       },
+      "description": "PM/delegate boundaries by default. These must not prohibit Codex controller-owned decisions or task authoring when gates allow them.",
       "minItems": 1
     },
     "bridge": {

@@ -9,6 +9,13 @@ from typing import Dict, Any, Optional
 from enum import Enum
 from dataclasses import dataclass
 
+from config import get_effective_qwen_default_model
+
+
+# Sentinel value for runtime default resolution
+# Use this in ROUTING_CONFIG to indicate "resolve to effective Qwen default at runtime"
+EFFECTIVE_QWEN_DEFAULT_MODEL = "__effective_qwen_default__"
+
 
 class TaskType(str, Enum):
     SIMPLE_QA = "simple_qa"
@@ -24,27 +31,28 @@ class TaskType(str, Enum):
 @dataclass
 class ModelConfig:
     provider: str
-    model: str
+    model: str  # Use EFFECTIVE_QWEN_DEFAULT_MODEL for runtime default resolution
     fallback_provider: Optional[str] = None
-    fallback_model: Optional[str] = None
+    fallback_model: Optional[str] = None  # None = no fallback, EFFECTIVE_QWEN_DEFAULT_MODEL = runtime default
     max_tokens: int = 4096
     temperature: float = 0.7
 
 
 # Task-to-model routing configuration (using Alibaba Cloud Bailian API)
+# Use EFFECTIVE_QWEN_DEFAULT_MODEL for model to indicate "use effective default at runtime"
 ROUTING_CONFIG: Dict[TaskType, ModelConfig] = {
     TaskType.SIMPLE_QA: ModelConfig(
         provider="qwen",
-        model="qwen-turbo",
+        model=EFFECTIVE_QWEN_DEFAULT_MODEL,  # Resolved to effective default at runtime
         fallback_provider="qwen",
-        fallback_model="qwen-plus",
+        fallback_model=EFFECTIVE_QWEN_DEFAULT_MODEL,  # Resolved to effective default at runtime
         temperature=0.3,
     ),
     TaskType.SUMMARIZATION: ModelConfig(
         provider="qwen",
         model="qwen-plus",
         fallback_provider="qwen",
-        fallback_model="qwen-max",
+        fallback_model=EFFECTIVE_QWEN_DEFAULT_MODEL,  # Resolved to effective default at runtime
         temperature=0.5,
     ),
     TaskType.DEEP_ANALYSIS: ModelConfig(
@@ -143,8 +151,30 @@ class TaskRouter:
         return TaskType.SIMPLE_QA
     
     def get_model_config(self, task_type: TaskType) -> ModelConfig:
-        """Get the model configuration for a task type"""
-        return self.routing.get(task_type, self.routing[TaskType.SIMPLE_QA])
+        """Get the model configuration for a task type, resolving effective defaults.
+
+        Only resolves EFFECTIVE_QWEN_DEFAULT_MODEL sentinel to effective default
+        when provider is "qwen". None fallback_model means explicit no fallback.
+        Voting and custom routing configs are preserved unchanged.
+        """
+        config = self.routing.get(task_type, self.routing[TaskType.SIMPLE_QA])
+
+        # Only resolve sentinel to effective default for Qwen provider
+        resolve_model = config.model == EFFECTIVE_QWEN_DEFAULT_MODEL and config.provider == "qwen"
+        resolve_fallback = config.fallback_model == EFFECTIVE_QWEN_DEFAULT_MODEL and config.fallback_provider == "qwen"
+
+        if resolve_model or resolve_fallback:
+            effective_default = get_effective_qwen_default_model()
+            return ModelConfig(
+                provider=config.provider,
+                model=config.model if not resolve_model else effective_default,
+                fallback_provider=config.fallback_provider,
+                fallback_model=config.fallback_model if not resolve_fallback else effective_default,
+                max_tokens=config.max_tokens,
+                temperature=config.temperature,
+            )
+
+        return config
     
     def route(
         self,

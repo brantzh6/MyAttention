@@ -19,6 +19,155 @@ MVP_OPEN_STATUSES = (
 MVP_BLOCKING_SOURCE_TYPES = ("api_test", "ui_test", "system_health")
 
 
+# ==============================================================================
+# Evolution Contexts API (Runtime Dashboard Support)
+# ==============================================================================
+
+class ContextSummaryResponse(BaseModel):
+    """Lightweight context summary for dashboard list view."""
+    id: str
+    context_type: str
+    title: str
+    goal: Optional[str] = None
+    owner_type: Optional[str] = None
+    owner_id: Optional[str] = None
+    status: str
+    priority: int
+    task_count: int = 0
+    open_task_count: int = 0
+    artifact_count: int = 0
+    event_count: int = 0
+    latest_event_at: Optional[str] = None
+    latest_artifact_at: Optional[str] = None
+    updated_at: Optional[str] = None
+    latest_event: Optional[Dict[str, Any]] = None
+    latest_artifact: Optional[Dict[str, Any]] = None
+
+
+class ContextDetailResponse(ContextSummaryResponse):
+    """Detailed context view with nested collections."""
+    tasks: List[Dict[str, Any]] = Field(default_factory=list)
+    recent_events: List[Dict[str, Any]] = Field(default_factory=list)
+    recent_artifacts: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class ContextListResponse(BaseModel):
+    """Response wrapper for context list endpoint."""
+    contexts: List[ContextSummaryResponse]
+    advisory_note: str = (
+        "This endpoint is a runtime dashboard support surface. "
+        "Results are non-canonical and derived from available task/history data. "
+        "Not a durable evolution context source."
+    )
+
+
+class TaskMemoryItemResponse(BaseModel):
+    """Task memory item for dashboard display."""
+    id: str
+    context_id: str
+    memory_kind: str
+    title: str
+    summary: Optional[str] = None
+    created_at: Optional[str] = None
+
+
+class TaskMemoryListResponse(BaseModel):
+    """Response wrapper for task memory endpoint."""
+    memories: List[TaskMemoryItemResponse]
+    advisory_note: str = (
+        "This endpoint is a runtime dashboard support surface. "
+        "Results are non-canonical and reflect inspect-only flywheel state. "
+        "Not a durable task-memory source."
+    )
+
+
+class ProceduralMemoryItemResponse(BaseModel):
+    """Procedural memory item for dashboard display."""
+    id: str
+    memory_key: str
+    name: str
+    problem_type: Optional[str] = None
+    method_name: Optional[str] = None
+    validation_status: str
+    effectiveness_score: float
+    last_validated_at: Optional[str] = None
+
+
+class ProceduralMemoryListResponse(BaseModel):
+    """Response wrapper for procedural memory endpoint."""
+    memories: List[ProceduralMemoryItemResponse]
+    advisory_note: str = (
+        "This endpoint is a runtime dashboard support surface. "
+        "Results are non-canonical and reflect inspect-only flywheel state. "
+        "Not a durable procedural-memory source."
+    )
+
+
+@router.get("/contexts", response_model=ContextListResponse)
+async def list_evolution_contexts():
+    """
+    List evolution contexts for dashboard.
+
+    This is a runtime dashboard support surface. Returns empty list
+    when no durable evolution context source exists. Results are
+    non-canonical and not accepted memory state.
+    """
+    # No durable evolution context source exists yet.
+    # Return empty list with advisory note.
+    return ContextListResponse(contexts=[])
+
+
+@router.get("/contexts/{context_id}", response_model=ContextDetailResponse)
+async def get_evolution_context(context_id: str):
+    """
+    Get detailed evolution context by ID.
+
+    This is a runtime dashboard support surface. Returns 404 if
+    context not found. Results are non-canonical and not accepted memory state.
+    """
+    # No durable evolution context source exists yet.
+    # All context IDs return 404.
+    raise HTTPException(
+        status_code=404,
+        detail={
+            "error": "Context not found",
+            "context_id": context_id,
+            "advisory_note": (
+                "This endpoint is a runtime dashboard support surface. "
+                "No durable evolution context source exists."
+            ),
+        },
+    )
+
+
+@router.get("/memories/task", response_model=TaskMemoryListResponse)
+async def list_task_memories():
+    """
+    List task memories for dashboard.
+
+    This is a runtime dashboard support surface. Returns empty list
+    when no durable task-memory source exists. Results are non-canonical
+    and not accepted memory state.
+    """
+    # No durable task-memory source exists yet.
+    # Return empty list with advisory note.
+    return TaskMemoryListResponse(memories=[])
+
+
+@router.get("/memories/procedural", response_model=ProceduralMemoryListResponse)
+async def list_procedural_memories():
+    """
+    List procedural memories for dashboard.
+
+    This is a runtime dashboard support surface. Returns empty list
+    when no durable procedural-memory source exists. Results are non-canonical
+    and not accepted memory state.
+    """
+    # No durable procedural-memory source exists yet.
+    # Return empty list with advisory note.
+    return ProceduralMemoryListResponse(memories=[])
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # 数据模型
 # ═══════════════════════════════════════════════════════════════════════════

@@ -166,6 +166,104 @@ class FlywheelInspectRouteTests(unittest.TestCase):
         )
         self.assertEqual(data["promotion_state"], "inspect_only")
 
+    def test_flywheel_inspect_explicit_ike_flywheel_improvement_request(self):
+        """Explicit IKE/flywheel improvement request yields flywheel_signal and evolution trigger.
+
+        Regression test for flywheel_candidate_semantic_fix_2026_05_25:
+        A chat message explicitly asking for an inspect-only improvement to the IKE flywheel
+        candidate extraction loop should produce at least one evolution_trigger_candidate,
+        not classify as other/no_action.
+
+        This test verifies that the prompt contains the bounded special-case guidance
+        for IKE/flywheel system improvements, proving the guidance is actually sent to the LLM.
+        """
+
+        captured_prompt = None
+
+        class _DummyAdapter:
+            async def chat(self, message, *args, **kwargs):
+                # Capture the prompt to verify guidance is present
+                nonlocal captured_prompt
+                captured_prompt = message
+                return """
+                {
+                  "intent": "flywheel_signal",
+                  "summary": "user requests flywheel inspection loop improvement",
+                  "source_candidates": [],
+                  "correction_events": [],
+                  "knowledge_delta_candidates": [],
+                  "evolution_trigger_candidates": [
+                    {
+                      "trigger_type": "study",
+                      "label": "Study candidate extraction prompt refinement",
+                      "rationale": "The user requests improvements to flywheel candidate extraction; worth studying prompt patterns"
+                    }
+                  ]
+                }
+                """
+
+        with patch(
+            "conversation_runtime.flywheel.LLMAdapter",
+            return_value=_DummyAdapter(),
+        ):
+            response = self.client.post(
+                "/api/conversation-runtime/flywheel/inspect",
+                json={
+                    "conversation_text": (
+                        "Please suggest one small improvement for the IKE flywheel inspection loop "
+                        "that would make the candidate extraction more useful. Keep it inspect-only: "
+                        "no automatic execution, no promotion, and controller review required."
+                    ),
+                    "speaker_role": "user",
+                    "topic": "IKE flywheel improvement",
+                    "task_intent": "inspect-only improvement request",
+                    "provider": "qwen",
+                },
+            )
+
+        # Verify the prompt contains the bounded special-case guidance for IKE/flywheel improvements.
+        # This assertion proves that the new guidance text is actually present in the prompt.
+        # If removed or significantly altered, the test fails, providing regression protection.
+        self.assertIsNotNone(captured_prompt, "Prompt should have been captured")
+        self.assertIn(
+            "If the conversation explicitly requests improvements to the IKE flywheel system itself",
+            captured_prompt,
+            "Prompt must contain bounded special-case guidance for IKE/flywheel improvements",
+        )
+        self.assertIn(
+            "classify intent as flywheel_signal",
+            captured_prompt,
+            "Prompt must instruct to classify IKE/flywheel improvement requests as flywheel_signal",
+        )
+        self.assertIn(
+            "produce at least one evolution_trigger_candidate",
+            captured_prompt,
+            "Prompt must require at least one evolution_trigger_candidate for IKE/flywheel improvements",
+        )
+        self.assertIn(
+            "This is bounded: do not broaden to generic evolution requests",
+            captured_prompt,
+            "Prompt must include bounded scope warning to prevent over-classification",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["segment_intent"], "flywheel_signal")
+        self.assertEqual(len(data["evolution_trigger_candidates"]), 1)
+        self.assertEqual(data["evolution_trigger_candidates"][0]["trigger_type"], "study")
+        self.assertIn(
+            "extraction",
+            data["evolution_trigger_candidates"][0]["label"].lower(),
+        )
+        self.assertEqual(data["operational_advice"]["suggested_next_step"], "review_evolution_triggers")
+        self.assertEqual(data["controller_packet"]["review_mode"], "review_evolution_triggers")
+        self.assertIn("evolution_trigger_review", data["controller_packet"]["reason_tags"])
+        self.assertIn("ready_for_task_packet_preview", data["controller_packet"]["reason_tags"])
+        self.assertIn("needs_controller_review", data["controller_packet"]["reason_tags"])
+        self.assertEqual(data["promotion_state"], "inspect_only")
+        self.assertEqual(data["controller_packet"]["truth_status"], "non_canonical")
+        self.assertNotEqual(data["operational_advice"]["suggested_next_step"], "no_action")
+
     def test_flywheel_inspect_explicit_non_canonical_boundary(self):
         """Verify truth boundary and inspect-only markers are always present."""
 

@@ -32,6 +32,49 @@ export interface ActiveLane {
   status: string
 }
 
+export interface AutomationHealth {
+  id: string
+  name: string
+  status: 'healthy' | 'caveat' | 'unhealthy'
+  description: string
+}
+
+export interface PmRunDigest {
+  runId: string
+  checkedAt: string
+  cronJobId: string
+  decision: string
+  status: 'ok' | 'warning' | 'error'
+  reason: string
+  lastRealProgressAt?: string
+  stalenessMinutes?: number
+  controllerActionNeeded: boolean
+  triggerPath?: string
+  bridgeResultPath?: string
+  evidence: string[]
+  nextExpectedRun?: string
+}
+
+export interface NextAction {
+  lane: string
+  action: string
+}
+
+export interface OperationsSplit {
+  codeTruth: string
+  runtimeTruth: string
+  runtimeDependency: string
+}
+
+export interface FlywheelLoopStatus {
+  statusLabel: string
+  acceptedEvidence: string[]
+  reusableCommand: string
+  latestRealPacket: string
+  nextGate: string
+  truthBoundary: string
+}
+
 export interface ControlSnapshot {
   provenance: SnapshotProvenance
   mainline: {
@@ -46,11 +89,15 @@ export interface ControlSnapshot {
   }
   capabilities: CapabilityGap[]
   lanes: ActiveLane[]
+  automationHealth?: AutomationHealth[]
+  pmRunDigest?: PmRunDigest
   reviewState: {
     prReviewGate: string
     promotion: string
     termination: string
     monitor: string
   }
-  nextActions: string[]
+  operationsSplit?: OperationsSplit
+  flywheelLoop?: FlywheelLoopStatus
+  nextActions: NextAction[]
 }

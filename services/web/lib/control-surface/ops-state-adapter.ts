@@ -288,7 +288,8 @@ function mapStatus(status: string): ScoreStatus {
   }
 }
 
-function mapServiceStatus(status: string): 'healthy' | 'caveat' | 'unhealthy' {
+function mapServiceStatus(status: unknown): 'healthy' | 'caveat' | 'unhealthy' {
+  if (typeof status !== 'string') return 'unhealthy'
   if (status === 'healthy') return 'healthy'
   if (status === 'degraded' || status.includes('contradictory')) return 'caveat'
   return 'unhealthy'

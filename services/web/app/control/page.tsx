@@ -31,6 +31,12 @@ function AutomationStatusBadge({ status }: { status: 'healthy' | 'caveat' | 'unh
   )
 }
 
+function pmDigestBadgeStatus(status: string, controllerActionNeeded: boolean): 'healthy' | 'caveat' | 'unhealthy' {
+  if (status === 'error') return 'unhealthy'
+  if (status === 'warning' || controllerActionNeeded) return 'caveat'
+  return 'healthy'
+}
+
 export default async function ControlAnchorPage() {
   const data = await getSnapshot()
 
@@ -196,7 +202,7 @@ export default async function ControlAnchorPage() {
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-medium">{data.pmRunDigest.decision}</span>
                   <AutomationStatusBadge
-                    status={data.pmRunDigest.status === 'error' ? 'unhealthy' : data.pmRunDigest.controllerActionNeeded ? 'caveat' : 'healthy'}
+                    status={pmDigestBadgeStatus(data.pmRunDigest.status, data.pmRunDigest.controllerActionNeeded)}
                   />
                 </div>
                 <p className="text-muted-foreground leading-relaxed">{data.pmRunDigest.reason}</p>

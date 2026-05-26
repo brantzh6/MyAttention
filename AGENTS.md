@@ -6,9 +6,14 @@ runtime truth.
 
 ## Source Of Truth
 
-Read these before acting:
+Read this before acting when present in the local workspace:
 
 - `ops/state/current_state.json`
+
+These files are optional repo-local governance extensions. Read them when they
+exist; do not fail a bounded task solely because they are absent from a small
+promotion package:
+
 - `docs/IKE_OPERATIONS_KERNEL_P0.md`
 - `ops/runners/registry.json`
 - `ops/agents/*.md` for the relevant lane

@@ -36,12 +36,29 @@ function resolveOpsStatePath(): string | null {
   return null
 }
 
+function resolveRepoRootFromStatePath(statePath: string): string | null {
+  const resolved = path.resolve(statePath)
+  const normalized = resolved.split(path.sep)
+  const suffix = ['ops', 'state', 'current_state.json']
+
+  for (let i = normalized.length - suffix.length; i >= 0; i--) {
+    const matches = suffix.every((part, offset) => normalized[i + offset] === part)
+    if (matches) {
+      return normalized.slice(0, i).join(path.sep) || path.sep
+    }
+  }
+
+  return null
+}
+
 function resolveRepoPath(relativePath: string): string | null {
   const explicitStatePath = process.env.IKE_OPS_STATE_PATH
   if (explicitStatePath) {
-    const root = path.resolve(path.dirname(explicitStatePath), '..', '..')
-    const candidate = path.join(root, relativePath)
-    if (fs.existsSync(candidate)) return candidate
+    const root = resolveRepoRootFromStatePath(explicitStatePath)
+    if (root) {
+      const candidate = path.join(root, relativePath)
+      if (fs.existsSync(candidate)) return candidate
+    }
   }
 
   const cwd = process.cwd()

@@ -17,13 +17,16 @@ function resolveOpsStatePath(): string | null {
     return envPath
   }
 
-  // 2. Try reasonable local repo roots from cwd
+  // 2. Try bounded local repo roots from cwd. Do not walk above cwd unless the
+  // process is running from the known services/web app directory.
   const cwd = process.cwd()
   const candidateRoots = [
-    cwd,                                    // running from repo root
-    path.join(cwd, '..', '..'),            // running from services/web
-    path.join(cwd, 'services', 'web'),     // running from repo root (alt)
+    cwd, // running from repo root
   ]
+
+  if (path.basename(cwd) === 'web' && path.basename(path.dirname(cwd)) === 'services') {
+    candidateRoots.push(path.resolve(cwd, '..', '..'))
+  }
 
   for (const root of candidateRoots) {
     const candidate = path.join(root, 'ops', 'state', 'current_state.json')
@@ -64,8 +67,11 @@ function resolveRepoPath(relativePath: string): string | null {
   const cwd = process.cwd()
   const candidateRoots = [
     cwd,
-    path.join(cwd, '..', '..'),
   ]
+
+  if (path.basename(cwd) === 'web' && path.basename(path.dirname(cwd)) === 'services') {
+    candidateRoots.push(path.resolve(cwd, '..', '..'))
+  }
 
   for (const root of candidateRoots) {
     const candidate = path.join(root, relativePath)

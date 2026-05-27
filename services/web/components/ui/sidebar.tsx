@@ -2,15 +2,16 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Activity, Brain, Home, MessageSquare, Settings } from 'lucide-react'
+import { Activity, Brain, Home, LayoutDashboard, MessageSquare, Settings } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { href: '/', label: 'Information Brain', icon: Home },
-  { href: '/chat', label: 'Knowledge Brain', icon: MessageSquare },
-  { href: '/evolution', label: 'Evolution Brain', icon: Activity },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/', label: '信息大脑', icon: Home },
+  { href: '/chat', label: '知识大脑', icon: MessageSquare },
+  { href: '/evolution', label: '进化大脑', icon: Activity },
+  { href: '/control', label: '项目控制面', icon: LayoutDashboard },
+  { href: '/settings', label: '设置', icon: Settings },
 ]
 
 export function Sidebar() {
@@ -23,7 +24,7 @@ export function Sidebar() {
           <Brain className="h-8 w-8 text-primary" />
           <div className="leading-tight">
             <p className="text-lg font-semibold">IKE</p>
-            <p className="text-xs text-muted-foreground">Information / knowledge / evolution</p>
+            <p className="text-xs text-muted-foreground">信息 / 知识 / 进化 / 世界模型 / 思维工具</p>
           </div>
         </Link>
       </div>
@@ -55,7 +56,7 @@ export function Sidebar() {
 
       <div className="border-t p-4 text-xs text-muted-foreground">
         <p>IKE v0.1.0</p>
-        <p className="mt-1">Repository name remains MyAttention during migration.</p>
+        <p className="mt-1">代码仓库仍是 MyAttention，迁移到 IKE 后再统一改名。</p>
       </div>
     </aside>
   )

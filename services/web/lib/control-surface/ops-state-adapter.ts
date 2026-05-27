@@ -18,14 +18,21 @@ function resolveOpsStatePath(): string | null {
   }
 
   // 2. Try bounded local repo roots from cwd. Do not walk above cwd unless the
-  // process is running from the known services/web app directory.
+  // process is running from the known services/web app directory or Next standalone.
   const cwd = process.cwd()
-  const candidateRoots = [
+  const candidateRoots: string[] = [
     cwd, // running from repo root
   ]
 
+  // Local dev: running from services/web
   if (path.basename(cwd) === 'web' && path.basename(path.dirname(cwd)) === 'services') {
     candidateRoots.push(path.resolve(cwd, '..', '..'))
+  }
+
+  // Next standalone: running from services/web/.next/standalone
+  if (path.basename(cwd) === 'standalone' && path.basename(path.dirname(cwd)) === '.next') {
+    // standalone -> .next -> web -> services -> repo root (4 levels up)
+    candidateRoots.push(path.resolve(cwd, '..', '..', '..', '..'))
   }
 
   for (const root of candidateRoots) {
@@ -65,12 +72,19 @@ function resolveRepoPath(relativePath: string): string | null {
   }
 
   const cwd = process.cwd()
-  const candidateRoots = [
+  const candidateRoots: string[] = [
     cwd,
   ]
 
+  // Local dev: running from services/web
   if (path.basename(cwd) === 'web' && path.basename(path.dirname(cwd)) === 'services') {
     candidateRoots.push(path.resolve(cwd, '..', '..'))
+  }
+
+  // Next standalone: running from services/web/.next/standalone
+  if (path.basename(cwd) === 'standalone' && path.basename(path.dirname(cwd)) === '.next') {
+    // standalone -> .next -> web -> services -> repo root (4 levels up)
+    candidateRoots.push(path.resolve(cwd, '..', '..', '..', '..'))
   }
 
   for (const root of candidateRoots) {
@@ -125,11 +139,6 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
     return logFieldError('runtime_state.services', 'not an object')
   }
 
-  const validation = state?.validation_state
-  if (!validation) {
-    return logFieldError('validation_state', 'undefined')
-  }
-
   const runner = state?.runner_state
   if (!runner) {
     return logFieldError('runner_state', 'undefined')
@@ -145,15 +154,9 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
     return logFieldError('review_state', 'undefined')
   }
 
+  // Optional fields - degrade gracefully if missing
   const dirtyTree = state?.dirty_tree_state
-  if (!dirtyTree) {
-    return logFieldError('dirty_tree_state', 'undefined')
-  }
-
   const nextAction = state?.next_action
-  if (!nextAction) {
-    return logFieldError('next_action', 'undefined')
-  }
 
   try {
     const pmRunDigest = readPmRunDigest()
@@ -219,17 +222,17 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
         termination: 'Review gates terminate after absorbed findings',
         monitor: state.review_state.status
       },
-      operationsSplit: {
-        codeTruth: state.dirty_tree_state.status === 'clean' ? 'Dirty tree is clean' : 'Dirty tree is DEGRADED',
+      operationsSplit: dirtyTree ? {
+        codeTruth: dirtyTree.status === 'clean' ? 'Dirty tree is clean' : 'Dirty tree is DEGRADED',
         runtimeTruth: `Reachability: ${runtime.reachability_status}`,
         runtimeDependency: `Product Runtime: ${runtime.product_runtime_status}`
-      },
-      nextActions: [
+      } : undefined,
+      nextActions: nextAction ? [
         {
-          lane: state.next_action.owner,
-          action: state.next_action.action
+          lane: nextAction.owner,
+          action: nextAction.action
         }
-      ]
+      ] : []
     }
 
     return snapshot

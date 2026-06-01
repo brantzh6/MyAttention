@@ -714,6 +714,19 @@ def build_web_command(config: dict[str, Any]) -> tuple[str, Path, dict[str, str]
             raise NotADirectoryError(
                 f"MYATTENTION_WEB_WORKDIR is not a directory: {workdir}"
             )
+        # Isolated override requires explicit ops-state path for durable contract.
+        ops_state_raw = os.environ.get("IKE_OPS_STATE_PATH", "").strip()
+        if not ops_state_raw:
+            raise RuntimeError(
+                "MYATTENTION_WEB_WORKDIR requires IKE_OPS_STATE_PATH; "
+                "the isolated Web process needs an explicit ops-state path. "
+                "Set IKE_OPS_STATE_PATH to an existing file path or unset MYATTENTION_WEB_WORKDIR."
+            )
+        ops_state_path = Path(ops_state_raw).resolve()
+        if not ops_state_path.exists():
+            raise FileNotFoundError(
+                f"IKE_OPS_STATE_PATH path does not exist: {ops_state_path}"
+            )
     else:
         workdir = resolve_config_path(web_cfg.get("workdir", "services/web"))
     api_port = int(runtime_cfg.get("api_port", 8000))
@@ -732,6 +745,8 @@ def build_web_command(config: dict[str, Any]) -> tuple[str, Path, dict[str, str]
         "API_URL": f"http://127.0.0.1:{api_port}",
         "NEXT_PUBLIC_API_URL": f"http://127.0.0.1:{api_port}",
     }
+    if override_dir:
+        env["IKE_OPS_STATE_PATH"] = str(ops_state_path)
     return command, workdir, env
 
 

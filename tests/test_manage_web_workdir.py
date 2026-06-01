@@ -29,12 +29,22 @@ class TestWebWorkdirOverride(unittest.TestCase):
 
     def setUp(self):
         self.original = os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        self.original_ops_state = os.environ.pop("IKE_OPS_STATE_PATH", None)
 
     def tearDown(self):
         if self.original is not None:
             os.environ["MYATTENTION_WEB_WORKDIR"] = self.original
         else:
             os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        if self.original_ops_state is not None:
+            os.environ["IKE_OPS_STATE_PATH"] = self.original_ops_state
+        else:
+            os.environ.pop("IKE_OPS_STATE_PATH", None)
+
+    def _make_ops_state_file(self, tmpdir: str) -> Path:
+        ops_state_file = Path(tmpdir) / "ops_state.json"
+        ops_state_file.write_text("{}", encoding="utf-8")
+        return ops_state_file
 
     def _make_config(self):
         return {
@@ -54,7 +64,9 @@ class TestWebWorkdirOverride(unittest.TestCase):
     def test_valid_override_existing_dir(self):
         """When MYATTENTION_WEB_WORKDIR points to an existing dir, use it."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            ops_state_file = self._make_ops_state_file(tmpdir)
             os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            os.environ["IKE_OPS_STATE_PATH"] = str(ops_state_file)
             config = self._make_config()
             _cmd, workdir, _env = build_web_command(config)
             self.assertEqual(workdir, Path(tmpdir).resolve())
@@ -93,12 +105,22 @@ class TestServiceModeIncompatibility(unittest.TestCase):
 
     def setUp(self):
         self.original = os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        self.original_ops_state = os.environ.pop("IKE_OPS_STATE_PATH", None)
 
     def tearDown(self):
         if self.original is not None:
             os.environ["MYATTENTION_WEB_WORKDIR"] = self.original
         else:
             os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        if self.original_ops_state is not None:
+            os.environ["IKE_OPS_STATE_PATH"] = self.original_ops_state
+        else:
+            os.environ.pop("IKE_OPS_STATE_PATH", None)
+
+    def _make_ops_state_file(self, tmpdir: str) -> Path:
+        ops_state_file = Path(tmpdir) / "ops_state.json"
+        ops_state_file.write_text("{}", encoding="utf-8")
+        return ops_state_file
 
     def _make_config(self, use_service=False):
         return {
@@ -110,7 +132,9 @@ class TestServiceModeIncompatibility(unittest.TestCase):
     def test_service_disabled_with_override_ok(self):
         """use_service=false + MYATTENTION_WEB_WORKDIR is fine."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            ops_state_file = self._make_ops_state_file(tmpdir)
             os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            os.environ["IKE_OPS_STATE_PATH"] = str(ops_state_file)
             with mock_service_enabled("web", False):
                 config = self._make_config(use_service=False)
                 _cmd, workdir, _env = build_web_command(config)
@@ -133,12 +157,22 @@ class TestWatchdogManageWebBoundary(unittest.TestCase):
 
     def setUp(self):
         self.original = os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        self.original_ops_state = os.environ.pop("IKE_OPS_STATE_PATH", None)
 
     def tearDown(self):
         if self.original is not None:
             os.environ["MYATTENTION_WEB_WORKDIR"] = self.original
         else:
             os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        if self.original_ops_state is not None:
+            os.environ["IKE_OPS_STATE_PATH"] = self.original_ops_state
+        else:
+            os.environ.pop("IKE_OPS_STATE_PATH", None)
+
+    def _make_ops_state_file(self, tmpdir: str) -> Path:
+        ops_state_file = Path(tmpdir) / "ops_state.json"
+        ops_state_file.write_text("{}", encoding="utf-8")
+        return ops_state_file
 
     def _make_config(self, manage_web=True):
         return {
@@ -157,7 +191,9 @@ class TestWatchdogManageWebBoundary(unittest.TestCase):
     def test_override_manage_web_false_ok(self):
         """manage_web=false + override is supported."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            ops_state_file = self._make_ops_state_file(tmpdir)
             os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            os.environ["IKE_OPS_STATE_PATH"] = str(ops_state_file)
             config = self._make_config(manage_web=False)
             _cmd, workdir, _env = build_web_command(config)
             self.assertEqual(workdir, Path(tmpdir).resolve())
@@ -207,17 +243,103 @@ class TestWatchdogManageWebBoundary(unittest.TestCase):
                 self.assertIn("web.use_service", str(ctx.exception))
 
 
+class TestOpsStatePathInjection(unittest.TestCase):
+    """MYATTENTION_WEB_WORKDIR requires IKE_OPS_STATE_PATH for durable contract."""
+
+    def setUp(self):
+        self.original_workdir = os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        self.original_ops_state = os.environ.pop("IKE_OPS_STATE_PATH", None)
+
+    def tearDown(self):
+        if self.original_workdir is not None:
+            os.environ["MYATTENTION_WEB_WORKDIR"] = self.original_workdir
+        else:
+            os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        if self.original_ops_state is not None:
+            os.environ["IKE_OPS_STATE_PATH"] = self.original_ops_state
+        else:
+            os.environ.pop("IKE_OPS_STATE_PATH", None)
+
+    def _make_config(self):
+        return {
+            "web": {"workdir": "services/web"},
+            "watchdog": {"manage_web": False},
+            "runtime": {"api_port": 8000, "web_port": 3000, "web_host": "127.0.0.1"},
+        }
+
+    def test_override_with_valid_ops_state_path_injects_env(self):
+        """When override is set with valid IKE_OPS_STATE_PATH, env includes it."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ops_state_file = Path(tmpdir) / "ops_state.json"
+            ops_state_file.write_text("{}", encoding="utf-8")
+            os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            os.environ["IKE_OPS_STATE_PATH"] = str(ops_state_file)
+            config = self._make_config()
+            _cmd, _workdir, env = build_web_command(config)
+            self.assertEqual(env["IKE_OPS_STATE_PATH"], str(ops_state_file.resolve()))
+
+    def test_override_missing_ops_state_path_raises(self):
+        """When override is set without IKE_OPS_STATE_PATH, raise."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            os.environ.pop("IKE_OPS_STATE_PATH", None)
+            config = self._make_config()
+            with self.assertRaises(RuntimeError) as ctx:
+                build_web_command(config)
+            self.assertIn("IKE_OPS_STATE_PATH", str(ctx.exception))
+            self.assertIn("MYATTENTION_WEB_WORKDIR", str(ctx.exception))
+
+    def test_override_whitespace_ops_state_path_raises(self):
+        """Whitespace-only IKE_OPS_STATE_PATH is rejected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            os.environ["IKE_OPS_STATE_PATH"] = "   "
+            config = self._make_config()
+            with self.assertRaises(RuntimeError) as ctx:
+                build_web_command(config)
+            self.assertIn("IKE_OPS_STATE_PATH", str(ctx.exception))
+
+    def test_override_nonexistent_ops_state_path_raises(self):
+        """IKE_OPS_STATE_PATH pointing to non-existent file raises."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nonexistent = Path(tmpdir) / "nonexistent_ops_state.json"
+            os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            os.environ["IKE_OPS_STATE_PATH"] = str(nonexistent)
+            config = self._make_config()
+            with self.assertRaises(FileNotFoundError) as ctx:
+                build_web_command(config)
+            self.assertIn("IKE_OPS_STATE_PATH", str(ctx.exception))
+
+    def test_no_override_no_ops_state_required(self):
+        """When override is unset, IKE_OPS_STATE_PATH is not required."""
+        os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        os.environ.pop("IKE_OPS_STATE_PATH", None)
+        config = self._make_config()
+        _cmd, _workdir, env = build_web_command(config)
+        self.assertNotIn("IKE_OPS_STATE_PATH", env)
+
+
 class TestRuntimeWatchdogBoundary(unittest.TestCase):
     """RuntimeWatchdog must reject override when manage_web=true."""
 
     def setUp(self):
         self.original = os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        self.original_ops_state = os.environ.pop("IKE_OPS_STATE_PATH", None)
 
     def tearDown(self):
         if self.original is not None:
             os.environ["MYATTENTION_WEB_WORKDIR"] = self.original
         else:
             os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+        if self.original_ops_state is not None:
+            os.environ["IKE_OPS_STATE_PATH"] = self.original_ops_state
+        else:
+            os.environ.pop("IKE_OPS_STATE_PATH", None)
+
+    def _make_ops_state_file(self, tmpdir: str) -> Path:
+        ops_state_file = Path(tmpdir) / "ops_state.json"
+        ops_state_file.write_text("{}", encoding="utf-8")
+        return ops_state_file
 
     def test_watchdog_init_manage_web_true_with_override_raises(self):
         """RuntimeWatchdog rejects override when manage_web=true."""
@@ -254,7 +376,9 @@ web_port = 3000
     def test_watchdog_init_manage_web_false_with_override_ok(self):
         """RuntimeWatchdog accepts override when manage_web=false."""
         with tempfile.TemporaryDirectory() as tmpdir:
+            ops_state_file = self._make_ops_state_file(tmpdir)
             os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            os.environ["IKE_OPS_STATE_PATH"] = str(ops_state_file)
             from runtime_watchdog import RuntimeWatchdog
 
             config_dir = REPO_ROOT / "config" / "runtime"

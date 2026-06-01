@@ -34,16 +34,13 @@ class RuntimeWatchdog:
         self.mode = mode
         self.config = load_runtime_config(mode)
 
-        # Prevent watchdog restart revision drift: if watchdog manages web and
-        # MYATTENTION_WEB_WORKDIR is set, the override would be silently lost
-        # on any watchdog-triggered restart (the restart calls start_web() ->
-        # service path or build_web_command() without the shell env). Reject.
-        if _web_workdir_override() and service_enabled(self.config, "web"):
+        # MYATTENTION_WEB_WORKDIR is only supported when watchdog does not manage Web.
+        # Runtime operator owns isolated Web start/restart when manage_web=false.
+        if _web_workdir_override() and self.config.get("watchdog", {}).get("manage_web", True):
             raise RuntimeError(
-                "Watchdog manages web but MYATTENTION_WEB_WORKDIR is set while "
-                "web.use_service is true; watchdog restarts would silently "
-                "switch back to the configured service source tree. "
-                "Either disable web.use_service or unset MYATTENTION_WEB_WORKDIR."
+                "MYATTENTION_WEB_WORKDIR requires watchdog.manage_web=false; "
+                "otherwise watchdog restarts would not preserve the override. "
+                "Set watchdog.manage_web=false or unset MYATTENTION_WEB_WORKDIR."
             )
 
         watchdog_cfg = self.config.get("watchdog", {})

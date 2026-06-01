@@ -352,7 +352,7 @@ export default async function ControlDashboardPage() {
               {data.pmRunDigest && (
                 <div className="p-2.5 rounded-lg bg-blue-500/5 border border-blue-500/20">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="text-[9px] font-bold text-blue-600 uppercase">IKE PM Mainline Watch</span>
+                    <span className="text-[9px] font-bold text-blue-600 uppercase">PM Watch Digest / IKE PM Mainline Watch</span>
                     <AutomationStatusBadge status={mapPmDigestStatus(data.pmRunDigest)} />
                   </div>
                   <p className="text-[10px] text-muted-foreground leading-tight italic line-clamp-2">

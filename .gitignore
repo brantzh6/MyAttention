@@ -56,3 +56,15 @@ docker-compose.override.yml
 *.pem
 *.key
 credentials.json
+
+# Ops kernel generated state
+ops/state/*.json
+ops/runtime/*.json
+ops/bridge/runs/*.json
+ops/bridge/runs/*.jsonl
+ops/bridge/runs/*.stderr.txt
+ops/bridge/runs/*.prompt.txt
+ops/pm-runs/*.json
+
+# Ops transient directories
+ops/triggers/

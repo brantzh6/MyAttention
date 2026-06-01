@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Observed State v1",
+  "description": "Machine-readable observed state written by control_plane_reconciler.ps1. Separate from controller-owned accepted state (current_state.json).",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "observed_at",
+    "reconciler_version",
+    "mode",
+    "bridge_runs_summary",
+    "lease_and_lock",
+    "state_comparison",
+    "controller_attention_required"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "observed_at": { "type": "string" },
+    "reconciler_version": { "type": "string" },
+    "mode": { "type": "string", "enum": ["live", "dry_run"] },
+    "bridge_runs_summary": {
+      "type": "object",
+      "required": ["total_scanned", "terminal_count", "active_count", "unreadable"],
+      "properties": {
+        "total_scanned": { "type": "integer", "minimum": 0 },
+        "terminal_count": { "type": "integer", "minimum": 0 },
+        "active_count": { "type": "integer", "minimum": 0 },
+        "unreadable": { "type": "integer", "minimum": 0 },
+        "other_count": { "type": "integer", "minimum": 0 },
+        "state_counts": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "recent_10": { "type": "array" }
+      }
+    },
+    "lease_and_lock": {
+      "type": "object",
+      "required": ["lease_file_exists", "lease_status", "lease_expired", "lock_file_exists"],
+      "properties": {
+        "lease_file_exists": { "type": "boolean" },
+        "lock_file_exists": { "type": "boolean" },
+        "lease_status": { "type": "string" },
+        "lease_expired": { "type": "boolean" },
+        "lease_pid_alive": { "type": ["boolean", "null"] },
+        "lock_is_stale": { "type": "boolean" },
+        "lock_removed": { "type": "boolean" },
+        "controller_attention_required": { "type": "boolean" },
+        "attention_evidence": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "state_comparison": {
+      "type": "object",
+      "required": ["conflict_detected", "controller_attention_required"],
+      "properties": {
+        "observed_reachability": { "type": ["string", "null"] },
+        "accepted_reachability": { "type": ["string", "null"] },
+        "conflict_detected": { "type": "boolean" },
+        "controller_attention_required": { "type": "boolean" },
+        "attention_evidence": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "controller_attention_required": { "type": "boolean" },
+    "attention_evidence": { "type": "array", "items": { "type": "string" } }
+  }
+}

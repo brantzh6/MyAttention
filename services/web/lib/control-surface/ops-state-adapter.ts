@@ -179,6 +179,34 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
       })
     }
 
+    const controlSummary = state.control_surface_summary ? {
+      overallStatus: String(state.control_surface_summary.overall_status || 'unknown'),
+      mainlineGoal: String(state.control_surface_summary.mainline_goal || 'unknown'),
+      currentPhase: String(state.control_surface_summary.current_phase || 'unknown'),
+      currentBlocker: state.control_surface_summary.current_blocker ? {
+        title: String(state.control_surface_summary.current_blocker.title || ''),
+        status: String(state.control_surface_summary.current_blocker.status || ''),
+        summary: String(state.control_surface_summary.current_blocker.summary || ''),
+        whyItMatters: String(state.control_surface_summary.current_blocker.why_it_matters || ''),
+        riskLevel: String(state.control_surface_summary.current_blocker.risk_level || ''),
+        blastRadius: String(state.control_surface_summary.current_blocker.blast_radius || ''),
+        completedSteps: Array.isArray(state.control_surface_summary.current_blocker.completed_steps) ? state.control_surface_summary.current_blocker.completed_steps.map(String) : [],
+        proposedSteps: Array.isArray(state.control_surface_summary.current_blocker.proposed_steps) ? state.control_surface_summary.current_blocker.proposed_steps.map(String) : [],
+      } : undefined,
+      plan: state.control_surface_summary.plan ? {
+        now: String(state.control_surface_summary.plan.now || ''),
+        next: String(state.control_surface_summary.plan.next || ''),
+        later: String(state.control_surface_summary.plan.later || ''),
+      } : undefined,
+      qualityGate: state.control_surface_summary.quality_gate ? {
+        localReviewStatus: String(state.control_surface_summary.quality_gate.local_review_status || ''),
+        cloudReviewStatus: String(state.control_surface_summary.quality_gate.cloud_review_status || ''),
+        exceptionActive: Boolean(state.control_surface_summary.quality_gate.exception_active),
+        exceptionScope: Array.isArray(state.control_surface_summary.quality_gate.exception_scope) ? state.control_surface_summary.quality_gate.exception_scope.map(String) : [],
+        mergeAuthorized: Boolean(state.control_surface_summary.quality_gate.merge_authorized),
+      } : undefined,
+    } : undefined
+
     const snapshot: ControlSnapshot = {
       provenance: {
         sourceKind: 'file_derived',
@@ -230,6 +258,7 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
         runtimeTruth: `Reachability: ${runtime.reachability_status}`,
         runtimeDependency: `Product Runtime: ${runtime.product_runtime_status}`
       } : undefined,
+      controlSummary,
       nextActions: nextAction ? [
         {
           lane: nextAction.owner,
@@ -323,7 +352,14 @@ export function readRuntimeState(): RuntimeProbeState | undefined {
       const s = svc as any
 
       // Status must be a supported string status
-      if (s.status !== 'healthy' && s.status !== 'unhealthy' && s.status !== 'degraded') {
+      let normalizedStatus: 'healthy' | 'unhealthy' | 'degraded'
+      if (s.status === 'healthy' || s.status === 'running') {
+        normalizedStatus = 'healthy'
+      } else if (s.status === 'unhealthy') {
+        normalizedStatus = 'unhealthy'
+      } else if (s.status === 'degraded') {
+        normalizedStatus = 'degraded'
+      } else {
         console.error(`OpsStateAdapter: Runtime service "${id}" has invalid status: ${s.status}`)
         return undefined
       }
@@ -342,7 +378,7 @@ export function readRuntimeState(): RuntimeProbeState | undefined {
 
       services.push({
         id: String(id),
-        status: s.status,
+        status: normalizedStatus,
         url: s.url,
         details: s.evidence || s.response || (s.tcp_check ? `TCP ${s.tcp_check.status}` : '') || 'No details'
       })
@@ -395,20 +431,23 @@ export function readPmRunDigest(): PmRunDigest | undefined {
 }
 
 function mapStatus(status: string): ScoreStatus {
-  switch (status) {
-    case 'passed':
-    case 'accepted':
-    case 'complete':
-      return 'accepted'
-    case 'partial':
-    case 'estimated':
-      return 'estimated'
-    case 'failed':
-    case 'blocked':
-      return 'blocked'
-    default:
-      return 'unknown'
+  if (!status) return 'unknown'
+  const s = status.toLowerCase()
+
+  // These variants MUST map to estimated, even if they contain "accepted"
+  if (s.includes('accepted_with_changes') || s.includes('partial') || s.includes('estimated') || s.includes('in_progress') || s.includes('usable') || s.includes('ready')) {
+    return 'estimated'
   }
+
+  // Only fully qualified "accepted" or equivalent map to accepted
+  if (s.includes('accepted') || s.includes('passed') || s.includes('complete')) {
+    return 'accepted'
+  }
+
+  if (s.includes('failed') || s.includes('blocked') || s.includes('stalled')) {
+    return 'blocked'
+  }
+  return 'unknown'
 }
 
 function mapServiceStatus(status: unknown): 'healthy' | 'caveat' | 'unhealthy' {

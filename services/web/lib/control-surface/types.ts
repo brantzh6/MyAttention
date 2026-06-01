@@ -96,6 +96,40 @@ export interface RuntimeProbeState {
   services: RuntimeProbeService[]
 }
 
+export interface ControlBlocker {
+  title: string
+  status: string
+  summary: string
+  whyItMatters: string
+  riskLevel: string
+  blastRadius: string
+  completedSteps: string[]
+  proposedSteps: string[]
+}
+
+export interface StrategicPlan {
+  now: string
+  next: string
+  later: string
+}
+
+export interface QualityGate {
+  localReviewStatus: string
+  cloudReviewStatus: string
+  exceptionActive: boolean
+  exceptionScope: string[]
+  mergeAuthorized: boolean
+}
+
+export interface ControlSurfaceSummary {
+  overallStatus: string
+  mainlineGoal: string
+  currentPhase: string
+  currentBlocker?: ControlBlocker
+  plan?: StrategicPlan
+  qualityGate?: QualityGate
+}
+
 export interface ControlSnapshot {
   provenance: SnapshotProvenance
   mainline: {
@@ -120,6 +154,7 @@ export interface ControlSnapshot {
   }
   operationsSplit?: OperationsSplit
   flywheelLoop?: FlywheelLoopStatus
+  controlSummary?: ControlSurfaceSummary
   nextActions: NextAction[]
   observed?: ObservedState
   runtime?: RuntimeProbeState

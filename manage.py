@@ -679,7 +679,21 @@ def build_service_commands(
 def build_web_command(config: dict[str, Any]) -> tuple[str, Path, dict[str, str]]:
     web_cfg = config.get("web", {})
     runtime_cfg = config.get("runtime", {})
-    workdir = resolve_config_path(web_cfg.get("workdir", "services/web"))
+
+    # MYATTENTION_WEB_WORKDIR environment variable override.
+    override_dir = os.environ.get("MYATTENTION_WEB_WORKDIR", "").strip()
+    if override_dir:
+        workdir = Path(override_dir).resolve()
+        if not workdir.exists():
+            raise FileNotFoundError(
+                f"MYATTENTION_WEB_WORKDIR path does not exist: {workdir}"
+            )
+        if not workdir.is_dir():
+            raise NotADirectoryError(
+                f"MYATTENTION_WEB_WORKDIR is not a directory: {workdir}"
+            )
+    else:
+        workdir = resolve_config_path(web_cfg.get("workdir", "services/web"))
     api_port = int(runtime_cfg.get("api_port", 8000))
     web_port = int(runtime_cfg.get("web_port", 3000))
     web_host = runtime_cfg.get("web_host", "127.0.0.1")

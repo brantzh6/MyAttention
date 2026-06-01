@@ -138,7 +138,7 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
   if (!Array.isArray(runtime.required_before_next_product_validation)) {
     return logFieldError('runtime_state.required_before_next_product_validation', 'not an array')
   }
-  if (typeof runtime.services !== 'object' || runtime.services === null) {
+  if (typeof runtime.services !== 'object' || runtime.services === null || Array.isArray(runtime.services)) {
     return logFieldError('runtime_state.services', 'not an object')
   }
 
@@ -272,6 +272,7 @@ function readObservedState(): ObservedState | undefined {
     let reachabilityConflict = false
     if (data.state_comparison !== undefined) {
       if (typeof data.state_comparison !== 'object' || data.state_comparison === null ||
+          Array.isArray(data.state_comparison) ||
           (data.state_comparison.conflict_detected !== undefined && typeof data.state_comparison.conflict_detected !== 'boolean')) {
         console.error('OpsStateAdapter: Observed state_comparison failed validation')
         return undefined
@@ -307,7 +308,8 @@ function readRuntimeState(): RuntimeProbeState | undefined {
     if (typeof data.probed_at !== 'string' ||
         typeof data.overall_reachability !== 'string' ||
         typeof data.services !== 'object' ||
-        data.services === null) {
+        data.services === null ||
+        Array.isArray(data.services)) {
       console.error('OpsStateAdapter: Runtime state failed schema validation')
       return undefined
     }

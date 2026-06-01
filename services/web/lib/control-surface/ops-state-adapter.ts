@@ -1,7 +1,7 @@
 import 'server-only'
 import fs from 'fs'
 import path from 'path'
-import { ControlSnapshot, PmRunDigest, ScoreStatus } from './types'
+import { ControlSnapshot, ObservedState, PmRunDigest, RuntimeProbeService, RuntimeProbeState, ScoreStatus } from './types'
 
 /**
  * Resolve the path to ops/state/current_state.json.
@@ -110,9 +110,12 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
     return null
   }
 
-  let state: any
+  let state: Record<string, any>
   try {
-    const rawData = fs.readFileSync(statePath, 'utf-8')
+    let rawData = fs.readFileSync(statePath, 'utf-8')
+    if (rawData.charCodeAt(0) === 0xFEFF) {
+      rawData = rawData.slice(1)
+    }
     state = JSON.parse(rawData)
   } catch (error) {
     console.error('OpsStateAdapter: Failed to read or parse ops state file:', error instanceof Error ? error.message : error)
@@ -135,7 +138,7 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
   if (!Array.isArray(runtime.required_before_next_product_validation)) {
     return logFieldError('runtime_state.required_before_next_product_validation', 'not an array')
   }
-  if (typeof runtime.services !== 'object' || runtime.services === null) {
+  if (typeof runtime.services !== 'object' || runtime.services === null || Array.isArray(runtime.services)) {
     return logFieldError('runtime_state.services', 'not an object')
   }
 
@@ -176,6 +179,34 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
       })
     }
 
+    const controlSummary = state.control_surface_summary ? {
+      overallStatus: String(state.control_surface_summary.overall_status || 'unknown'),
+      mainlineGoal: String(state.control_surface_summary.mainline_goal || 'unknown'),
+      currentPhase: String(state.control_surface_summary.current_phase || 'unknown'),
+      currentBlocker: state.control_surface_summary.current_blocker ? {
+        title: String(state.control_surface_summary.current_blocker.title || ''),
+        status: String(state.control_surface_summary.current_blocker.status || ''),
+        summary: String(state.control_surface_summary.current_blocker.summary || ''),
+        whyItMatters: String(state.control_surface_summary.current_blocker.why_it_matters || ''),
+        riskLevel: String(state.control_surface_summary.current_blocker.risk_level || ''),
+        blastRadius: String(state.control_surface_summary.current_blocker.blast_radius || ''),
+        completedSteps: Array.isArray(state.control_surface_summary.current_blocker.completed_steps) ? state.control_surface_summary.current_blocker.completed_steps.map(String) : [],
+        proposedSteps: Array.isArray(state.control_surface_summary.current_blocker.proposed_steps) ? state.control_surface_summary.current_blocker.proposed_steps.map(String) : [],
+      } : undefined,
+      plan: state.control_surface_summary.plan ? {
+        now: String(state.control_surface_summary.plan.now || ''),
+        next: String(state.control_surface_summary.plan.next || ''),
+        later: String(state.control_surface_summary.plan.later || ''),
+      } : undefined,
+      qualityGate: state.control_surface_summary.quality_gate ? {
+        localReviewStatus: String(state.control_surface_summary.quality_gate.local_review_status || ''),
+        cloudReviewStatus: String(state.control_surface_summary.quality_gate.cloud_review_status || ''),
+        exceptionActive: Boolean(state.control_surface_summary.quality_gate.exception_active),
+        exceptionScope: Array.isArray(state.control_surface_summary.quality_gate.exception_scope) ? state.control_surface_summary.quality_gate.exception_scope.map(String) : [],
+        mergeAuthorized: Boolean(state.control_surface_summary.quality_gate.merge_authorized),
+      } : undefined,
+    } : undefined
+
     const snapshot: ControlSnapshot = {
       provenance: {
         sourceKind: 'file_derived',
@@ -187,9 +218,9 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
       mainline: {
         name: product.mainline,
         objective: product.current_priority,
-        latestAcceptedEvidence: product.first_class_tasks.flatMap((t: any) => t.evidence || [])
+        latestAcceptedEvidence: product.first_class_tasks.flatMap((t: { evidence?: string[] }) => t.evidence || [])
       },
-      tasks: product.first_class_tasks.map((t: any) => ({
+      tasks: product.first_class_tasks.map((t: { id: string; status: string; remaining_gap: string }) => ({
         id: t.id,
         title: t.id.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
         status: mapStatus(t.status),
@@ -227,12 +258,15 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
         runtimeTruth: `Reachability: ${runtime.reachability_status}`,
         runtimeDependency: `Product Runtime: ${runtime.product_runtime_status}`
       } : undefined,
+      controlSummary,
       nextActions: nextAction ? [
         {
           lane: nextAction.owner,
           action: nextAction.action
         }
-      ] : []
+      ] : [],
+      observed: readObservedState(),
+      runtime: readRuntimeState()
     }
 
     return snapshot
@@ -242,12 +276,134 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
   }
 }
 
-function readPmRunDigest(): PmRunDigest | undefined {
+export function readObservedState(): ObservedState | undefined {
+  const observedPath = resolveRepoPath(path.join('ops', 'state', 'observed_state.json'))
+  if (!observedPath) return undefined
+
+  try {
+    let rawData = fs.readFileSync(observedPath, 'utf-8')
+    if (rawData.charCodeAt(0) === 0xFEFF) {
+      rawData = rawData.slice(1)
+    }
+    const data = JSON.parse(rawData)
+
+    // Schema validation - fail closed
+    if (typeof data.observed_at !== 'string' ||
+        typeof data.reconciler_version !== 'string' ||
+        typeof data.controller_attention_required !== 'boolean' ||
+        !Array.isArray(data.attention_evidence) ||
+        !data.attention_evidence.every((item: unknown) => typeof item === 'string')) {
+      console.error('OpsStateAdapter: Observed state failed schema validation')
+      return undefined
+    }
+
+    // Validate state_comparison.conflict_detected if present: it must be a boolean. Do not coerce it.
+    let reachabilityConflict = false
+    if (data.state_comparison !== undefined) {
+      if (typeof data.state_comparison !== 'object' || data.state_comparison === null ||
+          Array.isArray(data.state_comparison) ||
+          (data.state_comparison.conflict_detected !== undefined && typeof data.state_comparison.conflict_detected !== 'boolean')) {
+        console.error('OpsStateAdapter: Observed state_comparison failed validation')
+        return undefined
+      }
+      reachabilityConflict = !!data.state_comparison.conflict_detected
+    }
+
+    return {
+      observedAt: data.observed_at,
+      reconcilerVersion: data.reconciler_version,
+      controllerAttentionRequired: data.controller_attention_required,
+      attentionEvidence: data.attention_evidence,
+      reachabilityConflict
+    }
+  } catch (error) {
+    console.error('OpsStateAdapter: Failed to read observed state:', error)
+    return undefined
+  }
+}
+
+export function readRuntimeState(): RuntimeProbeState | undefined {
+  const runtimePath = resolveRepoPath(path.join('ops', 'runtime', 'latest.json'))
+  if (!runtimePath) return undefined
+
+  try {
+    let rawData = fs.readFileSync(runtimePath, 'utf-8')
+    if (rawData.charCodeAt(0) === 0xFEFF) {
+      rawData = rawData.slice(1)
+    }
+    const data = JSON.parse(rawData)
+
+    // Schema validation - fail closed
+    if (typeof data.probed_at !== 'string' ||
+        typeof data.overall_reachability !== 'string' ||
+        typeof data.services !== 'object' ||
+        data.services === null ||
+        Array.isArray(data.services)) {
+      console.error('OpsStateAdapter: Runtime state failed schema validation')
+      return undefined
+    }
+
+    const services: RuntimeProbeService[] = []
+    for (const [id, svc] of Object.entries(data.services)) {
+      if (typeof svc !== 'object' || svc === null) {
+        console.error(`OpsStateAdapter: Runtime service "${id}" is not a non-null object`)
+        return undefined
+      }
+      const s = svc as any
+
+      // Status must be a supported string status
+      let normalizedStatus: 'healthy' | 'unhealthy' | 'degraded'
+      if (s.status === 'healthy' || s.status === 'running') {
+        normalizedStatus = 'healthy'
+      } else if (s.status === 'unhealthy') {
+        normalizedStatus = 'unhealthy'
+      } else if (s.status === 'degraded') {
+        normalizedStatus = 'degraded'
+      } else {
+        console.error(`OpsStateAdapter: Runtime service "${id}" has invalid status: ${s.status}`)
+        return undefined
+      }
+
+      // Optional url, evidence, and response must be strings
+      if (s.url !== undefined && typeof s.url !== 'string') return undefined
+      if (s.evidence !== undefined && typeof s.evidence !== 'string') return undefined
+      if (s.response !== undefined && typeof s.response !== 'string') return undefined
+
+      // Optional tcp_check.status must be string
+      if (s.tcp_check !== undefined) {
+        if (typeof s.tcp_check !== 'object' || s.tcp_check === null || typeof s.tcp_check.status !== 'string') {
+          return undefined
+        }
+      }
+
+      services.push({
+        id: String(id),
+        status: normalizedStatus,
+        url: s.url,
+        details: s.evidence || s.response || (s.tcp_check ? `TCP ${s.tcp_check.status}` : '') || 'No details'
+      })
+    }
+
+    return {
+      probedAt: data.probed_at,
+      overallReachability: data.overall_reachability,
+      services
+    }
+  } catch (error) {
+    console.error('OpsStateAdapter: Failed to read runtime state:', error)
+    return undefined
+  }
+}
+
+export function readPmRunDigest(): PmRunDigest | undefined {
   const digestPath = resolveRepoPath(path.join('ops', 'pm-runs', 'latest.json'))
   if (!digestPath) return undefined
 
   try {
-    const rawData = fs.readFileSync(digestPath, 'utf-8')
+    let rawData = fs.readFileSync(digestPath, 'utf-8')
+    if (rawData.charCodeAt(0) === 0xFEFF) {
+      rawData = rawData.slice(1)
+    }
     const digest = JSON.parse(rawData)
     if (digest?.schema_version !== 1 || digest?.source !== 'openclaw-ike-pm') {
       return undefined
@@ -275,20 +431,23 @@ function readPmRunDigest(): PmRunDigest | undefined {
 }
 
 function mapStatus(status: string): ScoreStatus {
-  switch (status) {
-    case 'passed':
-    case 'accepted':
-    case 'complete':
-      return 'accepted'
-    case 'partial':
-    case 'estimated':
-      return 'estimated'
-    case 'failed':
-    case 'blocked':
-      return 'blocked'
-    default:
-      return 'unknown'
+  if (!status) return 'unknown'
+  const s = status.toLowerCase()
+
+  // These variants MUST map to estimated, even if they contain "accepted"
+  if (s.includes('accepted_with_changes') || s.includes('partial') || s.includes('estimated') || s.includes('in_progress') || s.includes('usable') || s.includes('ready')) {
+    return 'estimated'
   }
+
+  // Only fully qualified "accepted" or equivalent map to accepted
+  if (s.includes('accepted') || s.includes('passed') || s.includes('complete')) {
+    return 'accepted'
+  }
+
+  if (s.includes('failed') || s.includes('blocked') || s.includes('stalled')) {
+    return 'blocked'
+  }
+  return 'unknown'
 }
 
 function mapServiceStatus(status: unknown): 'healthy' | 'caveat' | 'unhealthy' {
@@ -303,7 +462,7 @@ function mapPmStatus(status: unknown): 'ok' | 'warning' | 'error' {
   return 'warning'
 }
 
-function mapPmDigestStatus(digest: PmRunDigest): 'healthy' | 'caveat' | 'unhealthy' {
+export function mapPmDigestStatus(digest: PmRunDigest): 'healthy' | 'caveat' | 'unhealthy' {
   if (digest.status === 'error') return 'unhealthy'
   if (digest.controllerActionNeeded || digest.status === 'warning') return 'caveat'
   return 'healthy'

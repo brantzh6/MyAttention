@@ -75,6 +75,61 @@ export interface FlywheelLoopStatus {
   truthBoundary: string
 }
 
+export interface ObservedState {
+  observedAt: string
+  reconcilerVersion: string
+  controllerAttentionRequired: boolean
+  attentionEvidence: string[]
+  reachabilityConflict: boolean
+}
+
+export interface RuntimeProbeService {
+  id: string
+  status: 'healthy' | 'unhealthy' | 'degraded'
+  url?: string
+  details?: string
+}
+
+export interface RuntimeProbeState {
+  probedAt: string
+  overallReachability: string
+  services: RuntimeProbeService[]
+}
+
+export interface ControlBlocker {
+  title: string
+  status: string
+  summary: string
+  whyItMatters: string
+  riskLevel: string
+  blastRadius: string
+  completedSteps: string[]
+  proposedSteps: string[]
+}
+
+export interface StrategicPlan {
+  now: string
+  next: string
+  later: string
+}
+
+export interface QualityGate {
+  localReviewStatus: string
+  cloudReviewStatus: string
+  exceptionActive: boolean
+  exceptionScope: string[]
+  mergeAuthorized: boolean
+}
+
+export interface ControlSurfaceSummary {
+  overallStatus: string
+  mainlineGoal: string
+  currentPhase: string
+  currentBlocker?: ControlBlocker
+  plan?: StrategicPlan
+  qualityGate?: QualityGate
+}
+
 export interface ControlSnapshot {
   provenance: SnapshotProvenance
   mainline: {
@@ -99,5 +154,8 @@ export interface ControlSnapshot {
   }
   operationsSplit?: OperationsSplit
   flywheelLoop?: FlywheelLoopStatus
+  controlSummary?: ControlSurfaceSummary
   nextActions: NextAction[]
+  observed?: ObservedState
+  runtime?: RuntimeProbeState
 }

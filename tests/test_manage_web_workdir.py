@@ -2,13 +2,14 @@ import os
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from manage import _web_workdir_override, build_web_command, service_enabled  # noqa: E402
+from manage import _web_workdir_override, build_web_command, is_pid_running, read_pid, service_enabled  # noqa: E402
 
 
 class TestWebWorkdirOverride(unittest.TestCase):
@@ -92,6 +93,7 @@ class TestServiceModeIncompatibility(unittest.TestCase):
             "runtime": {"api_port": 8000, "web_port": 3000, "web_host": "127.0.0.1"},
         }
 
+    @unittest.mock.patch("manage.os.name", "nt")
     def test_service_enabled_no_override_ok(self):
         """use_service=true without MYATTENTION_WEB_WORKDIR is fine."""
         config = self._make_service_config()
@@ -100,6 +102,7 @@ class TestServiceModeIncompatibility(unittest.TestCase):
         _cmd, workdir, _env = build_web_command(config)
         self.assertEqual(workdir.name, "web")
 
+    @unittest.mock.patch("manage.os.name", "nt")
     def test_service_enabled_with_override_raises(self):
         """use_service=true + MYATTENTION_WEB_WORKDIR must raise."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -134,6 +137,7 @@ class TestWatchdogRestartSafety(unittest.TestCase):
         else:
             os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
 
+    @unittest.mock.patch("manage.os.name", "nt")
     def test_guard_condition_raises(self):
         """The guard that RuntimeWatchdog uses raises RuntimeError for bad combo."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -160,6 +164,7 @@ class TestWatchdogRestartSafety(unittest.TestCase):
                     )
             self.assertIn("Watchdog manages web", str(ctx.exception))
 
+    @unittest.mock.patch("manage.os.name", "nt")
     def test_guard_condition_ok_no_override(self):
         """Guard passes when MYATTENTION_WEB_WORKDIR is unset."""
         os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
@@ -216,6 +221,7 @@ class TestWatchdogServiceModeIncompatibility(unittest.TestCase):
         _cmd, workdir, _env = build_web_command(config)
         self.assertEqual(workdir.name, "web")
 
+    @unittest.mock.patch("manage.os.name", "nt")
     def test_watchdog_service_with_override_raises(self):
         """watchdog.use_service=true + manage_web=true + override must raise."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -226,6 +232,7 @@ class TestWatchdogServiceModeIncompatibility(unittest.TestCase):
             self.assertIn("watchdog.use_service", str(ctx.exception))
             self.assertIn("MYATTENTION_WEB_WORKDIR", str(ctx.exception))
 
+    @unittest.mock.patch("manage.os.name", "nt")
     def test_watchdog_service_manage_web_false_ok(self):
         """watchdog.use_service=true + manage_web=false + override is fine."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -235,7 +242,7 @@ class TestWatchdogServiceModeIncompatibility(unittest.TestCase):
             self.assertEqual(workdir, Path(tmpdir).resolve())
 
     def test_watchdog_process_with_override_ok(self):
-        """watchdog.use_service=false + override is fine."""
+        """watchdog.use_service=false + override is fine when no watchdog running."""
         with tempfile.TemporaryDirectory() as tmpdir:
             os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
             config = {
@@ -243,9 +250,11 @@ class TestWatchdogServiceModeIncompatibility(unittest.TestCase):
                 "watchdog": {"use_service": False, "manage_web": True},
                 "runtime": {"api_port": 8000, "web_port": 3000, "web_host": "127.0.0.1"},
             }
+            # No watchdog process running, so override is allowed.
             _cmd, workdir, _env = build_web_command(config)
             self.assertEqual(workdir, Path(tmpdir).resolve())
 
+    @unittest.mock.patch("manage.os.name", "nt")
     def test_web_service_and_watchdog_service_both_rejected(self):
         """Both web.use_service and watchdog.use_service errors are distinct."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -259,6 +268,83 @@ class TestWatchdogServiceModeIncompatibility(unittest.TestCase):
             with self.assertRaises(RuntimeError) as ctx:
                 build_web_command(config)
             self.assertIn("web.use_service", str(ctx.exception))
+
+
+class TestProcessWatchdogRevisionDrift(unittest.TestCase):
+    """MYATTENTION_WEB_WORKDIR must not combine with running process-managed watchdog."""
+
+    def setUp(self):
+        self.original = os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+
+    def tearDown(self):
+        if self.original is not None:
+            os.environ["MYATTENTION_WEB_WORKDIR"] = self.original
+        else:
+            os.environ.pop("MYATTENTION_WEB_WORKDIR", None)
+
+    def _make_process_watchdog_config(self, manage_web=True):
+        return {
+            "web": {"workdir": "services/web"},
+            "watchdog": {"use_service": False, "manage_web": manage_web},
+            "runtime": {"api_port": 8000, "web_port": 3000, "web_host": "127.0.0.1"},
+        }
+
+    def test_override_ok_no_watchdog_running(self):
+        """Override is fine when no process-managed watchdog is running."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            config = self._make_process_watchdog_config(manage_web=True)
+            # No watchdog PID on disk, so no running watchdog to conflict.
+            self.assertIsNone(read_pid("watchdog"))
+            _cmd, workdir, _env = build_web_command(config)
+            self.assertEqual(workdir, Path(tmpdir).resolve())
+
+    def test_override_ok_manage_web_false(self):
+        """Override is fine when watchdog.manage_web=false, even if watchdog running."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            config = self._make_process_watchdog_config(manage_web=False)
+            _cmd, workdir, _env = build_web_command(config)
+            self.assertEqual(workdir, Path(tmpdir).resolve())
+
+    @unittest.mock.patch("manage.is_pid_running", return_value=True)
+    @unittest.mock.patch("manage.read_pid", return_value=12345)
+    def test_override_rejected_running_watchdog_manage_web_true(
+        self, _mock_read_pid, _mock_is_pid_running
+    ):
+        """Override rejected when process-managed watchdog (manage_web=true) is running."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            config = self._make_process_watchdog_config(manage_web=True)
+            with self.assertRaises(RuntimeError) as ctx:
+                build_web_command(config)
+            self.assertIn("process-managed watchdog", str(ctx.exception))
+            self.assertIn("manage_web=true", str(ctx.exception))
+            self.assertIn("MYATTENTION_WEB_WORKDIR", str(ctx.exception))
+
+    @unittest.mock.patch("manage.is_pid_running", return_value=True)
+    @unittest.mock.patch("manage.read_pid", return_value=12345)
+    def test_override_ok_running_watchdog_manage_web_false(
+        self, _mock_read_pid, _mock_is_pid_running
+    ):
+        """Override fine when running watchdog has manage_web=false."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            config = self._make_process_watchdog_config(manage_web=False)
+            _cmd, workdir, _env = build_web_command(config)
+            self.assertEqual(workdir, Path(tmpdir).resolve())
+
+    @unittest.mock.patch("manage.is_pid_running", return_value=False)
+    @unittest.mock.patch("manage.read_pid", return_value=12345)
+    def test_override_ok_watchdog_pid_not_running(
+        self, _mock_read_pid, _mock_is_pid_running
+    ):
+        """Override fine when watchdog PID exists but process is dead."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            os.environ["MYATTENTION_WEB_WORKDIR"] = tmpdir
+            config = self._make_process_watchdog_config(manage_web=True)
+            _cmd, workdir, _env = build_web_command(config)
+            self.assertEqual(workdir, Path(tmpdir).resolve())
 
 
 if __name__ == "__main__":

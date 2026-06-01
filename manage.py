@@ -705,6 +705,20 @@ def build_web_command(config: dict[str, Any]) -> tuple[str, Path, dict[str, str]
             "or unset MYATTENTION_WEB_WORKDIR."
         )
 
+    # Reject override when a process-managed watchdog (manage_web=true) is already running.
+    # The existing watchdog process lacks MYATTENTION_WEB_WORKDIR in its environment,
+    # so its restarts would silently revert to the configured checkout.
+    if override_dir and not service_enabled(config, "watchdog") and watchdog_cfg.get("manage_web", True):
+        watchdog_pid = read_pid("watchdog")
+        if is_pid_running(watchdog_pid):
+            raise RuntimeError(
+                "MYATTENTION_WEB_WORKDIR cannot be used when a process-managed watchdog "
+                "with manage_web=true is already running; that watchdog process lacks "
+                "the override in its environment and would restart Web onto the "
+                "configured checkout. Stop the watchdog first, then start a fresh "
+                "watchdog in this shell session after setting MYATTENTION_WEB_WORKDIR."
+            )
+
     # MYATTENTION_WEB_WORKDIR environment variable override.
     if override_dir:
         workdir = Path(override_dir).resolve()
@@ -1285,6 +1299,18 @@ def start_web(config: dict[str, Any]) -> int:
             "the override. Either disable watchdog.use_service, set watchdog.manage_web=false, "
             "or unset MYATTENTION_WEB_WORKDIR."
         )
+
+    # Reject override when a process-managed watchdog (manage_web=true) is already running.
+    if _web_workdir_override() and not service_enabled(config, "watchdog") and watchdog_cfg.get("manage_web", True):
+        watchdog_pid = read_pid("watchdog")
+        if is_pid_running(watchdog_pid):
+            raise RuntimeError(
+                "MYATTENTION_WEB_WORKDIR cannot be used when a process-managed watchdog "
+                "with manage_web=true is already running; that watchdog process lacks "
+                "the override in its environment and would restart Web onto the "
+                "configured checkout. Stop the watchdog first, then start a fresh "
+                "watchdog in this shell session after setting MYATTENTION_WEB_WORKDIR."
+            )
 
     if http_ok(web_url)[0]:
         print(f"Web already healthy on {web_url}")

@@ -676,10 +676,59 @@ def build_service_commands(
     return start_command, stop_command, REPO_ROOT, env
 
 
+def _web_workdir_override() -> str | None:
+    """Return a non-empty, stripped MYATTENTION_WEB_WORKDIR value, or None."""
+    return os.environ.get("MYATTENTION_WEB_WORKDIR", "").strip() or None
+
+
 def build_web_command(config: dict[str, Any]) -> tuple[str, Path, dict[str, str]]:
     web_cfg = config.get("web", {})
     runtime_cfg = config.get("runtime", {})
-    workdir = resolve_config_path(web_cfg.get("workdir", "services/web"))
+
+    override_dir = _web_workdir_override()
+    if override_dir:
+        # Web service mode cannot apply the workdir override.
+        if service_enabled(config, "web"):
+            raise RuntimeError(
+                "MYATTENTION_WEB_WORKDIR cannot be used when web.use_service is true; "
+                "the Windows service would ignore the override. "
+                "Either disable web.use_service or unset MYATTENTION_WEB_WORKDIR."
+            )
+        # Override requires watchdog.manage_web=false. Runtime operator owns Web lifecycle.
+        watchdog_cfg = config.get("watchdog", {})
+        if watchdog_cfg.get("manage_web", True):
+            raise RuntimeError(
+                "MYATTENTION_WEB_WORKDIR requires watchdog.manage_web=false; "
+                "otherwise watchdog restarts would not preserve the override. "
+                "Set watchdog.manage_web=false or unset MYATTENTION_WEB_WORKDIR."
+            )
+
+    # MYATTENTION_WEB_WORKDIR environment variable override.
+    if override_dir:
+        workdir = Path(override_dir).resolve()
+        if not workdir.exists():
+            raise FileNotFoundError(
+                f"MYATTENTION_WEB_WORKDIR path does not exist: {workdir}"
+            )
+        if not workdir.is_dir():
+            raise NotADirectoryError(
+                f"MYATTENTION_WEB_WORKDIR is not a directory: {workdir}"
+            )
+        # Isolated override requires explicit ops-state path for durable contract.
+        ops_state_raw = os.environ.get("IKE_OPS_STATE_PATH", "").strip()
+        if not ops_state_raw:
+            raise RuntimeError(
+                "MYATTENTION_WEB_WORKDIR requires IKE_OPS_STATE_PATH; "
+                "the isolated Web process needs an explicit ops-state path. "
+                "Set IKE_OPS_STATE_PATH to an existing file path or unset MYATTENTION_WEB_WORKDIR."
+            )
+        ops_state_path = Path(ops_state_raw).resolve()
+        if not ops_state_path.exists():
+            raise FileNotFoundError(
+                f"IKE_OPS_STATE_PATH path does not exist: {ops_state_path}"
+            )
+    else:
+        workdir = resolve_config_path(web_cfg.get("workdir", "services/web"))
     api_port = int(runtime_cfg.get("api_port", 8000))
     web_port = int(runtime_cfg.get("web_port", 3000))
     web_host = runtime_cfg.get("web_host", "127.0.0.1")
@@ -696,6 +745,8 @@ def build_web_command(config: dict[str, Any]) -> tuple[str, Path, dict[str, str]
         "API_URL": f"http://127.0.0.1:{api_port}",
         "NEXT_PUBLIC_API_URL": f"http://127.0.0.1:{api_port}",
     }
+    if override_dir:
+        env["IKE_OPS_STATE_PATH"] = str(ops_state_path)
     return command, workdir, env
 
 
@@ -1229,6 +1280,22 @@ def start_web(config: dict[str, Any]) -> int:
     web_url = runtime_cfg.get("web_health_url", f"http://127.0.0.1:{int(runtime_cfg.get('web_port', 3000))}")
     if not service_enabled(config, "web"):
         stop_residual_windows_service(config, "web")
+
+    override_dir = _web_workdir_override()
+    if override_dir:
+        if service_enabled(config, "web"):
+            raise RuntimeError(
+                "MYATTENTION_WEB_WORKDIR cannot be used when web.use_service is true; "
+                "the Windows service would ignore the override. "
+                "Either disable web.use_service or unset MYATTENTION_WEB_WORKDIR."
+            )
+        watchdog_cfg = config.get("watchdog", {})
+        if watchdog_cfg.get("manage_web", True):
+            raise RuntimeError(
+                "MYATTENTION_WEB_WORKDIR requires watchdog.manage_web=false; "
+                "otherwise watchdog restarts would not preserve the override. "
+                "Set watchdog.manage_web=false or unset MYATTENTION_WEB_WORKDIR."
+            )
 
     if http_ok(web_url)[0]:
         print(f"Web already healthy on {web_url}")

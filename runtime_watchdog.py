@@ -18,8 +18,10 @@ from typing import Any
 from manage import (
     DEFAULT_MODE,
     RUNTIME_DIR,
+    _web_workdir_override,
     health,
     load_runtime_config,
+    service_enabled,
     start_api,
     start_infra,
     start_web,
@@ -31,6 +33,16 @@ class RuntimeWatchdog:
     def __init__(self, mode: str):
         self.mode = mode
         self.config = load_runtime_config(mode)
+
+        # MYATTENTION_WEB_WORKDIR is only supported when watchdog does not manage Web.
+        # Runtime operator owns isolated Web start/restart when manage_web=false.
+        if _web_workdir_override() and self.config.get("watchdog", {}).get("manage_web", True):
+            raise RuntimeError(
+                "MYATTENTION_WEB_WORKDIR requires watchdog.manage_web=false; "
+                "otherwise watchdog restarts would not preserve the override. "
+                "Set watchdog.manage_web=false or unset MYATTENTION_WEB_WORKDIR."
+            )
+
         watchdog_cfg = self.config.get("watchdog", {})
         self.interval_seconds = int(watchdog_cfg.get("interval_seconds", 20))
         self.restart_cooldown_seconds = int(watchdog_cfg.get("restart_cooldown_seconds", 45))

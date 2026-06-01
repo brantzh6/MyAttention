@@ -18,8 +18,10 @@ from typing import Any
 from manage import (
     DEFAULT_MODE,
     RUNTIME_DIR,
+    _web_workdir_override,
     health,
     load_runtime_config,
+    service_enabled,
     start_api,
     start_infra,
     start_web,
@@ -31,6 +33,19 @@ class RuntimeWatchdog:
     def __init__(self, mode: str):
         self.mode = mode
         self.config = load_runtime_config(mode)
+
+        # Prevent watchdog restart revision drift: if watchdog manages web and
+        # MYATTENTION_WEB_WORKDIR is set, the override would be silently lost
+        # on any watchdog-triggered restart (the restart calls start_web() ->
+        # service path or build_web_command() without the shell env). Reject.
+        if _web_workdir_override() and service_enabled(self.config, "web"):
+            raise RuntimeError(
+                "Watchdog manages web but MYATTENTION_WEB_WORKDIR is set while "
+                "web.use_service is true; watchdog restarts would silently "
+                "switch back to the configured service source tree. "
+                "Either disable web.use_service or unset MYATTENTION_WEB_WORKDIR."
+            )
+
         watchdog_cfg = self.config.get("watchdog", {})
         self.interval_seconds = int(watchdog_cfg.get("interval_seconds", 20))
         self.restart_cooldown_seconds = int(watchdog_cfg.get("restart_cooldown_seconds", 45))

@@ -676,12 +676,36 @@ def build_service_commands(
     return start_command, stop_command, REPO_ROOT, env
 
 
+def _web_workdir_override() -> str | None:
+    """Return a non-empty, stripped MYATTENTION_WEB_WORKDIR value, or None."""
+    return os.environ.get("MYATTENTION_WEB_WORKDIR", "").strip() or None
+
+
 def build_web_command(config: dict[str, Any]) -> tuple[str, Path, dict[str, str]]:
     web_cfg = config.get("web", {})
     runtime_cfg = config.get("runtime", {})
 
+    # Reject explicit workdir override when web is configured as a Windows service.
+    override_dir = _web_workdir_override()
+    if override_dir and service_enabled(config, "web"):
+        raise RuntimeError(
+            "MYATTENTION_WEB_WORKDIR cannot be used when web.use_service is true; "
+            "the Windows service would ignore the override. "
+            "Either disable web.use_service or unset MYATTENTION_WEB_WORKDIR."
+        )
+
+    # Reject explicit workdir override when watchdog is a Windows service managing Web.
+    # Watchdog service won't see shell env vars, so restarts would lose the override.
+    watchdog_cfg = config.get("watchdog", {})
+    if override_dir and service_enabled(config, "watchdog") and watchdog_cfg.get("manage_web", True):
+        raise RuntimeError(
+            "MYATTENTION_WEB_WORKDIR cannot be used when watchdog.use_service is true "
+            "and watchdog manages web; watchdog service restarts would not preserve "
+            "the override. Either disable watchdog.use_service, set watchdog.manage_web=false, "
+            "or unset MYATTENTION_WEB_WORKDIR."
+        )
+
     # MYATTENTION_WEB_WORKDIR environment variable override.
-    override_dir = os.environ.get("MYATTENTION_WEB_WORKDIR", "").strip()
     if override_dir:
         workdir = Path(override_dir).resolve()
         if not workdir.exists():
@@ -1243,6 +1267,24 @@ def start_web(config: dict[str, Any]) -> int:
     web_url = runtime_cfg.get("web_health_url", f"http://127.0.0.1:{int(runtime_cfg.get('web_port', 3000))}")
     if not service_enabled(config, "web"):
         stop_residual_windows_service(config, "web")
+
+    # Reject explicit workdir override when web is configured as a Windows service.
+    if _web_workdir_override() and service_enabled(config, "web"):
+        raise RuntimeError(
+            "MYATTENTION_WEB_WORKDIR cannot be used when web.use_service is true; "
+            "the Windows service would ignore the override. "
+            "Either disable web.use_service or unset MYATTENTION_WEB_WORKDIR."
+        )
+
+    # Reject explicit workdir override when watchdog is a Windows service managing Web.
+    watchdog_cfg = config.get("watchdog", {})
+    if _web_workdir_override() and service_enabled(config, "watchdog") and watchdog_cfg.get("manage_web", True):
+        raise RuntimeError(
+            "MYATTENTION_WEB_WORKDIR cannot be used when watchdog.use_service is true "
+            "and watchdog manages web; watchdog service restarts would not preserve "
+            "the override. Either disable watchdog.use_service, set watchdog.manage_web=false, "
+            "or unset MYATTENTION_WEB_WORKDIR."
+        )
 
     if http_ok(web_url)[0]:
         print(f"Web already healthy on {web_url}")

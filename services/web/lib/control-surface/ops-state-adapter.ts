@@ -1,7 +1,7 @@
 import 'server-only'
 import fs from 'fs'
 import path from 'path'
-import { ControlSnapshot, ObservedState, PmRunDigest, RuntimeProbeState, ScoreStatus } from './types'
+import { ControlSnapshot, ObservedState, PmRunDigest, RuntimeProbeService, RuntimeProbeState, ScoreStatus } from './types'
 
 /**
  * Resolve the path to ops/state/current_state.json.
@@ -257,12 +257,34 @@ function readObservedState(): ObservedState | undefined {
       rawData = rawData.slice(1)
     }
     const data = JSON.parse(rawData)
+
+    // Schema validation - fail closed
+    if (typeof data.observed_at !== 'string' ||
+        typeof data.reconciler_version !== 'string' ||
+        typeof data.controller_attention_required !== 'boolean' ||
+        !Array.isArray(data.attention_evidence) ||
+        !data.attention_evidence.every((item: unknown) => typeof item === 'string')) {
+      console.error('OpsStateAdapter: Observed state failed schema validation')
+      return undefined
+    }
+
+    // Validate state_comparison.conflict_detected if present: it must be a boolean. Do not coerce it.
+    let reachabilityConflict = false
+    if (data.state_comparison !== undefined) {
+      if (typeof data.state_comparison !== 'object' || data.state_comparison === null ||
+          (data.state_comparison.conflict_detected !== undefined && typeof data.state_comparison.conflict_detected !== 'boolean')) {
+        console.error('OpsStateAdapter: Observed state_comparison failed validation')
+        return undefined
+      }
+      reachabilityConflict = !!data.state_comparison.conflict_detected
+    }
+
     return {
       observedAt: data.observed_at,
       reconcilerVersion: data.reconciler_version,
       controllerAttentionRequired: data.controller_attention_required,
-      attentionEvidence: data.attention_evidence || [],
-      reachabilityConflict: data.state_comparison?.conflict_detected || false
+      attentionEvidence: data.attention_evidence,
+      reachabilityConflict
     }
   } catch (error) {
     console.error('OpsStateAdapter: Failed to read observed state:', error)
@@ -280,12 +302,49 @@ function readRuntimeState(): RuntimeProbeState | undefined {
       rawData = rawData.slice(1)
     }
     const data = JSON.parse(rawData)
-    const services = Object.entries(data.services || {}).map(([id, svc]: [string, any]) => ({
-      id,
-      status: svc.status,
-      url: svc.url,
-      details: svc.evidence || svc.response || (svc.tcp_check ? `TCP ${svc.tcp_check.status}` : undefined)
-    }))
+
+    // Schema validation - fail closed
+    if (typeof data.probed_at !== 'string' ||
+        typeof data.overall_reachability !== 'string' ||
+        typeof data.services !== 'object' ||
+        data.services === null) {
+      console.error('OpsStateAdapter: Runtime state failed schema validation')
+      return undefined
+    }
+
+    const services: RuntimeProbeService[] = []
+    for (const [id, svc] of Object.entries(data.services)) {
+      if (typeof svc !== 'object' || svc === null) {
+        console.error(`OpsStateAdapter: Runtime service "${id}" is not a non-null object`)
+        return undefined
+      }
+      const s = svc as any
+
+      // Status must be a supported string status
+      if (s.status !== 'healthy' && s.status !== 'unhealthy' && s.status !== 'degraded') {
+        console.error(`OpsStateAdapter: Runtime service "${id}" has invalid status: ${s.status}`)
+        return undefined
+      }
+
+      // Optional url, evidence, and response must be strings
+      if (s.url !== undefined && typeof s.url !== 'string') return undefined
+      if (s.evidence !== undefined && typeof s.evidence !== 'string') return undefined
+      if (s.response !== undefined && typeof s.response !== 'string') return undefined
+
+      // Optional tcp_check.status must be string
+      if (s.tcp_check !== undefined) {
+        if (typeof s.tcp_check !== 'object' || s.tcp_check === null || typeof s.tcp_check.status !== 'string') {
+          return undefined
+        }
+      }
+
+      services.push({
+        id: String(id),
+        status: s.status,
+        url: s.url,
+        details: s.evidence || s.response || (s.tcp_check ? `TCP ${s.tcp_check.status}` : '') || 'No details'
+      })
+    }
 
     return {
       probedAt: data.probed_at,
@@ -297,7 +356,6 @@ function readRuntimeState(): RuntimeProbeState | undefined {
     return undefined
   }
 }
-
 
 function readPmRunDigest(): PmRunDigest | undefined {
   const digestPath = resolveRepoPath(path.join('ops', 'pm-runs', 'latest.json'))

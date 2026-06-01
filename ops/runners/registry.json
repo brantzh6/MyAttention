@@ -1,0 +1,177 @@
+﻿{
+  "schema_version": 1,
+  "updated_at": "2026-05-20T11:57:46.0570395+08:00",
+  "policy": "Runners are execution surfaces, not project controllers. Use IKE-specific agent profiles and bounded packets. Give each delegate enough tool permission to complete its lane, then constrain behavior with allowed files, forbidden actions, validation, and review gates.",
+  "dispatch_rules": {
+    "unique_session_required": true,
+    "rule": "Every controller-authored openclaw agent --agent <id> delegated execution must include a fresh explicit session UUID (--session-id <new-guid>). Do not reuse default sessions for bounded task packets. A session may be resumed only when the controller explicitly intends continuation of the same task.",
+    "rationale": "Concurrent delegated turns that reuse the agent's default session collide on shared session state, causing EmbeddedAttemptSessionTakeoverError and prompt lock release.",
+    "reference": "docs/OPENCLAW_DELEGATE_UNIQUE_SESSION_PROTOCOL.md",
+    "enforced_since": "2026-06-01",
+    "required_dispatch_surface": "scripts/ops/invoke_openclaw_delegate.ps1",
+    "dispatch_surface_note": "All controller-authored OpenClaw delegate dispatches MUST use invoke_openclaw_delegate.ps1. Direct openclaw.cmd invocation without session isolation is forbidden."
+  },
+  "permission_profiles": {
+    "coding_worker": {
+      "claude_allowed_tools": ["Read", "Write", "Edit", "Bash"],
+      "minimum_capability": "read context, edit packet-allowed files, run validation commands, and write the result artifact",
+      "boundary": "allowed files and stop conditions in the task packet"
+    },
+    "ui_worker": {
+      "claude_allowed_tools": ["Read", "Write", "Edit", "Bash"],
+      "minimum_capability": "edit packet-allowed frontend files, run build/smoke validation, and write the result artifact",
+      "boundary": "no backend semantics changes unless explicitly authorized"
+    },
+    "test_runner": {
+      "claude_allowed_tools": ["Read", "Write", "Bash"],
+      "minimum_capability": "run tests, browser probes, and write test evidence artifacts",
+      "boundary": "no source edits unless a separate implementation packet authorizes fixes"
+    },
+    "runtime_operator": {
+      "claude_allowed_tools": ["Read", "Write", "Bash"],
+      "minimum_capability": "inspect processes, run authorized runtime commands, and write runtime result artifacts",
+      "boundary": "no source edits or dependency changes unless explicitly authorized"
+    },
+    "reviewer": {
+      "claude_allowed_tools": ["Read", "Write", "Bash"],
+      "minimum_capability": "read diffs/artifacts, run read-only checks, and write review artifacts",
+      "boundary": "no source edits and no promotion decision"
+    }
+  },
+  "runners": [
+    {
+      "id": "codex-controller",
+      "surface": "Codex App",
+      "roles": ["controller", "task_author", "review_absorber", "promotion_decider"],
+      "local": true,
+      "automatic_trigger": "via Codex automation or external trigger only",
+      "allowed_writes": ["tasks/codex/**", "docs/**", "ops/state/**", "ops/runners/**", "ops/agents/**"],
+      "forbidden": ["delegate top-level main control", "accept own work without required review gate"],
+      "status": "active"
+    },
+    {
+      "id": "hermes-ike-trigger",
+      "surface": "Hermes stable endpoint",
+      "roles": ["external_backup_trigger", "stall_detector", "watchdog_signal"],
+      "local": false,
+      "automatic_trigger": "scheduled or event based",
+      "agent_profile": "ops/agents/hermes-ike-trigger.md",
+      "allowed_writes": ["ops/triggers/*.json"],
+      "forbidden": ["task authoring", "source edits", "GitHub task creation", "review", "promotion decision"],
+      "status": "backup_only_after_openclaw_pm"
+    },
+    {
+      "id": "openclaw-ike-pm",
+      "surface": "local OpenClaw agent",
+      "openclaw_agent_id": "ike-pm",
+      "workspace": "D:\\code\\_agent-runtimes\\openclaw-workspaces\\ike-pm",
+      "model": "bailian-coding-plan/qwen3.6-plus",
+      "roles": ["project_coordinator", "progress_auditor", "blocker_escalator", "gate_auditor"],
+      "local": true,
+      "automatic_trigger": "OpenClaw cron job 9cbc70a5-0118-40aa-aa24-8379d0c5113d (PM run every 4h; deterministic reconciler every 15m; runtime probe every 10m), judges progress/gates/blockers, and invokes the Codex bridge when controller coordination is needed",
+      "agent_profile": "ops/agents/openclaw-ike-pm.md",
+      "workspace_contract": "D:\\code\\_agent-runtimes\\openclaw-workspaces\\ike-pm\\AGENTS.md",
+      "bootstrap_task": "ops/openclaw/ike-pm-bootstrap-task.md",
+      "allowed_writes": [
+        "ops/pm-runs/latest.json",
+        "ops/pm-runs/history/openclaw_pm_run_*.json",
+        "ops/triggers/openclaw_pm_*.json"
+      ],
+      "allowed_commands": ["python D:\\code\\MyAttention\\scripts\\ops\\openclaw_codex_bridge.py --mode wake ..."],
+      "forbidden": ["task authoring", "source edits", "runtime operation", "review", "promotion decision", "direct codex invocation"],
+      "cron_job_id": "9cbc70a5-0118-40aa-aa24-8379d0c5113d",
+      "bridge_script": "scripts/ops/openclaw_codex_bridge.py",
+      "status": "active_pm_coordinator_contract_updated"
+    },
+    {
+      "id": "openclaw-ike-operator",
+      "surface": "local OpenClaw agent",
+      "openclaw_agent_id": "ike-operator",
+      "workspace": "D:\\code\\_agent-runtimes\\openclaw-workspaces\\ike-operator",
+      "model": "bailian-coding-plan/qwen3.6-plus",
+      "roles": ["runtime_operator", "runtime_readiness_checker"],
+      "local": true,
+      "automatic_trigger": "controller packet only",
+      "agent_profile": "ops/agents/openclaw-ike-operator.md",
+      "workspace_contract": "D:\\code\\_agent-runtimes\\openclaw-workspaces\\ike-operator\\AGENTS.md",
+      "bootstrap_task": "ops/openclaw/ike-operator-bootstrap-task.md",
+      "allowed_writes": ["tasks/codex/*runtime*result*.md", "tasks/codex/openclaw_ike_operator_*result*.md"],
+      "forbidden": ["source edits", "runtime config edits unless separately authorized", "unassigned service operation", "promotion decision", "restore or stage source files from any branch into the controller workspace", "modify controller branch source tree to make routes or features available for validation"],
+      "status": "validated_degraded_runtime_bootstrap"
+    },
+    {
+      "id": "claude-code-runtime-operator",
+      "surface": "local Claude Code CLI",
+      "command_hint": "claude -p <packet> --permission-mode bypassPermissions",
+      "roles": ["runtime_operator"],
+      "local": true,
+      "automatic_trigger": "controller packet only",
+      "agent_profile": "ops/agents/ike-runtime-operator.md",
+      "allowed_writes": ["tasks/codex/*runtime*result*.md"],
+      "forbidden": ["product code edits unless separate implementation packet authorizes them", "promotion decision", "restore or stage source files from any branch into the controller workspace", "modify controller branch source tree to make routes or features available for validation"],
+      "status": "available_and_recently_successful",
+      "latest_success": "tasks/codex/runtime_operator_web_readiness_repair_result_2026-05-20.md"
+    },
+    {
+      "id": "claude-code-test-runner",
+      "surface": "local Claude Code CLI",
+      "roles": ["test_runner", "validation_gap_reporter"],
+      "local": true,
+      "automatic_trigger": "controller packet only",
+      "agent_profile": "ops/agents/ike-test-runner.md",
+      "allowed_writes": ["tasks/codex/*test*result*.md", "tasks/codex/*smoke*result*.md"],
+      "forbidden": ["weaken assertions", "change product behavior without implementation packet", "promotion decision", "restore or stage source files from any branch into the controller workspace", "modify controller branch source tree to make test targets available for validation"],
+      "status": "available_result_reroute_succeeded_dispatch_needs_repair",
+      "latest_partial_result": "tasks/codex/ai_chat_to_flywheel_browser_ui_l5_trace_claude_result_2026-05-20.md",
+      "latest_incident": "tasks/codex/claude_test_runner_browser_l5_dispatch_incident_2026-05-20.md"
+    },
+    {
+      "id": "claude-code-reviewer",
+      "surface": "local Claude Code CLI",
+      "roles": ["reviewer"],
+      "local": true,
+      "automatic_trigger": "controller packet only",
+      "agent_profile": "ops/agents/ike-reviewer.md",
+      "allowed_writes": ["docs/reviews/active/*.md"],
+      "forbidden": ["source edits", "promotion decision", "task priority changes"],
+      "status": "available_needs_current_review_run"
+    },
+    {
+      "id": "gemini-cli-ui-worker",
+      "surface": "local Gemini CLI",
+      "roles": ["ui_worker"],
+      "local": true,
+      "automatic_trigger": "controller packet only",
+      "agent_profile": "ops/agents/ike-ui-worker.md",
+      "allowed_writes": ["services/web/**", "tasks/codex/*ui*result*.md"],
+      "forbidden": ["backend semantics changes", "fake runtime data", "promotion decision"],
+      "activation_rule": "Must pass a separate runner validation packet before being used for unattended IKE UI implementation.",
+      "status": "validated_for_current_ui_package_with_default_model",
+      "latest_success": "tasks/codex/project_control_surface_ops_state_sync_gemini_result_2026-05-20.md",
+      "model_note": "Requested gemini-3.1-pro returned ModelNotFound; default Gemini CLI model succeeded."
+    },
+    {
+      "id": "qoder-cli-coding-worker",
+      "surface": "local Qoder CLI",
+      "roles": ["coding_worker", "runtime_implementation_worker"],
+      "local": true,
+      "automatic_trigger": "controller packet only",
+      "agent_profile": "ops/agents/ike-coding-worker.md",
+      "allowed_writes": ["packet-specific allowed files only", "tasks/codex/*result*.md"],
+      "forbidden": ["architecture decisions", "broad refactors", "promotion decision"],
+      "activation_rule": "Must pass a separate runner validation packet before being used for unattended IKE coding implementation.",
+      "status": "available_interactive_only_not_headless_validated",
+      "latest_validation": "tasks/codex/qoder_cli_runner_validation_result_2026-05-20.md"
+    },
+    {
+      "id": "github-codex-review",
+      "surface": "GitHub PR / Codex review",
+      "roles": ["promotion_review_gate"],
+      "local": false,
+      "automatic_trigger": "promotion-ready PR only",
+      "allowed_writes": ["GitHub review comments"],
+      "forbidden": ["daily local review loop", "runtime operation", "mainline control"],
+      "status": "available_for_pr_scope_only"
+    }
+  ]
+}

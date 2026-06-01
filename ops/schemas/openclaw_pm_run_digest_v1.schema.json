@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OpenClaw PM Run Digest v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "run_id",
+    "checked_at",
+    "source",
+    "cron_job_id",
+    "decision",
+    "status",
+    "reason",
+    "evidence",
+    "controller_action_needed"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "run_id": {
+      "type": "string",
+      "pattern": "^openclaw_pm_run_[0-9]{8}_[0-9]{6}$"
+    },
+    "checked_at": { "type": "string" },
+    "source": { "const": "openclaw-ike-pm" },
+    "cron_job_id": { "type": "string" },
+    "decision": {
+      "type": "string",
+      "enum": [
+        "quiet",
+        "monitoring",
+        "needs_controller_consult",
+        "triggered",
+        "bridge_busy",
+        "bridge_failed",
+        "invalid_state"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "warning", "error"]
+    },
+    "reason": { "type": "string", "minLength": 1 },
+    "last_real_progress_at": { "type": ["string", "null"] },
+    "staleness_minutes": { "type": ["integer", "number", "null"], "minimum": 0 },
+    "trigger_path": { "type": "string" },
+    "bridge_result_path": { "type": "string" },
+    "evidence": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "next_expected_run": { "type": ["string", "null"] },
+    "controller_action_needed": { "type": "boolean" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "decision": { "const": "quiet" }
+        },
+        "required": ["decision"]
+      },
+      "then": {
+        "properties": {
+          "controller_action_needed": { "const": false }
+        }
+      }
+    }
+  ]
+}

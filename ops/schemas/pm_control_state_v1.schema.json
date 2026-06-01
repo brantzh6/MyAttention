@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "pm_control_state_version": 1,
+  "generated_at": "<ISO-8601 timestamp>",
+  "generator": "write_pm_control_snapshot.ps1",
+  "accepted_state": {
+    "updated_at": "<ISO-8601 timestamp>",
+    "last_real_progress_at": "<ISO-8601 timestamp>",
+    "controller_state": "<string>",
+    "mainline": "<string>",
+    "active_gate": "<string>",
+    "next_action_owner": "<string>",
+    "next_action_action": "<string>",
+    "next_action_stop_condition": "<string>"
+  },
+  "observed_state": {
+    "observed_at": "<ISO-8601 timestamp or null>",
+    "attention_flag": "boolean: true when observed_state.controller_attention_required"
+  },
+  "runtime_readiness": {
+    "summary": "<healthy|degraded|unreachable|unknown>",
+    "api_healthy": "boolean",
+    "web_healthy": "boolean",
+    "postgres_healthy": "boolean",
+    "redis_healthy": "boolean",
+    "gate": "<string from runtime_state.gate>"
+  },
+  "review_absorption": {
+    "pending": "boolean: true when review_state.status contains pending or review artifacts are unabsorbed",
+    "current_package": "<string or null>"
+  },
+  "dirty_tree_gate": {
+    "new_feature_coding_allowed": "boolean",
+    "status": "<string>"
+  },
+  "runner_availability": {
+    "required_for_active_action": "<array of runner ids needed by next_action>",
+    "all_available": "boolean",
+    "unavailable": "<array of runner ids that are not available>"
+  },
+  "decision_hint": {
+    "read_compact_only": "boolean: true when PM can decide from this snapshot alone",
+    "escalation_needed": "boolean: true when PM must deep-read current_state.json"
+  }
+}

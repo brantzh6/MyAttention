@@ -247,7 +247,7 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
   }
 }
 
-function readObservedState(): ObservedState | undefined {
+export function readObservedState(): ObservedState | undefined {
   const observedPath = resolveRepoPath(path.join('ops', 'state', 'observed_state.json'))
   if (!observedPath) return undefined
 
@@ -293,7 +293,7 @@ function readObservedState(): ObservedState | undefined {
   }
 }
 
-function readRuntimeState(): RuntimeProbeState | undefined {
+export function readRuntimeState(): RuntimeProbeState | undefined {
   const runtimePath = resolveRepoPath(path.join('ops', 'runtime', 'latest.json'))
   if (!runtimePath) return undefined
 
@@ -359,7 +359,7 @@ function readRuntimeState(): RuntimeProbeState | undefined {
   }
 }
 
-function readPmRunDigest(): PmRunDigest | undefined {
+export function readPmRunDigest(): PmRunDigest | undefined {
   const digestPath = resolveRepoPath(path.join('ops', 'pm-runs', 'latest.json'))
   if (!digestPath) return undefined
 
@@ -423,7 +423,7 @@ function mapPmStatus(status: unknown): 'ok' | 'warning' | 'error' {
   return 'warning'
 }
 
-function mapPmDigestStatus(digest: PmRunDigest): 'healthy' | 'caveat' | 'unhealthy' {
+export function mapPmDigestStatus(digest: PmRunDigest): 'healthy' | 'caveat' | 'unhealthy' {
   if (digest.status === 'error') return 'unhealthy'
   if (digest.controllerActionNeeded || digest.status === 'warning') return 'caveat'
   return 'healthy'

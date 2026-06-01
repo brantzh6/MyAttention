@@ -280,6 +280,95 @@ export default async function ControlAnchorPage() {
         </section>
       )}
 
+      {/* Observed & Runtime Sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* PM Observed Automation State */}
+        <section className="border rounded-lg bg-blue-50/30 dark:bg-blue-900/10 border-blue-200 dark:border-blue-900/50 p-5 shadow-sm">
+          <div className="flex justify-between items-start mb-4 border-b border-blue-200 dark:border-blue-900/50 pb-2">
+            <h2 className="text-sm font-semibold text-blue-800 dark:text-blue-300 uppercase tracking-wider">PM Observed Automation State</h2>
+            {data.observed && (
+              <span className="text-[10px] text-blue-600 dark:text-blue-400 font-mono">
+                OBSERVED: {data.observed.observedAt}
+              </span>
+            )}
+          </div>
+          {data.observed ? (
+            <div className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <div className="px-3 py-1.5 rounded bg-background border border-blue-100 dark:border-blue-900/30 text-xs">
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold mb-0.5">Reconciler</span>
+                  {data.observed.reconcilerVersion}
+                </div>
+                <div className={`px-3 py-1.5 rounded bg-background border text-xs ${data.observed.controllerAttentionRequired ? 'border-red-200 text-red-700' : 'border-green-200 text-green-700'}`}>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold mb-0.5">Attention</span>
+                  {data.observed.controllerAttentionRequired ? 'REQUIRED' : 'CLEAR'}
+                </div>
+                <div className={`px-3 py-1.5 rounded bg-background border text-xs ${data.observed.reachabilityConflict ? 'border-amber-200 text-amber-700' : 'border-blue-100 dark:border-blue-900/30'}`}>
+                  <span className="text-muted-foreground block text-[10px] uppercase font-bold mb-0.5">Conflict</span>
+                  {data.observed.reachabilityConflict ? 'DETECTED' : 'NONE'}
+                </div>
+              </div>
+              {data.observed.attentionEvidence.length > 0 && (
+                <div className="bg-red-50/50 dark:bg-red-950/20 p-3 rounded border border-red-100 dark:border-red-900/30">
+                  <span className="text-[10px] uppercase font-bold text-red-800 dark:text-red-400 block mb-2">Attention Evidence</span>
+                  <ul className="list-disc pl-4 space-y-1 text-xs text-red-700 dark:text-red-300">
+                    {data.observed.attentionEvidence.map((ev, i) => <li key={i}>{ev}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground italic">No observed state artifact available.</div>
+          )}
+        </section>
+
+        {/* Live Runtime Probe State */}
+        <section className="border rounded-lg bg-emerald-50/30 dark:bg-emerald-900/10 border-emerald-200 dark:border-emerald-900/50 p-5 shadow-sm">
+          <div className="flex justify-between items-start mb-4 border-b border-emerald-200 dark:border-emerald-900/50 pb-2">
+            <h2 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">Live Runtime Probe State</h2>
+            {data.runtime && (
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
+                PROBED: {data.runtime.probedAt}
+              </span>
+            )}
+          </div>
+          {data.runtime ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs text-muted-foreground">Overall:</span>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider border ${data.runtime.overallReachability === 'all_healthy' ? 'bg-green-100 text-green-800 border-green-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
+                  {data.runtime.overallReachability}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {data.runtime.services.map(svc => (
+                  <div key={svc.id} className="p-2.5 border rounded bg-background text-xs">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="font-bold uppercase tracking-tight">{svc.id}</span>
+                      <span className={`text-[10px] px-1.5 rounded-full border ${svc.status === 'healthy' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                        {svc.status}
+                      </span>
+                    </div>
+                    {svc.url && (
+                      <div className="text-[10px] text-blue-600 dark:text-blue-400 truncate mb-1">
+                        {svc.url}
+                      </div>
+                    )}
+                    {svc.details && (
+                      <div className="text-[10px] text-muted-foreground leading-tight italic">
+                        {svc.details}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-xs text-muted-foreground italic">No live runtime probe artifact available.</div>
+          )}
+        </section>
+      </div>
+
       {/* Next Actions */}
       <section className="border rounded-lg bg-primary/5 border-primary/20 p-5 shadow-sm">
         <h2 className="text-sm font-semibold text-primary uppercase tracking-wider mb-4 border-b border-primary/20 pb-2">Next Actions</h2>

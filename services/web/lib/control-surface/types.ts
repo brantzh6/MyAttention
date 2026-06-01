@@ -75,6 +75,27 @@ export interface FlywheelLoopStatus {
   truthBoundary: string
 }
 
+export interface ObservedState {
+  observedAt: string
+  reconcilerVersion: string
+  controllerAttentionRequired: boolean
+  attentionEvidence: string[]
+  reachabilityConflict: boolean
+}
+
+export interface RuntimeProbeService {
+  id: string
+  status: 'healthy' | 'unhealthy' | 'degraded'
+  url?: string
+  details?: string
+}
+
+export interface RuntimeProbeState {
+  probedAt: string
+  overallReachability: string
+  services: RuntimeProbeService[]
+}
+
 export interface ControlSnapshot {
   provenance: SnapshotProvenance
   mainline: {
@@ -100,4 +121,6 @@ export interface ControlSnapshot {
   operationsSplit?: OperationsSplit
   flywheelLoop?: FlywheelLoopStatus
   nextActions: NextAction[]
+  observed?: ObservedState
+  runtime?: RuntimeProbeState
 }

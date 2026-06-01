@@ -1,7 +1,7 @@
 import 'server-only'
 import fs from 'fs'
 import path from 'path'
-import { ControlSnapshot, PmRunDigest, ScoreStatus } from './types'
+import { ControlSnapshot, ObservedState, PmRunDigest, RuntimeProbeState, ScoreStatus } from './types'
 
 /**
  * Resolve the path to ops/state/current_state.json.
@@ -110,9 +110,12 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
     return null
   }
 
-  let state: any
+  let state: Record<string, any>
   try {
-    const rawData = fs.readFileSync(statePath, 'utf-8')
+    let rawData = fs.readFileSync(statePath, 'utf-8')
+    if (rawData.charCodeAt(0) === 0xFEFF) {
+      rawData = rawData.slice(1)
+    }
     state = JSON.parse(rawData)
   } catch (error) {
     console.error('OpsStateAdapter: Failed to read or parse ops state file:', error instanceof Error ? error.message : error)
@@ -187,9 +190,9 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
       mainline: {
         name: product.mainline,
         objective: product.current_priority,
-        latestAcceptedEvidence: product.first_class_tasks.flatMap((t: any) => t.evidence || [])
+        latestAcceptedEvidence: product.first_class_tasks.flatMap((t: { evidence?: string[] }) => t.evidence || [])
       },
-      tasks: product.first_class_tasks.map((t: any) => ({
+      tasks: product.first_class_tasks.map((t: { id: string; status: string; remaining_gap: string }) => ({
         id: t.id,
         title: t.id.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
         status: mapStatus(t.status),
@@ -232,7 +235,9 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
           lane: nextAction.owner,
           action: nextAction.action
         }
-      ] : []
+      ] : [],
+      observed: readObservedState(),
+      runtime: readRuntimeState()
     }
 
     return snapshot
@@ -242,12 +247,67 @@ export function getOpsStateSnapshot(): ControlSnapshot | null {
   }
 }
 
+function readObservedState(): ObservedState | undefined {
+  const observedPath = resolveRepoPath(path.join('ops', 'state', 'observed_state.json'))
+  if (!observedPath) return undefined
+
+  try {
+    let rawData = fs.readFileSync(observedPath, 'utf-8')
+    if (rawData.charCodeAt(0) === 0xFEFF) {
+      rawData = rawData.slice(1)
+    }
+    const data = JSON.parse(rawData)
+    return {
+      observedAt: data.observed_at,
+      reconcilerVersion: data.reconciler_version,
+      controllerAttentionRequired: data.controller_attention_required,
+      attentionEvidence: data.attention_evidence || [],
+      reachabilityConflict: data.state_comparison?.conflict_detected || false
+    }
+  } catch (error) {
+    console.error('OpsStateAdapter: Failed to read observed state:', error)
+    return undefined
+  }
+}
+
+function readRuntimeState(): RuntimeProbeState | undefined {
+  const runtimePath = resolveRepoPath(path.join('ops', 'runtime', 'latest.json'))
+  if (!runtimePath) return undefined
+
+  try {
+    let rawData = fs.readFileSync(runtimePath, 'utf-8')
+    if (rawData.charCodeAt(0) === 0xFEFF) {
+      rawData = rawData.slice(1)
+    }
+    const data = JSON.parse(rawData)
+    const services = Object.entries(data.services || {}).map(([id, svc]: [string, any]) => ({
+      id,
+      status: svc.status,
+      url: svc.url,
+      details: svc.evidence || svc.response || (svc.tcp_check ? `TCP ${svc.tcp_check.status}` : undefined)
+    }))
+
+    return {
+      probedAt: data.probed_at,
+      overallReachability: data.overall_reachability,
+      services
+    }
+  } catch (error) {
+    console.error('OpsStateAdapter: Failed to read runtime state:', error)
+    return undefined
+  }
+}
+
+
 function readPmRunDigest(): PmRunDigest | undefined {
   const digestPath = resolveRepoPath(path.join('ops', 'pm-runs', 'latest.json'))
   if (!digestPath) return undefined
 
   try {
-    const rawData = fs.readFileSync(digestPath, 'utf-8')
+    let rawData = fs.readFileSync(digestPath, 'utf-8')
+    if (rawData.charCodeAt(0) === 0xFEFF) {
+      rawData = rawData.slice(1)
+    }
     const digest = JSON.parse(rawData)
     if (digest?.schema_version !== 1 || digest?.source !== 'openclaw-ike-pm') {
       return undefined

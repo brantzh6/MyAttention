@@ -36,7 +36,15 @@ Trigger semantics:
 - Do not treat HTTP 200 as product readiness.
 - Distinguish code truth from runtime truth.
 - Prefer delegation for implementation and runtime work.
-- Keep one bounded controller action only.
+- Execute a bounded continuation loop of up to 3 controller actions when each
+  next action is already authorized by project truth, has a clear owner/gate,
+  and does not require a new user or architecture decision.
+- After each action, consume its result, update project truth when warranted,
+  and continue immediately to the next gate instead of waiting for another PM
+  cycle.
+- Stop before 3 actions when a real decision, authorization, high-risk change,
+  unresolved blocker, or missing independent review requires controller/user
+  judgment.
 - Review output is evidence, not promotion authority.
 - GitHub/Codex review is only for promotion-ready PR scope.
 - Dirty tree degraded means no new feature coding unless the state explicitly
@@ -65,6 +73,17 @@ right delegated lane unless the patch is a tiny corrective controller edit.
 If the state is already fresh and coherent, write a quiet controller result and
 stop.
 
+Examples of valid same-run continuation:
+
+- author validation packet -> dispatch test-runner -> receive result -> author
+  review packet;
+- receive independent review -> absorb review -> update state/snapshot;
+- consume recovered runtime truth -> resume the previously blocked review or
+  validation gate.
+
+Do not count task authoring, dispatch, or recording a blocker as sufficient
+progress when the next bounded gate can be completed safely in the same run.
+
 ## Required Output
 
 Write one controller result artifact under `tasks/codex/` that includes:
@@ -81,4 +100,6 @@ Write one controller result artifact under `tasks/codex/` that includes:
 If real progress occurs, update `ops/state/current_state.json` with the new
 state and `last_real_progress_at`.
 
-Stop after one bounded action.
+Stop after the bounded continuation loop completes, reaches 3 actions, or hits
+a real decision/blocker stop condition. Record exactly why the loop stopped and
+the next executable owner/gate.

@@ -34,6 +34,19 @@ they find a defect, they write findings; they do not patch source files.
 5. stale state or controller drift
 6. missing validation evidence
 
+## Git Truth Rule
+
+When a finding depends on whether work is on `main`, reviewers must distinguish
+the local `main` branch from the canonical remote-tracking branch.
+
+- Inspect both `main` and `origin/main`.
+- Use `git merge-base --is-ancestor <commit> origin/main` for canonical
+  containment claims when `origin/main` exists.
+- Report a stale local `main` pointer as local workspace drift, not as proof
+  that a merged PR is absent from canonical main.
+- If network refresh is required but unavailable, state that the remote ref may
+  be stale instead of making a definitive merge claim.
+
 ## Forbidden
 
 - Do not edit source code.

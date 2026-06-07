@@ -1,0 +1,974 @@
+{
+  "lease_id": "focused_l5_rerun_2026_06_06_v1",
+  "task_id": "focused_l5_preview_response_capture_rerun_2026_06_06",
+  "started_at": "2026-06-06T22:54:04.485094",
+  "steps": [
+    {
+      "step": 1,
+      "action": "open_chat",
+      "status": "completed"
+    },
+    {
+      "step": 3,
+      "action": "submit_message",
+      "status": "completed",
+      "message": "I have been exploring efficient attention mechanisms in transformers. What are the key differences between multi-head attention and single-head attention, and how do they affect computational efficiency in large language models?"
+    },
+    {
+      "step": 4,
+      "action": "wait_response",
+      "status": "completed",
+      "response_markers": 0
+    },
+    {
+      "step": 5,
+      "action": "click_handoff",
+      "status": "completed"
+    },
+    {
+      "step": 6,
+      "action": "trigger_inspect_synchronous",
+      "status": "completed"
+    },
+    {
+      "step": 7,
+      "action": "check_absorption_section",
+      "status": "completed"
+    },
+    {
+      "step": 8,
+      "action": "select_candidates",
+      "status": "completed",
+      "checkboxes_found": 6,
+      "checkboxes_clicked": 2
+    },
+    {
+      "step": 9,
+      "action": "check_preview_button",
+      "status": "completed",
+      "enabled": true
+    },
+    {
+      "step": 10,
+      "action": "trigger_preview_synchronous",
+      "status": "completed"
+    }
+  ],
+  "network_requests": [
+    {
+      "url": "http://127.0.0.1:3000/chat",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:05.618983",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/css/css-app_globals_css-node_modules_next_font_google_target_css.css?v=1780757645626",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:05.648521",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/webpack.js?v=1780757645626",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:05.648521",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/main-app.js?v=1780757645626",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:05.649032",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app-pages-internals.js",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:05.649032",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app/chat/page.js",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:05.649340",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app/layout.js",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:05.649340",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/media/e4af272ccee01ff0-s.p.woff2",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:05.660045",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversations?page=1&page_size=50",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:06.085002",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/rag/knowledge-bases",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:06.085340",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversations?page=1&page_size=50",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:06.085987",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/rag/knowledge-bases",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:54:06.085987",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/chat",
+      "method": "POST",
+      "timestamp": "2026-06-06T22:54:19.871323",
+      "post_data": "{\"message\":\"I have been exploring efficient attention mechanisms in transformers. What are the key differences between multi-head attention and single-head attention, and how do they affect computational efficiency in large language models?\",\"use_voting\":false,\"use_rag\":true,\"enable_search\":false,\"enable_thinking\":false,\"conversation_id\":null,\"provider\":\"qwen\",\"model\":\"qwen3.6-plus\"}"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversations?page=1&page_size=50",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:19.296639",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/evolution?handoff=chat",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.074826",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/css/css-app_globals_css-node_modules_next_font_google_target_css.css?v=1780757722082",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.106048",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/webpack.js?v=1780757722082",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.106048",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/main-app.js?v=1780757722082",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.106048",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app-pages-internals.js",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.106750",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app/evolution/page.js",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.106750",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app/layout.js",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.106750",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/media/e4af272ccee01ff0-s.p.woff2",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.112039",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/settings/system",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.467655",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.467655",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/collection-health?fresh=true",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.469356",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/mvp-status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.469356",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/testing/issues",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.469659",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.469659",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.469659",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.470349",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/settings/system",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.470349",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.470654",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/collection-health?fresh=true",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.470654",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/mvp-status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.470654",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/testing/issues",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.470654",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.470654",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.470654",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:22.471344",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/settings/system",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:52.468476",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:52.468979",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/collection-health?fresh=true",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:52.468979",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/mvp-status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:52.469313",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/testing/issues",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:52.469313",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:52.469313",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:52.469313",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:55:52.469313",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversation-runtime/flywheel/inspect",
+      "method": "POST",
+      "timestamp": "2026-06-06T22:56:01.255437",
+      "post_data": "{\"conversation_text\":\"User:\\nI have been exploring efficient attention mechanisms in transformers. What are the key differences between multi-head attention and single-head attention, and how do they affect computational efficiency in large language models?’s a structured breakdown of the key differences between **Multi-Head Attention (MHA)** and **Single-Head Attention (SHA)**, and how they impact computational efficiency in modern Large Language Models (LLMs).\\n\\n---\\n### 🔑 Core Architectural Differences\\n| Dimension | Multi-Head Attention (MHA) | Single-Head Attention (SHA) |\\n|-----------|----------------------------|-----------------------------|\\n| **Projection Structure** | Splits `d_model` into `h` heads of size `d_k = d_model/h`. Each head has independent `Q, K, V` projections. Outputs concatenated and linearly projected. | Uses one set of `Q, K, V` projections over the full `d_model` dimension. Single attention map. |\\n| **Parameter Count** | `4d_model²` (asymptotically ident"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/settings/system",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:22.468093",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:22.468093",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/collection-health?fresh=true",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:22.468544",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/mvp-status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:22.468854",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/testing/issues",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:22.468854",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:22.469166",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:22.469166",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:22.469166",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversation-runtime/flywheel/task-packet/preview",
+      "method": "POST",
+      "timestamp": "2026-06-06T22:56:52.321513",
+      "post_data": "{\"topic\":\"chat conversation\",\"task_intent\":\"inspect chat-originated turn for typed IKE flywheel candidate extraction and delegate handoff preview\",\"selected_knowledge_labels\":[\"[concept] Multi-Head vs Single-Head Attention\",\"[claim] Modern LLM Efficiency Paradigm\"],\"selected_evolution_labels\":[],\"selected_source_labels\":[],\"reviewer_note\":\"chat_handoff=true; truth_status=inspect_only_non_canonical; role=user; conversation_id=82d0d27b-6802-4b2f-bd8c-1dd11627a736; message_id=1780757659836\",\"explicit_non_canonical\":true}"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/settings/system",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:52.469320",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:52.469320",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/collection-health?fresh=true",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:52.469936",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/mvp-status",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:52.469936",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/testing/issues",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:52.470275",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:52.470275",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:52.470596",
+      "post_data": null
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "method": "GET",
+      "timestamp": "2026-06-06T22:56:52.470596",
+      "post_data": null
+    }
+  ],
+  "network_responses": [
+    {
+      "url": "http://127.0.0.1:3000/chat",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:05.643165"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/css/css-app_globals_css-node_modules_next_font_google_target_css.css?v=1780757645626",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:05.654041"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/webpack.js?v=1780757645626",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:05.654373"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app-pages-internals.js",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:05.660371"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app/layout.js",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:05.733226"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/media/e4af272ccee01ff0-s.p.woff2",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:05.738204"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app/chat/page.js",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:05.747954"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/main-app.js?v=1780757645626",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:05.827244"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/rag/knowledge-bases",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:06.087338"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/rag/knowledge-bases",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:06.087988"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversations?page=1&page_size=50",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:06.091337"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversations?page=1&page_size=50",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:06.096335"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/chat",
+      "status": 200,
+      "timestamp": "2026-06-06T22:54:19.874317"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversations?page=1&page_size=50",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:19.345021"
+    },
+    {
+      "url": "http://127.0.0.1:3000/evolution?handoff=chat",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.097051"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/css/css-app_globals_css-node_modules_next_font_google_target_css.css?v=1780757722082",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.109037"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/media/e4af272ccee01ff0-s.p.woff2",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.112693"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/webpack.js?v=1780757722082",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.113037"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app-pages-internals.js",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.126038"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app/layout.js",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.126691"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/app/evolution/page.js",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.145034"
+    },
+    {
+      "url": "http://127.0.0.1:3000/_next/static/chunks/main-app.js?v=1780757722082",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.271647"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.474346"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.474652"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.475348"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.475654"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.475654"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.476654"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:22.477349"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/testing/issues",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:24.649582"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:24.651115"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/mvp-status",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:24.654719"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/testing/issues",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:24.665671"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/mvp-status",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:24.726870"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/collection-health?fresh=true",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:24.735558"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/collection-health?fresh=true",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:24.813901"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/settings/system",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:24.989639"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/settings/system",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:27.533557"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:52.478309"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:52.480309"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:52.481989"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:52.482312"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/testing/issues",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:54.682207"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/mvp-status",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:54.736067"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/collection-health?fresh=true",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:54.750061"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/settings/system",
+      "status": 200,
+      "timestamp": "2026-06-06T22:55:55.038253"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:22.778222"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:22.781817"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:22.784818"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:24.996356"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/testing/issues",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:25.003664"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/mvp-status",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:25.052897"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/collection-health?fresh=true",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:25.069224"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/settings/system",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:25.335068"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversation-runtime/flywheel/inspect",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:43.707264"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/conversation-runtime/flywheel/task-packet/preview",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:52.325517"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/status",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:52.519696"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/task",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:52.519696"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/contexts",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:52.520394"
+    },
+    {
+      "url": "http://127.0.0.1:8000/api/evolution/memories/procedural",
+      "status": 200,
+      "timestamp": "2026-06-06T22:56:52.520700"
+    }
+  ],
+  "screenshots": [
+    "01_chat_initial.png",
+    "03_message_entered.png",
+    "04_assistant_response.png",
+    "05_before_handoff.png",
+    "06_after_handoff.png",
+    "07_before_inspect.png",
+    "08_after_inspect.png",
+    "09_absorption_section_visible.png",
+    "10_before_selection.png",
+    "11_after_selection.png",
+    "12_preview_enabled.png",
+    "13_before_preview_trigger.png",
+    "14_after_preview.png",
+    "15_final_state.png",
+    "error_final.png"
+  ],
+  "errors": [],
+  "inspect_evidence": {
+    "url": "http://127.0.0.1:8000/api/conversation-runtime/flywheel/inspect",
+    "method": "POST",
+    "request_timestamp": "2026-06-06T22:56:01.193911",
+    "response_timestamp": "2026-06-06T22:56:43.709263",
+    "http_status": 200,
+    "elapsed_ms": 42521,
+    "response_body": {
+      "topic": "chat conversation",
+      "task_intent": "inspect chat-originated turn for typed IKE flywheel candidate extraction and delegate handoff preview",
+      "provider": "qwen",
+      "model": "qwen3.6-plus",
+      "segment_intent": "flywheel_signal",
+      "source_candidates": [],
+      "correction_events": [],
+      "knowledge_delta_candidates": [
+        {
+          "delta_type": "concept",
+          "label": "Multi-Head vs Single-Head Attention",
+          "content": "MHA splits the model dimension into h independent heads with separate Q, K, V projections, whereas SHA applies a single Q, K, V projection across the full d_model dimension.",
+          "provenance_note": "conversation-flywheel-inspect",
+          "trust_state": "candidate",
+          "proposal_state": "proposed",
+          "review_gate": "controller_review_required",
+          "absorption_state": "not_absorbed"
+        },
+        {
+          "delta_type": "claim",
+          "label": "Modern LLM Efficiency Paradigm",
+          "content": "Contemporary LLM efficiency gains are rarely achieved by removing multi-head structures, but instead by optimizing projection sharing, KV cache states, and compute trajectories while preserving multi-head representation.",
+          "provenance_note": "conversation-flywheel-inspect",
+          "trust_state": "candidate",
+          "proposal_state": "proposed",
+          "review_gate": "controller_review_required",
+          "absorption_state": "not_absorbed"
+        },
+        {
+          "delta_type": "concept",
+          "label": "Efficient Attention Variants",
+          "content": "Notable architectural variants for improving attention efficiency include Multi-Latent Attention (MLA), sliding window attention, linearized attention, and dynamic head routing.",
+          "provenance_note": "conversation-flywheel-inspect",
+          "trust_state": "candidate",
+          "proposal_state": "proposed",
+          "review_gate": "controller_review_required",
+          "absorption_state": "not_absorbed"
+        },
+        {
+          "delta_type": "relation",
+          "label": "Parameter Equivalence Condition",
+          "content": "MHA and SHA asymptotically share the same parameter count (4*d_model^2) when the product of head count and head dimension (h * d_k) equals the full model dimension (d_model).",
+          "provenance_note": "conversation-flywheel-inspect",
+          "trust_state": "candidate",
+          "proposal_state": "proposed",
+          "review_gate": "controller_review_required",
+          "absorption_state": "not_absorbed"
+        }
+      ],
+      "evolution_trigger_candidates": [
+        {
+          "trigger_type": "study",
+          "label": "Efficient Attention Benchmarking",
+          "rationale": "Research and compile FLOPs, memory footprint, and training/inference benchmark comparisons for MLA, sliding window, linearized attention, and dynamic head routing architectures.",
+          "provenance_note": "conversation-flywheel-inspect",
+          "trust_state": "candidate",
+          "proposal_state": "proposed",
+          "review_gate": "controller_review_required",
+          "absorption_state": "not_absorbed"
+        },
+        {
+          "trigger_type": "prototype",
+          "label": "Projection & Cache Sharing Experiment",
+          "rationale": "Implement a lightweight prototype modifying standard MHA to share Q/K/V projections or compress cache states, then measure latency and throughput gains against baseline SHA and vanilla MHA.",
+          "provenance_note": "conversation-flywheel-inspect",
+          "trust_state": "candidate",
+          "proposal_state": "proposed",
+          "review_gate": "controller_review_required",
+          "absorption_state": "not_absorbed"
+        }
+      ],
+      "extraction_summary": "Extracted knowledge deltas contrasting MHA and SHA architectures with evolution triggers to investigate efficient attention variants and projection-sharing optimizations.",
+      "operational_advice": {
+        "suggested_next_step": "review_flywheel_candidates",
+        "controller_notes": [
+          "4 knowledge delta candidate(s) extracted for review",
+          "2 evolution trigger candidate(s) extracted for review",
+          "ready for task-packet preview after controller review"
+        ]
+      },
+      "controller_packet": {
+        "review_mode": "review_flywheel_candidates",
+        "actionable_source_object_keys": [],
+        "actionable_correction_targets": [
+          "concept:Multi-Head vs Single-Head Attention",
+          "claim:Modern LLM Efficiency Paradigm",
+          "concept:Efficient Attention Variants",
+          "relation:Parameter Equivalence Condition",
+          "study:Efficient Attention Benchmarking",
+          "prototype:Projection & Cache Sharing Experiment"
+        ],
+        "reason_tags": [
+          "knowledge_delta_review",
+          "evolution_trigger_review",
+          "ready_for_task_packet_preview",
+          "needs_controller_review"
+        ],
+        "advisory_scope": "flywheel_inspect_only",
+        "truth_status": "non_canonical"
+      },
+      "notes": [
+        "conversation_parse_status=valid_json",
+        "segment_intent=flywheel_signal",
+        "source_candidates=0",
+        "correction_events=0",
+        "discarded_corrections=0",
+        "knowledge_delta_candidates=4",
+        "evolution_trigger_candidates=2",
+        "conversation_window_truncated=true"
+      ],
+      "truth_boundary": [
+        "raw conversation is not truth",
+        "raw conversation is not memory",
+        "conversation inspect output is candidate material only",
+        "conversation-derived source candidates remain review-gated",
+        "conversation-derived corrections are bounded proposals, not accepted state",
+        "controller packet is advisory compression, not a workflow contract",
+        "AI judgment inspect output is advisory, not canonical source truth",
+        "AI judgment does not auto-subscribe, auto-promote, or write source plans",
+        "model verdicts must remain reviewable and may be wrong or incomplete",
+        "model summary is advisory condensation, not the canonical decision set",
+        "flywheel inspect output is candidate material only, not canonical knowledge",
+        "knowledge delta candidates are bounded proposals, not accepted knowledge state",
+        "evolution trigger candidates are bounded suggestions, not scheduled actions",
+        "flywheel inspect does not auto-promote any candidate into canonical truth",
+        "controller packet is advisory compression, not a workflow contract"
+      ],
+      "promotion_state": "inspect_only"
+    },
+    "has_candidates": true,
+    "candidate_counts": {
+      "knowledge": 4,
+      "triggers": 2,
+      "sources": 0
+    }
+  },
+  "preview_request_evidence": {
+    "url": "http://127.0.0.1:8000/api/conversation-runtime/flywheel/task-packet/preview",
+    "method": "POST",
+    "request_timestamp": "2026-06-06T22:56:52.270064",
+    "post_data_preview": "{\"topic\":\"chat conversation\",\"task_intent\":\"inspect chat-originated turn for typed IKE flywheel candidate extraction and delegate handoff preview\",\"selected_knowledge_labels\":[\"[concept] Multi-Head vs Single-Head Attention\",\"[claim] Modern LLM Efficiency Paradigm\"],\"selected_evolution_labels\":[],\"selected_source_labels\":[],\"reviewer_note\":\"chat_handoff=true; truth_status=inspect_only_non_canonical; role=user; conversation_id=82d0d27b-6802-4b2f-bd8c-1dd11627a736; message_id=1780757659836\",\"explic"
+  },
+  "preview_response_evidence": {
+    "url": "http://127.0.0.1:8000/api/conversation-runtime/flywheel/task-packet/preview",
+    "http_status": 200,
+    "response_timestamp": "2026-06-06T22:56:52.327514",
+    "elapsed_ms": 57,
+    "response_body_keys": [
+      "task_packet_summary",
+      "packet_intent",
+      "suggested_lane",
+      "suggested_next_step",
+      "selected_label_groups",
+      "controller_packet",
+      "truth_boundary",
+      "promotion_state",
+      "notes",
+      "candidate_packet",
+      "handoff_preview"
+    ],
+    "has_candidate_packet": true,
+    "has_handoff_preview": true,
+    "has_task_packet": false,
+    "response_body_preview": "{\"task_packet_summary\": \"Topic 'chat conversation' intent 'inspect chat-originated turn for typed IKE flywheel candidate extraction and delegate handoff preview' has 2 labels (knowledge:2)\", \"packet_intent\": \"knowledge_driven\", \"suggested_lane\": \"knowledge_review\", \"suggested_next_step\": \"review_knowledge_candidates\", \"selected_label_groups\": [{\"label_type\": \"knowledge\", \"labels\": [\"[concept] Multi-Head vs Single-Head Attention\", \"[claim] Modern LLM Efficiency Paradigm\"], \"count\": 2}], \"controller_packet\": {\"review_mode\": \"inspect_only\", \"actionable_source_object_keys\": [], \"actionable_correction_targets\": [\"knowledge:[concept] Multi-Head vs Single-Head Attention\", \"knowledge:[claim] Modern LLM Efficiency Paradigm\"], \"reason_tags\": [\"knowledge_driven\", \"explicit_non_canonical_boundary\"], \"advisory_scope\": \"task_packet_preview\", \"truth_status\": \"explicit_non_canonical\"}, \"truth_boundary\": [\"task-packet preview is inspect-only, not a workflow contract\", \"suggested lane and next step are advisory, not automated decisions\", \"selected label groups are normalized inputs, not persisted state\", \"controller packet is compression for human review, not execution\", \"promotion state is fixed to inspect_only; no automatic promotion\"], \"promotion_state\": \"inspect_only\", \"notes\": [\"knowledge_labels_selected=2\", \"evolution_labels_selected=0\", \"source_labels_selected=0\", \"packet_intent=knowledge_driven\", \"suggested_lane=knowledge_review\", \"explicit_non_canonical=True\", \"reviewer_note_present=true\"], \"candidate_packet\": null, \"handoff_preview\": null}"
+  },
+  "runtime_precheck": {
+    "source": "ops/runtime/latest.json",
+    "probed_at": "2026-06-06T22:27:02+08:00",
+    "overall_reachability": "all_healthy",
+    "services_summary": {
+      "healthy_count": 4,
+      "total_count": 4
+    },
+    "file_derived_marker": true,
+    "pm_watch_digest_marker": true
+  },
+  "runtime_postcheck": {
+    "source": "ops/runtime/latest.json",
+    "probed_at": "2026-06-06T22:27:02+08:00",
+    "overall_reachability": "all_healthy",
+    "services_summary": {
+      "healthy_count": 4,
+      "total_count": 4
+    }
+  },
+  "completed_at": "2026-06-06T22:56:52.598312",
+  "lease": {
+    "lease_id": "focused_l5_rerun_2026_06_06_v1",
+    "command": "python focused_l5_preview_response_capture_rerun_2026-06-06.py",
+    "start_time": "2026-06-06T22:54:04.485094",
+    "hard_timeout_ms": 360000,
+    "expected_child_pattern": "chromium|chrome",
+    "process_ids_started": [],
+    "process_ids_cleaned": [],
+    "end_time": "2026-06-06T22:56:52.523542"
+  },
+  "no_execution_evidence": {
+    "no_execute_endpoint": true,
+    "no_promote_endpoint": true,
+    "no_git_operations": true,
+    "no_file_modifications": true,
+    "runtime_unchanged": true
+  }
+}

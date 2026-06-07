@@ -58,25 +58,27 @@ Complete current isolated-worktree `git status --short`:
 - **Untracked (required result artifact):** 1 file
   - `tasks/codex/isolated_origin_main_l5_milestone_save_state_result_2026-06-07.md`
 
-- **Unchanged allowed files already in base:** 2 files
-  - `ops/state/current_state.json`
-  - `ops/runtime/latest.json`
+**External controller-workspace evidence (NOT in PR package):**
 
-**Total allowed scope files (12):**
+The controller decision referenced external controller workspace files that are NOT part of this bounded Git package:
+- `ops/state/current_state.json` — controller-owned mutable operational truth (absent from base and PR)
+- `ops/runtime/latest.json` — observed ephemeral runtime truth (absent from base and PR)
+
+These files exist only in the controller workspace (`D:/code/MyAttention`) and were used as external evidence for the controller decision. They are NOT included in or validated from the PR package.
+
+**Total allowed scope files (10):**
 1. `AGENTS.md` [OK]
 2. `ops/agents/ike-reviewer.md` [OK]
 3. `ops/codex/controller_wakeup_prompt.md` [OK]
-4. `ops/state/current_state.json` [OK] (unchanged from base)
-5. `ops/runtime/latest.json` [OK] (unchanged from base)
-6. `tasks/codex/focused_l5_preview_response_capture_rerun_packet_2026-06-06.md` [OK]
-7. `tasks/codex/focused_l5_preview_response_capture_rerun_result_2026-06-06.md` [OK]
-8. `tasks/codex/focused_l5_browser_trace_rerun_2026-06-06.json` [OK]
-9. `docs/reviews/active/review_for_focused_l5_preview_response_capture_rerun_2026-06-07.md` [OK]
-10. `tasks/codex/focused_l5_preview_response_capture_rerun_absorption_2026-06-07.md` [OK]
-11. `tasks/codex/post_l5_milestone_and_dirty_tree_audit_absorption_2026-06-07.md` [OK]
-12. `tasks/codex/isolated_origin_main_l5_milestone_save_state_result_2026-06-07.md` [OK] (this result artifact)
+4. `tasks/codex/focused_l5_preview_response_capture_rerun_packet_2026-06-06.md` [OK]
+5. `tasks/codex/focused_l5_preview_response_capture_rerun_result_2026-06-06.md` [OK]
+6. `tasks/codex/focused_l5_browser_trace_rerun_2026-06-06.json` [OK]
+7. `docs/reviews/active/review_for_focused_l5_preview_response_capture_rerun_2026-06-07.md` [OK]
+8. `tasks/codex/focused_l5_preview_response_capture_rerun_absorption_2026-06-07.md` [OK]
+9. `tasks/codex/post_l5_milestone_and_dirty_tree_audit_absorption_2026-06-07.md` [OK]
+10. `tasks/codex/isolated_origin_main_l5_milestone_save_state_result_2026-06-07.md` [OK] (this result artifact)
 
-All 12 allowed files present. No excluded files in package.
+All 10 allowed files present. No excluded files in package. No active runtime or controller state files in package.
 
 ## Validation Run
 
@@ -85,11 +87,11 @@ All 12 allowed files present. No excluded files in package.
 | `git status --short` shows only allowed files | PASS |
 | `git diff --cached --name-only` (zero staged) | PASS |
 | `git diff --check` | PASS (only LF/CRLF warnings) |
-| `python -m json.tool ops/state/current_state.json` | PASS |
-| `python -m json.tool ops/runtime/latest.json` | PASS |
-| `python scripts/ops/check_controller_gate.py --claim accepted_project_truth` | PASS |
+| `git ls-tree -r --name-only HEAD` confirms no active state files | PASS |
 | All four required merge commits are ancestors of origin/main | PASS |
 | Milestone wording remains `inspect_only` | PASS |
+
+**Note:** Controller workspace state files (`ops/state/current_state.json`, `ops/runtime/latest.json`) are external evidence NOT validated from the PR package. JSON parsing and controller-gate checks were performed against controller workspace files, NOT PR package files.
 
 ## Exclusions Verified
 

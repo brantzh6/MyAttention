@@ -25,6 +25,8 @@ Controller: codex-controller
 - The package contains only bounded milestone, automation-protocol, and
   acceptance-evidence files.
 - No excluded controller dirty-tree lane entered the package.
+- Controller workspace state (`ops/state/current_state.json`, `ops/runtime/latest.json`)
+  was external evidence for controller decision-making, NOT PR package contents.
 - The initial result artifact was rejected for factual and encoding defects.
 - Delegate correction and independent re-review resolved all prior findings.
 - The package remains explicitly `inspect_only`.

@@ -5,7 +5,7 @@ Controller: codex-controller
 
 ## Decision
 
-accept
+accept_with_changes
 
 ## Absorbed Evidence
 
@@ -47,6 +47,12 @@ prove or authorize:
 
 Null `candidate_packet` and `handoff_preview` values are accepted for the
 current inspect-only preview contract.
+
+The browser trace proves route reachability and the supported product
+interaction path. It does not prove that runtime remained continuously healthy
+throughout the validation window because precheck and postcheck referenced the
+same earlier runtime probe. Current runtime readiness is separate operational
+truth and is not retroactive validation evidence.
 
 ## Automation Closure Finding
 

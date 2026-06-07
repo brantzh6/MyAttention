@@ -41,11 +41,7 @@ Prior Review: docs/reviews/active/review_for_focused_l5_single_run_preview_closu
 - Result section 4: precheck "probed at 2026-06-06T22:27:02+08:00"
 - Validation started at 2026-06-06T22:54:04.485094
 
-**Assessment**: Not a blocker. Runtime remained healthy throughout validation as evidenced by continuous HTTP 200 responses for all evolution polling endpoints. The stale probe timestamp does not affect the validation truth because:
-1. All captured API calls returned HTTP 200
-2. Inspect API responded in 42.5s with valid candidate extraction
-3. Preview API responded in 57ms with proper structure
-4. No error responses or timeouts in network logs
+**Assessment**: This is a validation gap. The stale probe timestamp means contemporaneous runtime readiness during the validation window is unproven. HTTP 200 responses prove route reachability and product interaction, not runtime remained healthy or unchanged. The validation provides strong product-path evidence but does not satisfy the task packet's runtime-health acceptance condition. Current runtime readiness (from latest.json at a later timestamp) is separate external operational truth, not retroactive evidence for the validation window.
 
 ---
 
@@ -107,9 +103,8 @@ Prior Review: docs/reviews/active/review_for_focused_l5_single_run_preview_closu
 | No /flywheel/execute | Network logs contain no execute endpoint | Yes |
 | No /flywheel/promote | Network logs contain no promote endpoint | Yes |
 | No git operations | Script is read-only validation | Yes |
-| Runtime unchanged | Precheck/postcheck both all_healthy | Yes |
 
-**Answer**: YES. Result proves no execution or promotion occurred.
+**Answer**: YES. Result proves no execution or promotion endpoints were called. Runtime readiness during validation is separate operational truth not proven by HTTP 200 responses.
 
 ---
 
@@ -117,28 +112,34 @@ Prior Review: docs/reviews/active/review_for_focused_l5_single_run_preview_closu
 
 | Source | Timestamp | Status |
 |--------|-----------|--------|
-| latest.json (validation time) | 2026-06-06T22:27:02 | all_healthy |
+| latest.json (validation window) | 2026-06-06T22:27:02 (27 min before) | Unknown |
 | latest.json (current) | 2026-06-07T11:27:02 | all_healthy |
-| Validation runtime evidence | 2026-06-06T22:54-22:56 | All HTTP 200 |
+| Validation HTTP responses | 2026-06-06T22:54-22:56 | All 200 |
 
-**Answer**: YES. Runtime truth is sufficiently healthy for absorption:
-- Validation runtime remained healthy throughout (all evolution endpoints HTTP 200)
-- Current latest.json probe (2026-06-07T11:27:02) shows all_healthy
-- The transient Web degradation noted in current_state.json (2026-06-07T10:27) was repaired by 11:27
+**Answer**: PARTIAL. Current runtime truth is healthy, but contemporaneous runtime readiness during the validation window is unproven:
+
+- HTTP 200 responses prove route reachability and product interaction, not runtime remained healthy throughout
+- The pre-run probe timestamp (22:27:02) is 27 minutes before validation start (22:54) — stale for validation window
+- Current latest.json probe (2026-06-07T11:27:02) shows all_healthy but is separate external operational truth, not retroactive evidence
+- The task packet's runtime-health acceptance condition is unproven for this validation run
+
+Controller should treat current runtime readiness as independent operational state, not evidence for the validation window.
 
 ---
 
 ### Question 6: Closure Claim Supported
 
-**Answer**: `accept`
+**Answer**: `accept_with_changes`
 
-The evidence supports accepting this focused rerun as closing the preview response capture gap from the prior run. The evidence proves:
-1. Chat origin through Evolution/Flywheel UI handoff path works
+The evidence supports accepting this focused rerun as closing the preview response capture gap with explicit runtime-health caveat. The evidence proves:
+1. Chat origin through Evolution/Flywheel UI handoff path works (product interaction proven)
 2. Inspect returns HTTP 200 with valid candidate extraction (4 knowledge, 2 triggers)
 3. UI candidate selection works (manual absorption checkboxes)
 4. Preview returns HTTP 200 with bounded response shape including truth boundaries
 5. promotion_state fixed to inspect_only, no auto-promotion
 6. No execution endpoints called
+
+**Not proven**: Runtime remained healthy throughout validation. Stale probe data and HTTP 200 responses do not satisfy runtime-health acceptance condition.
 
 ---
 
@@ -147,16 +148,17 @@ The evidence supports accepting this focused rerun as closing the preview respon
 | Gap | Severity | Block Absorption? | Block Closure? |
 |-----|----------|-------------------|----------------|
 | Null candidate_packet/handoff_preview | LOW | No | No (expected for inspect_only) |
-| Runtime probe timestamp stale relative to validation | LOW | No | No |
+| Runtime probe timestamp stale for validation window | MEDIUM | No | Yes (runtime-health condition unproven) |
+| Contemporaneous runtime readiness during validation | MEDIUM | No | Yes (HTTP 200 ≠ runtime health) |
 | Prior evidence gap | CLOSED | N/A | N/A |
 
-**No remaining validation gaps for this focused rerun objective.**
+**Remaining validation gap**: The task packet's runtime-health acceptance condition is unproven because the probe data is stale relative to the validation window. HTTP 200 responses prove product interaction and route reachability, not continuous runtime health.
 
 ---
 
 ## Supported Closure Claim
 
-**accept**
+**accept_with_changes**
 
 This focused L5 preview-response capture rerun successfully closes the single evidence gap from the prior run (preview response status/body not captured). The synchronous response capture pattern with `page.expect_response()` and extended timeout captured:
 
@@ -165,9 +167,11 @@ This focused L5 preview-response capture rerun successfully closes the single ev
 - truth_boundary array with explicit non-execution statements
 - promotion_state: "inspect_only"
 
+**Caveat**: The runtime-health acceptance condition from the task packet is unproven because probe data is stale relative to the validation window. HTTP 200 responses prove product interaction and route reachability, not continuous runtime health. Current runtime readiness is separate external operational truth.
+
 ---
 
-## Recommendation: accept
+## Recommendation: accept_with_changes
 
 ### Rationale
 
@@ -177,16 +181,22 @@ This focused L5 preview-response capture rerun successfully closes the single ev
 
 3. **Contract satisfied**: Preview response contains task_packet_summary, selected_label_groups, truth_boundary, and promotion_state=inspect_only.
 
-4. **No forbidden actions**: No execute/promote endpoints, no git operations, no runtime service operations, runtime unchanged.
+4. **No forbidden actions**: No execute/promote endpoints, no git operations, no runtime service operations.
 
 5. **Null values expected**: candidate_packet: null and handoff_preview: null reflect the bounded inspect_only preview contract, not missing functionality.
 
+6. **Runtime-health condition unproven**: Stale probe data and HTTP 200 responses do not prove runtime remained healthy throughout validation. This is a known validation gap. Current runtime readiness is separate external operational truth.
+
+**Changes required**: Controller must recognize that product interaction evidence is proven but runtime-health acceptance condition is unproven for this validation window.
+
 ### Absorption Guidance
 
-Controller may absorb this result and update:
-- `current_state.json` evolution_flywheel_v1 task status from `focused_l5_accept_with_changes_preview_response_rerun_next` to `focused_l5_preview_response_rerun_accepted`
+Controller may absorb this result with explicit recognition of validation gap:
+
+- `current_state.json` evolution_flywheel_v1 task status from `focused_l5_accept_with_changes_preview_response_rerun_next` to `focused_l5_preview_response_rerun_accepted_with_runtime_gap`
 - Evidence chain with result, trace, and this review artifact
-- Runtime_state from latest.json to reflect current all_healthy status
+- Runtime_state from latest.json reflects current operational truth, separate from validation window
+- Record that runtime-health acceptance condition remains unproven for this specific validation run
 
 ### L5 Gate Status
 

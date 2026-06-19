@@ -110,6 +110,9 @@ export default async function ControlDashboardPage() {
   const currentStage = data.controlSummary?.currentPhase || data.phase.current
   const mainlineGoal = data.controlSummary?.mainlineGoal || data.mainline.objective
   const decisionGate = currentBlocker?.title || data.phase.nextGate
+  const immediateAction = primaryAction
+    ? `${primaryAction.lane}: ${primaryAction.action}`
+    : currentBlocker?.proposedSteps[0] || 'Controller: choose the next bounded action from accepted truth.'
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-20 px-4 sm:px-6">
@@ -128,7 +131,7 @@ export default async function ControlDashboardPage() {
             <SummaryTile label="Current Stage">{currentStage}</SummaryTile>
             <SummaryTile label="Decision Gate" tone="gate">{decisionGate}</SummaryTile>
             <SummaryTile label="Immediate Owner / Action">
-              {primaryAction ? `${primaryAction.lane}: ${primaryAction.action}` : 'Controller: choose the next bounded action from accepted truth.'}
+              {immediateAction}
             </SummaryTile>
             <SummaryTile label="Snapshot">
               <span className="flex items-center gap-1.5 font-mono">

@@ -1,0 +1,10 @@
+# Retrieval scope only: these files remain on disk and retain their Git status.
+# For a specific incident, inspect its exact path with an explicit --no-ignore.
+/.ike/runtime/
+/ops/runtime/
+/ops/supervised-runs/
+/pytest-of-jiuyou/
+/.pytest-*/
+/validation_screenshots/
+/validation_screenshots_v2/
+/services/web/.next.rollback/

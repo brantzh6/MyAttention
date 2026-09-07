@@ -11,6 +11,7 @@ venv/
 # Build outputs
 .next/
 .next.old*/
+/services/web/.next.rollback/
 dist/
 build/
 *.egg-info/
@@ -18,6 +19,8 @@ build/
 # Runtime & temp
 .runtime/
 .tmp/
+/.pytest-*/
+/pytest-of-jiuyou/
 
 # Data directories (vector DB, etc.)
 services/api/data/
